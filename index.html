@@ -2504,48 +2504,10 @@ async function syncToDrive(manual = false, forcePush = false) {
     saveUserData();
 
     try {
-        let finalData = inMemoryLoadedData;
+        // 直接用本地数据推送，不做 pull-merge
+        const finalData = inMemoryLoadedData;
 
-        if (!forcePush) {
-            // ── 步骤 1：拉取 Drive 最新版本 ──
-            let remoteData = null;
-            try {
-                const pullResp = await fetch(gasRequestUrl());
-                if (pullResp.ok) {
-                    const raw = (await pullResp.text()).trim();
-                    if (raw && raw !== 'UNAUTHORIZED') {
-                        try {
-                            remoteData = JSON.parse(raw);
-                        } catch (_) {
-                            if (userPassword) {
-                                try {
-                                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-                                    remoteData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-                                } catch (_) { }
-                            }
-                        }
-                    }
-                }
-            } catch (_) { }
-
-            // ── 步骤 2：合并 ──
-            if (remoteData) {
-                finalData = mergeData(inMemoryLoadedData, remoteData);
-                inMemoryLoadedData = finalData;
-                accounts = []; transactions = []; plannedTransactions = [];
-                Object.entries(finalData.allUserData || {}).forEach(([u, uData]) => {
-                    accounts.push(...(uData.accounts || []).map(a => ({...a, ownerName: u})));
-                    transactions.push(...(uData.transactions || []).map(t => ({...t, ownerName: u})));
-                    if (uData.plannedTransactions) {
-                        plannedTransactions.push(...uData.plannedTransactions.map(p => ({...p, ownerName: u})));
-                    }
-                });
-                filterUserData();
-                loadAllData();
-            }
-        }
-
-        // ── 步骤 3：加密打包并推送 ──
+        // 加密打包并推送
         let content;
         if (userPassword) {
             content = CryptoJS.AES.encrypt(JSON.stringify(finalData), userPassword).toString();
