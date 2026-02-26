@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>APP</title>
+    <title>Test-app</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -547,7 +547,7 @@ body {
 <!-- ==================== 登录界面 ==================== -->
 <div id="login-overlay">
     <div class="card shadow p-3 p-md-4" style="width: 480px; max-width: 95%;">
-        <h4 class="text-center mb-3 text-primary"><i class="bi bi-wallet2"></i> APP v1.0</h4>
+        <h4 class="text-center mb-3 text-primary"><i class="bi bi-wallet2"></i> Test-app v1.0.2</h4>
 
         <!-- GAS URL 配置（首次填写，之后折叠） -->
         <div class="mb-3" id="gas-url-section" style="display: none;">
@@ -643,7 +643,7 @@ body {
     <div class="sidebar">
         <div class="brand-title">
             <i class="bi bi-wallet2"></i>
-            <span style="font-size: 0.7rem;">APP</span>
+            <span style="font-size: 0.7rem;">Test-app</span>
         </div>
         <ul class="nav nav-pills flex-md-column mb-auto">
             <li class="nav-item">
@@ -2071,7 +2071,7 @@ function renderArchiveManagementUI() {
 function checkArchivePrompt() {
     const now = new Date();
     const currentYear = now.getFullYear();
-    if (now.getMonth() + 1 > 2) return; // 只在1-2月提示
+    if (now.getMonth() + 1 < 2 || now.getMonth() + 1 > 3) return; // 只在2-3月提示
     const lastYear = currentYear - 1;
     const archivedYears = getArchivedYears();
     if (archivedYears.includes(lastYear)) return;
@@ -2185,7 +2185,7 @@ async function archiveYear(year) {
         }
 
         filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions(); renderArchiveManagementUI();
-        showToast(`✅ ${year} 年数据存档成功`, 'success');
+        showToast(`${year} 年数据存档成功`, 'success');
     } catch (err) {
         showToast(`存档失败：${err.message}`, 'error');
         console.error('[archiveYear]', err);
@@ -2231,7 +2231,7 @@ async function unarchiveYear(year) {
         await syncToDrive(true, true); // forcePush：解档后直接推送，不拉取合并
 
         filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions(); renderArchiveManagementUI();
-        showToast(`✅ ${year} 年数据解档成功`, 'success');
+        showToast(`${year} 年数据解档成功`, 'success');
     } catch (err) {
         showToast(`解档失败：${err.message}`, 'error');
         console.error('[unarchiveYear]', err);
@@ -2504,10 +2504,48 @@ async function syncToDrive(manual = false, forcePush = false) {
     saveUserData();
 
     try {
-        // 直接用本地数据推送，不做 pull-merge
-        const finalData = inMemoryLoadedData;
+        let finalData = inMemoryLoadedData;
 
-        // 加密打包并推送
+        if (!forcePush) {
+            // ── 步骤 1：拉取 Drive 最新版本 ──
+            let remoteData = null;
+            try {
+                const pullResp = await fetch(gasRequestUrl());
+                if (pullResp.ok) {
+                    const raw = (await pullResp.text()).trim();
+                    if (raw && raw !== 'UNAUTHORIZED') {
+                        try {
+                            remoteData = JSON.parse(raw);
+                        } catch (_) {
+                            if (userPassword) {
+                                try {
+                                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
+                                    remoteData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                                } catch (_) { }
+                            }
+                        }
+                    }
+                }
+            } catch (_) { }
+
+            // ── 步骤 2：合并 ──
+            if (remoteData) {
+                finalData = mergeData(inMemoryLoadedData, remoteData);
+                inMemoryLoadedData = finalData;
+                accounts = []; transactions = []; plannedTransactions = [];
+                Object.entries(finalData.allUserData || {}).forEach(([u, uData]) => {
+                    accounts.push(...(uData.accounts || []).map(a => ({...a, ownerName: u})));
+                    transactions.push(...(uData.transactions || []).map(t => ({...t, ownerName: u})));
+                    if (uData.plannedTransactions) {
+                        plannedTransactions.push(...uData.plannedTransactions.map(p => ({...p, ownerName: u})));
+                    }
+                });
+                filterUserData();
+                loadAllData();
+            }
+        }
+
+        // ── 步骤 3：加密打包并推送 ──
         let content;
         if (userPassword) {
             content = CryptoJS.AES.encrypt(JSON.stringify(finalData), userPassword).toString();
@@ -3196,9 +3234,7 @@ function openNewTransFromDetail() {
     $('editTransactionModalTitle').textContent = '新增交易';
     $('edit-trans-submit-btn').textContent = '保存';
     $('edit-trans-delete-btn').style.display = 'none';
-    const lastDate = prefs.date;
-    const dateDiff = lastDate ? Math.abs(new Date(today) - new Date(lastDate)) / 86400000 : 99;
-    $('edit-trans-date').value = (lastDate && dateDiff <= 7) ? lastDate : today;
+    $('edit-trans-date').value = today;
     $('edit-trans-type').value = prefs.type || 'expense';
     updateEditFormCategories();
     const accSelect = $('edit-trans-account');
@@ -3242,10 +3278,8 @@ function openNewTransaction() {
     $('edit-trans-submit-btn').textContent = '保存';
     $('edit-trans-delete-btn').style.display = 'none';
 
-    // 日期：记住上次日期，但若相差超过7天则用今天（防止默默记住老日期）
-    const lastDate = prefs.date;
-    const dateDiff = lastDate ? Math.abs(new Date(today) - new Date(lastDate)) / 86400000 : 99;
-    $('edit-trans-date').value = (lastDate && dateDiff <= 7) ? lastDate : today;
+    // 日期：默认今天
+    $('edit-trans-date').value = today;
 
     // 类型
     const typeEl = $('edit-trans-type');
@@ -3493,7 +3527,7 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
 
     if (mode === 'add') {
         // 记住本次输入的日期/类型/账户/分类，供下次新增时预填
-        localStorage.setItem('APP_last_trans_prefs', JSON.stringify({ date, type, accountId, category }));
+        localStorage.setItem('APP_last_trans_prefs', JSON.stringify({ type, accountId, category }));
         transactions.unshift({
             id: Date.now() + Math.random(), date, type, accountId,
             amount: finalAmount, category, tags, desc,
@@ -4018,14 +4052,11 @@ async function handleAttachmentSelected(input) {
     // 设置上传状态
     isUploadingAttachment = true;
     $('attachment-upload-status').style.display = 'block';
-    $('attachment-upload-status').textContent = '压缩中…';
-    $('edit-trans-submit-btn').disabled = true;
+    $('edit-trans-submit-btn').disabled = true; // 禁用保存按钮
 
     try {
         // 压缩图片后再上传
         const compressedFile = await compressImage(file, 200);
-
-        $('attachment-upload-status').textContent = '上传中…';
 
         const reader = new FileReader();
         reader.onload = async function(e) {
@@ -4033,37 +4064,33 @@ async function handleAttachmentSelected(input) {
             const fileName = `attach_${Date.now()}.jpg`;
 
             try {
-                const payload = JSON.stringify({
-                    action: 'uploadAttachment',
-                    filename: fileName,
-                    mimeType: 'image/jpeg',
-                    data: base64Data
-                });
-                const response = await fetch(`${GAS_URL}?token=${encodeURIComponent(GAS_TOKEN)}`, {
+                const response = await fetch(gasRequestUrl({
+                    action: 'uploadFile',
+                    fileName: fileName,
+                    mimeType: 'image/jpeg'
+                }), {
                     method: 'POST',
-                    body: payload,
-                    headers: { 'Content-Type': 'text/plain' }
+                    body: base64Data
                 });
                 const result = await response.json();
 
-                if (result.fileId) {
+                if (result.status === 'success') {
+                    // 将新 ID 加入数组
                     currentIds.push(result.fileId);
                     $('edit-trans-attachment-id').value = currentIds.join(',');
+                    // 重新渲染预览
                     renderAttachmentThumbs(currentIds);
-                    // 显示压缩后的实际上传大小
-                    $('attachment-upload-status').textContent = `✅ 已上传（${Math.round(compressedFile.size / 1024)}KB）`;
                 } else {
-                    $('attachment-upload-status').textContent = '';
-                    alert('上传失败: ' + (result.error || '未知错误'));
+                    alert('上传失败: ' + result.message);
                 }
             } catch (err) {
                 console.error(err);
-                $('attachment-upload-status').textContent = '';
                 alert('网络错误，上传失败');
             } finally {
                 isUploadingAttachment = false;
+                $('attachment-upload-status').style.display = 'none';
                 $('edit-trans-submit-btn').disabled = false;
-                input.value = '';
+                input.value = ''; // 清空 input 方便下次触发
             }
         };
         reader.readAsDataURL(compressedFile);
@@ -4071,7 +4098,6 @@ async function handleAttachmentSelected(input) {
         console.error(err);
         alert('图片处理失败');
         isUploadingAttachment = false;
-        $('attachment-upload-status').textContent = '';
         $('attachment-upload-status').style.display = 'none';
         $('edit-trans-submit-btn').disabled = false;
         input.value = '';
@@ -4082,7 +4108,7 @@ async function handleAttachmentSelected(input) {
 function renderAttachmentThumbs(ids) {
     const container = $('attachment-preview-container');
     container.innerHTML = '';
-
+    
     if (!ids || ids.length === 0) {
         container.style.setProperty('display', 'none', 'important');
         return;
@@ -4092,9 +4118,10 @@ function renderAttachmentThumbs(ids) {
     ids.forEach((id, index) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'thumb-wrapper';
-
+        
+        // 使用你之前确认的 800px 接口
         const url = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
-
+        
         wrapper.innerHTML = `
             <img src="${url}" class="thumb-img" onclick="showFullImagePreviewFromSrc('${url}')">
             <button type="button" class="thumb-remove" onclick="removeSpecificAttachment(${index})">✕</button>
@@ -4105,7 +4132,6 @@ function renderAttachmentThumbs(ids) {
 
 // 5. 删除特定位置的图片
 function removeSpecificAttachment(index) {
-if (!confirm('确定删除这张附件吗？')) return;
     const rawVal = $('edit-trans-attachment-id').value;
     let ids = rawVal ? rawVal.split(',').filter(id => id.trim()) : [];
     ids.splice(index, 1);
@@ -4113,7 +4139,7 @@ if (!confirm('确定删除这张附件吗？')) return;
     renderAttachmentThumbs(ids);
 }
 
-// 6. 全屏预览
+// 6. 适配全屏预览 (稍微修改下之前的函数名/参数)
 function showFullImagePreviewFromSrc(src) {
     const overlay = document.createElement('div');
     overlay.style = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); 
@@ -4796,9 +4822,9 @@ function renderPlannedTransactions() {
         return;
     }
     const sortedPlans = [...userPlannedTransactions].sort((a, b) => {
-        const nextA = getNextGenerationDate(a); const nextB = getNextGenerationDate(b);
-        if (!nextA && !nextB) return 0; if (!nextA) return 1; if (!nextB) return -1;
-        return nextA.localeCompare(nextB);
+        const la = a.lastGenerated || '0000-00-00';
+        const lb = b.lastGenerated || '0000-00-00';
+        return la.localeCompare(lb);
     });
     sortedPlans.forEach(plan => {
         const acc = accounts.find(a => a.id == plan.accountId);
@@ -4981,7 +5007,7 @@ function generateTransactionFromPlan(plan, targetDate) {
     });
     plan.lastGenerated = targetDate;
     saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
-    displayedTransactionCount = 100; renderAllTransactions(); renderAccounts();
+    displayedTransactionCount = 100; renderAllTransactions(); renderAccounts(); renderPlannedTransactions();
 }
 
 function getNextGenerationDate(plan) {
@@ -5093,50 +5119,6 @@ function removeUser(name) {
     showToast(`已删除用户 "${name}"`, 'success');
 }
 
-// ==================== 数据一致性检查和修复 ====================
-function checkDataConsistency() {
-    const issues = [];
-    transactions.forEach(t => {
-        if (!t.isTransfer) {
-            const exists = categories[t.type] && categories[t.type].includes(t.category);
-            if (!exists && t.category !== '未分类') issues.push({ type: 'invalid_trans_category', transId: t.id, category: t.category });
-        }
-    });
-    if (plannedTransactions && plannedTransactions.length > 0) {
-        plannedTransactions.forEach(p => {
-            const exists = categories[p.type] && categories[p.type].includes(p.category);
-            if (!exists && p.category !== '未分类') issues.push({ type: 'invalid_plan_category', planId: p.id, category: p.category });
-        });
-    }
-    return issues;
-}
-
-function repairDataConsistency() {
-    const issues = checkDataConsistency();
-    if (issues.length === 0) { alert('✅ 数据一致性检查通过，无需修复！'); return; }
-    const invalidTransCats = issues.filter(i => i.type === 'invalid_trans_category');
-    const invalidPlanCats = issues.filter(i => i.type === 'invalid_plan_category');
-    let confirmMsg = `发现 ${issues.length} 个数据一致性问题：\n\n`;
-    if (invalidTransCats.length > 0) confirmMsg += `📝 ${invalidTransCats.length} 条交易分类无效（将改为"未分类"）\n`;
-    if (invalidPlanCats.length > 0) confirmMsg += `📅 ${invalidPlanCats.length} 条计划交易分类无效（将改为"未分类"）\n`;
-    confirmMsg += '\n确定要自动修复这些问题吗？';
-    if (!confirm(confirmMsg)) return;
-    let fixed = 0;
-    invalidTransCats.forEach(issue => {
-        const trans = transactions.find(t => t.id === issue.transId);
-        if (trans) { trans.category = '未分类'; fixed++; }
-    });
-    invalidPlanCats.forEach(issue => {
-        const plan = plannedTransactions.find(p => p.id === issue.planId);
-        if (plan) { plan.category = '未分类'; fixed++; }
-    });
-    if (fixed > 0) {
-        saveUserData(); triggerAutoSave();
-        displayedTransactionCount = 100; renderAllTransactions(); renderStats();
-        alert(`✅ 已修复 ${fixed} 个数据一致性问题！`);
-    }
-}
-
 // ==================== 初始化 ====================
 window.addEventListener('load', () => {
     updateTransferModeButton();
@@ -5151,12 +5133,6 @@ if ('serviceWorker' in navigator) {
             console.log('[PWA] SW registered:', reg.scope);
         }).catch(err => {
             console.warn('[PWA] SW registration failed:', err);
-        });
-
-        navigator.serviceWorker.addEventListener('message', e => {
-            if (e.data?.type === 'HTML_UPDATED') {
-                showToast('🔄 有新版本，下次打开生效', 'info', 5000);
-            }
         });
     });
 }
