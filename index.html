@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔</title>
+    <title>Test-app</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -307,7 +307,7 @@ body {
     align-items: center;
     gap: 7px;
 }
-#app-toast.show { opacity: 0.8; pointer-events: auto; }
+#app-toast.show { opacity: 1; pointer-events: auto; }
 
 .amount-hidden { filter: blur(8px); user-select: none; }
 
@@ -570,7 +570,7 @@ body {
 
         <!-- 标题栏 + 齿轮 -->
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i> 记一笔 V 1.1</h4>
+            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i> Test-app v1.1</h4>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleLoginSettings()" title="连接设置">
                 <i class="bi bi-gear" id="login-settings-gear"></i>
             </button>
@@ -678,7 +678,7 @@ body {
     <div class="sidebar">
         <div class="brand-title">
             <i class="bi bi-wallet2"></i>
-            <span style="font-size: 0.7rem;">APP</span>
+            <span style="font-size: 0.7rem;">Test-app</span>
         </div>
         <ul class="nav nav-pills flex-md-column mb-auto">
             <li class="nav-item">
@@ -1097,7 +1097,7 @@ body {
                             <i class="bi bi-archive"></i> 数据存档管理
                         </div>
                         <div class="card-body">
-                            <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档数据只读，可解档恢复。</p>
+                            <p class="text-muted small mb-2">归档历史年份数据，归档数据只读，可解档恢复。</p>
                             <div id="archive-management-ui" class="mb-2"></div>
                             <button class="btn btn-outline-secondary btn-sm w-100" onclick="showHistoryYearSelector()">
                                 <i class="bi bi-clock-history"></i> 查看历史存档
@@ -1111,7 +1111,6 @@ body {
                         <div class="card-header bg-transparent fw-bold">汇率配置 (对人民币)</div>
                         <div class="card-body">
                             <div id="exchange-rate-inputs"></div>
-                            <p class="text-muted small mt-2">当前: <span id="current-exchange-rate"></span></p>
                         </div>
                     </div>
                 </div>
@@ -1453,7 +1452,7 @@ body {
                     </div>
 
 <div class="mb-2" id="attachment-section" style="display:none;">
-    <input type="file" id="attachment-file-input" accept="image/*,image/heic,image/heif" class="d-none" onchange="handleAttachmentSelected(this)">
+    <input type="file" id="attachment-file-input" accept="image/*,image/heic,image/heif,application/pdf" class="d-none" onchange="handleAttachmentSelected(this)">
     
     <div id="attachment-preview-container" class="d-flex flex-wrap gap-2 mt-2" style="display:none !important;">
         </div>
@@ -2088,6 +2087,9 @@ function loginWithUser(name) {
 
     // 检查是否需要提示存档
     checkArchivePrompt();
+
+    // 离线优先：后台静默同步（有新版本时合并刷新UI）
+    setTimeout(() => backgroundSyncAfterLogin(), 300);
 }
 
 // ==================== 本地草稿恢复 ====================
@@ -2627,10 +2629,25 @@ function mergeData(local, remote) {
         return Array.from(map.values());
     };
 
+    // ── 合并删除日志（60天保留期）──
+    const now = Date.now();
+    const cutoff = now - 60 * 24 * 60 * 60 * 1000;
+    const localLog = (local.deletedLog || []);
+    const remoteLog = (remote.deletedLog || []);
+    const logMap = new Map();
+    [...localLog, ...remoteLog].forEach(entry => {
+        if (entry.deletedAt > cutoff) {
+            logMap.set(String(entry.id), entry);
+        }
+    });
+    const mergedDeletedLog = Array.from(logMap.values());
+    const deletedIdSet = new Set(mergedDeletedLog.map(e => String(e.id)));
+
     const merged = {
         users: local.users || remote.users || [],
         categories: local.categories,
         exchangeRates: local.exchangeRates,
+        deletedLog: mergedDeletedLog,
         archivedYears: Array.from(new Set([
             ...(local.archivedYears || []),
             ...(remote.archivedYears || [])
@@ -2646,9 +2663,11 @@ function mergeData(local, remote) {
     allUsers.forEach(u => {
         const localU = (local.allUserData || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
         const remoteU = ((remote && remote.allUserData) || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
+        const mergedTransactions = mergeArray(localU.transactions, remoteU.transactions)
+            .filter(t => !deletedIdSet.has(String(t.id))); // 过滤已删除的交易
         merged.allUserData[u] = {
             accounts: mergeArray(localU.accounts, remoteU.accounts),
-            transactions: mergeArray(localU.transactions, remoteU.transactions),
+            transactions: mergedTransactions,
             plannedTransactions: mergeArray(localU.plannedTransactions, remoteU.plannedTransactions)
         };
     });
@@ -2773,7 +2792,39 @@ async function loadFromDrive() {
     if (!GAS_URL) {
         alert('请先在登录界面填写并保存 GAS URL。'); return;
     }
-    showToast('正在同步数据…', 'syncing', 0);
+
+    const localRawCache = localStorage.getItem('APP_raw_cache');
+
+    // ── 离线优先：有本地缓存就立即展示，不等网络 ──
+    if (localRawCache) {
+        window._driveRawContent = localRawCache;
+        try {
+            const parsed = JSON.parse(localRawCache);
+            // 明文缓存：直接进入用户选择
+            userPassword = '';
+            inMemoryLoadedData = parsed;
+            categories = parsed.categories || DEFAULT_CATEGORIES;
+            exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
+            $('password-section').style.display = 'none';
+            showToast('已加载本地缓存', 'info', 3000);
+            onDataLoaded();
+        } catch(_) {
+            // 加密缓存：立即让用户输密码，完全不等网络
+            window._driveMode = true;
+            showToast('请输入密码', 'info', 0);
+            $('user-section').style.display = 'none';
+            $('user-buttons').innerHTML = '';
+            $('password-error').classList.add('d-none');
+            $('password-section').style.display = 'block';
+            $('login-password').focus();
+        }
+        // 后台静默核对版本，登录后由 backgroundSyncAfterLogin 完成刷新
+        window._pendingBackgroundSync = true;
+        return;
+    }
+
+    // ── 无缓存：走原有网络加载流程 ──
+    showToast('正在从 Drive 加载数据…', 'syncing', 0);
 
     try {
         const localVersion = localStorage.getItem('APP_drive_version') || '0';
@@ -2782,27 +2833,6 @@ async function loadFromDrive() {
             const vResp = await fetch(gasRequestUrl({ action: 'version' }));
             if (vResp.ok) remoteVersion = (await vResp.text()).trim();
         } catch (_) {}
-
-        const localRawCache = localStorage.getItem('APP_raw_cache');
-        if (remoteVersion !== '0' && remoteVersion === localVersion && localRawCache) {
-            window._driveRawContent = localRawCache;
-            try {
-                const parsed = JSON.parse(localRawCache);
-                userPassword = '';
-                inMemoryLoadedData = parsed;
-                categories = parsed.categories || DEFAULT_CATEGORIES;
-                exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
-                $('password-section').style.display = 'none';
-                showToast('数据已是最新，使用本地缓存', 'success', 3000);
-                onDataLoaded();
-            } catch(_) {
-                window._driveMode = true;
-                showToast('已从本地缓存获取加密文件，请输入密码', 'info', 0);
-                $('password-section').style.display = 'block';
-                $('login-password').focus();
-            }
-            return;
-        }
 
         const resp = await fetch(gasRequestUrl());
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -2842,27 +2872,76 @@ async function loadFromDrive() {
         $('password-section').style.display = 'block';
         $('login-password').focus();
     } catch (err) {
-        const localRawCache = localStorage.getItem('APP_raw_cache');
-        if (localRawCache) {
-            window._driveRawContent = localRawCache;
-            try {
-                const parsed = JSON.parse(localRawCache);
-                userPassword = '';
-                inMemoryLoadedData = parsed;
-                categories = parsed.categories || DEFAULT_CATEGORIES;
-                exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
-                $('password-section').style.display = 'none';
-                showToast('网络异常，已加载本地缓存数据', 'warning', 0);
-                onDataLoaded();
-            } catch(_) {
-                window._driveMode = true;
-                showToast('网络异常，已从本地缓存获取加密文件，请输入密码', 'warning', 0);
-                $('password-section').style.display = 'block';
-                $('login-password').focus();
-            }
-        } else {
-            showToast(`加载失败：${err.message}`, 'error', 0);
+        showToast(`加载失败：${err.message}`, 'error', 0);
+    }
+}
+
+/**
+ * 登录后在后台静默检查版本并合并更新
+ * 由 loginWithUser() 在用户选完用户后触发
+ */
+async function backgroundSyncAfterLogin() {
+    if (!window._pendingBackgroundSync || !GAS_URL || offlineMode) return;
+    window._pendingBackgroundSync = false;
+
+    try {
+        const localVersion = localStorage.getItem('APP_drive_version') || '0';
+        let remoteVersion = '0';
+        try {
+            const vResp = await fetch(gasRequestUrl({ action: 'version' }));
+            if (vResp.ok) remoteVersion = (await vResp.text()).trim();
+        } catch (_) { return; } // 无网络，静默放弃
+
+        if (remoteVersion === '0' || remoteVersion === localVersion) {
+            // 版本一致，无需更新
+            showToast('数据已是最新版本', 'success', 2000);
+            return;
         }
+
+        // 有新版本，拉取远端数据
+        const resp = await fetch(gasRequestUrl());
+        if (!resp.ok) return;
+        const raw = (await resp.text()).trim();
+        if (!raw || raw === 'UNAUTHORIZED') return;
+
+        // 解密远端数据
+        let remoteData = null;
+        try {
+            remoteData = JSON.parse(raw);
+        } catch(_) {
+            if (userPassword) {
+                try {
+                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
+                    remoteData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                } catch(_) { return; }
+            } else { return; }
+        }
+
+        // 合并数据
+        const merged = mergeData(inMemoryLoadedData, remoteData);
+        if (remoteVersion !== '0') localStorage.setItem('APP_drive_version', remoteVersion);
+        try { localStorage.setItem('APP_raw_cache', raw); } catch(_) {}
+
+        const isFormOpen = $('add-transaction-section') && $('add-transaction-section').classList.contains('show');
+
+        if (isFormOpen) {
+            // 用户正在填表单：只更新内存，弹提示，不刷UI
+            inMemoryLoadedData = merged;
+            saveUserData();
+            showToast('后台已同步新数据，关闭表单后自动刷新', 'info', 4000);
+            window._pendingUIRefresh = true;
+        } else {
+            // 用户没在填表单：合并后刷新列表
+            inMemoryLoadedData = merged;
+            loadAllData();
+            filterUserData();
+            renderAllTransactions();
+            renderAccounts();
+            showToast('已同步最新数据', 'success', 3000);
+        }
+    } catch(e) {
+        // 后台同步失败，静默忽略，不打扰用户
+        console.warn('后台同步失败:', e);
     }
 }
 
@@ -3607,13 +3686,31 @@ function deleteTransaction(id) {
     }
 
     if (confirm('确定删除？')) {
+        const now = Date.now();
+        // 收集要删除的id，写入删除日志
+        let deletedIds = [];
         if (t.isTransfer && t.transferPairId) {
+            deletedIds = transactions.filter(x => x.transferPairId === t.transferPairId).map(x => x.id);
             transactions = transactions.filter(x => x.transferPairId !== t.transferPairId);
         } else if (t.isTransfer) {
-            transactions = transactions.filter(x => !(x.isTransfer && x.date === t.date && (x.id === t.id || x.relatedAccountId == t.accountId)));
+            const toDelete = transactions.filter(x => x.isTransfer && x.date === t.date && (x.id === t.id || x.relatedAccountId == t.accountId));
+            deletedIds = toDelete.map(x => x.id);
+            transactions = transactions.filter(x => !deletedIds.includes(x.id));
         } else {
+            deletedIds = [id];
             transactions = transactions.filter(x => x.id !== id);
         }
+        // 写入删除日志到根数据
+        if (!inMemoryLoadedData.deletedLog) inMemoryLoadedData.deletedLog = [];
+        deletedIds.forEach(did => {
+            if (!inMemoryLoadedData.deletedLog.find(e => e.id === did)) {
+                inMemoryLoadedData.deletedLog.push({ id: did, deletedAt: now });
+            }
+        });
+        // 只保留60天内的日志
+        const cutoff = now - 60 * 24 * 60 * 60 * 1000;
+        inMemoryLoadedData.deletedLog = inMemoryLoadedData.deletedLog.filter(e => e.deletedAt > cutoff);
+
         saveUserData(); triggerAutoSave(); filterUserData();
         displayedTransactionCount = 100;
         renderAllTransactions(); renderAccounts();
@@ -4273,6 +4370,17 @@ window.addEventListener('load', () => {
             alert('图片正在同步至网盘，请稍候...');
         }
     });
+    editModalEl.addEventListener('hidden.bs.modal', function () {
+        // 后台同步有新数据待刷新时，在表单关闭后执行
+        if (window._pendingUIRefresh) {
+            window._pendingUIRefresh = false;
+            loadAllData();
+            filterUserData();
+            renderAllTransactions();
+            renderAccounts();
+            showToast('已刷新最新数据', 'success', 2500);
+        }
+    });
     updateTransferModeButton();
 });
 
@@ -4281,43 +4389,60 @@ async function handleAttachmentSelected(input) {
     const file = input.files[0];
     if (!file) return;
 
+    const isPdf = file.type === 'application/pdf';
+
     let currentIds = $('edit-trans-attachment-id').value ? $('edit-trans-attachment-id').value.split(',').filter(id => id.trim()) : [];
     if (currentIds.length >= 3) {
-        alert('最多只能上传 3 张照片');
+        alert('最多只能上传 3 个附件');
         input.value = '';
         return;
     }
 
     isUploadingAttachment = true;
     $('edit-trans-submit-btn').disabled = true;
-    showToast('压缩中…', 'syncing', 0);
 
     try {
-        const compressedFile = await compressImage(file, 200);
+        let base64Data, fileName, mimeType, fileSizeKB;
 
-        showToast('上传中…', 'syncing', 0);
+        if (isPdf) {
+            showToast('上传中…', 'syncing', 0);
+            base64Data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result.split(',')[1]);
+                reader.onerror = () => reject(new Error('文件读取失败'));
+                reader.readAsDataURL(file);
+            });
+            fileName = file.name || `attach_${Date.now()}.pdf`;
+            mimeType = 'application/pdf';
+            fileSizeKB = Math.round(file.size / 1024);
+        } else {
+            showToast('压缩中…', 'syncing', 0);
+            const compressedFile = await compressImage(file, 200);
+            showToast('上传中…', 'syncing', 0);
+            base64Data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result.split(',')[1]);
+                reader.onerror = () => reject(new Error('文件读取失败'));
+                reader.readAsDataURL(compressedFile);
+            });
+            fileName = `attach_${Date.now()}.jpg`;
+            mimeType = 'image/jpeg';
+            fileSizeKB = Math.round(compressedFile.size / 1024);
+        }
 
-        // 将 FileReader 包装成 Promise，确保时序完全可控
-        const base64Data = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(e.target.result.split(',')[1]);
-            reader.onerror = () => reject(new Error('文件读取失败'));
-            reader.readAsDataURL(compressedFile);
-        });
-
-        const fileName = `attach_${Date.now()}.jpg`;
         const response = await fetch(`${GAS_URL}?token=${encodeURIComponent(GAS_TOKEN)}`, {
             method: 'POST',
-            body: JSON.stringify({ action: 'uploadAttachment', filename: fileName, mimeType: 'image/jpeg', data: base64Data }),
+            body: JSON.stringify({ action: 'uploadAttachment', filename: fileName, mimeType, data: base64Data }),
             headers: { 'Content-Type': 'text/plain' }
         });
         const result = await response.json();
 
         if (result.fileId) {
-            currentIds.push(result.fileId);
+            const storedId = isPdf ? `pdf:${result.fileId}` : result.fileId;
+            currentIds.push(storedId);
             $('edit-trans-attachment-id').value = currentIds.join(',');
             renderAttachmentThumbs(currentIds);
-            showToast(`已上传（${Math.round(compressedFile.size / 1024)}KB）`, 'success', 3000);
+            showToast(`已上传（${fileSizeKB}KB）`, 'success', 3000);
         } else {
             showToast('上传失败：' + (result.error || '未知错误'), 'error');
         }
@@ -4331,7 +4456,9 @@ async function handleAttachmentSelected(input) {
     }
 }
 
-// 4. 渲染多张缩略图
+
+
+// 4. 渲染多张缩略图（图片显示缩略图，PDF显示图标）
 function renderAttachmentThumbs(ids) {
     const container = $('attachment-preview-container');
     container.innerHTML = '';
@@ -4346,12 +4473,27 @@ function renderAttachmentThumbs(ids) {
         const wrapper = document.createElement('div');
         wrapper.className = 'thumb-wrapper';
 
-        const url = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+        const isPdf = id.startsWith('pdf:');
+        const rawId = isPdf ? id.slice(4) : id;
 
-        wrapper.innerHTML = `
-            <img src="${url}" class="thumb-img" onclick="showFullImagePreviewFromSrc('${url}')">
-            <button type="button" class="thumb-remove" onclick="removeSpecificAttachment(${index})">✕</button>
-        `;
+        if (isPdf) {
+            const downloadUrl = `https://drive.google.com/uc?id=${rawId}&export=download`;
+            wrapper.innerHTML = `
+                <div class="thumb-img d-flex flex-column align-items-center justify-content-center gap-1"
+                     style="background:var(--bs-tertiary-bg);border-radius:6px;cursor:pointer;font-size:0.7rem;color:var(--bs-secondary);padding:4px;"
+                     onclick="window.open('${downloadUrl}', '_blank')" title="点击下载 PDF">
+                    <i class="bi bi-file-earmark-pdf" style="font-size:1.8rem;color:#dc3545;"></i>
+                    <span>PDF</span>
+                </div>
+                <button type="button" class="thumb-remove" onclick="removeSpecificAttachment(${index})">✕</button>
+            `;
+        } else {
+            const url = `https://drive.google.com/thumbnail?id=${rawId}&sz=w800`;
+            wrapper.innerHTML = `
+                <img src="${url}" class="thumb-img" onclick="window.open('${url}', '_blank')">
+                <button type="button" class="thumb-remove" onclick="removeSpecificAttachment(${index})">✕</button>
+            `;
+        }
         container.appendChild(wrapper);
     });
 }
@@ -5352,6 +5494,14 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
+
+// 网络恢复时自动触发后台同步
+window.addEventListener('online', () => {
+    if (currentUserName && !offlineMode && GAS_URL) {
+        window._pendingBackgroundSync = true;
+        backgroundSyncAfterLogin();
+    }
+});
 </script>
 
 
