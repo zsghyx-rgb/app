@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>App</title>
+    <title>APP</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -307,7 +307,7 @@ body {
     align-items: center;
     gap: 7px;
 }
-#app-toast.show { opacity: 1; pointer-events: auto; }
+#app-toast.show { opacity: 0.7; pointer-events: auto; }
 
 .amount-hidden { filter: blur(8px); user-select: none; }
 
@@ -570,7 +570,7 @@ body {
 
         <!-- 标题栏 + 齿轮 -->
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i> App v1.1</h4>
+            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i> APP v1.1</h4>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleLoginSettings()" title="连接设置">
                 <i class="bi bi-gear" id="login-settings-gear"></i>
             </button>
@@ -612,7 +612,7 @@ body {
 
             <!-- 设备昵称 -->
             <div class="mb-3">
-                <label class="form-label small mb-1">设备昵称</label>
+                <label class="form-label small mb-1">设备昵称 <span class="text-muted">(可选，用于访问日志)</span></label>
                 <div class="input-group input-group-sm">
                     <input type="text" class="form-control" id="device-name-input" placeholder="如：家里iPad、公司电脑" maxlength="30" autocomplete="off">
                     <button class="btn btn-outline-secondary" type="button" onclick="saveDeviceName()"><i class="bi bi-check-lg"></i></button>
@@ -678,7 +678,7 @@ body {
     <div class="sidebar">
         <div class="brand-title">
             <i class="bi bi-wallet2"></i>
-            <span style="font-size: 0.7rem;">App</span>
+            <span style="font-size: 0.7rem;">APP</span>
         </div>
         <ul class="nav nav-pills flex-md-column mb-auto">
             <li class="nav-item">
@@ -1097,7 +1097,7 @@ body {
                             <i class="bi bi-archive"></i> 数据存档管理
                         </div>
                         <div class="card-body">
-                            <p class="text-muted small mb-2">归档历史年份数据，归档数据只读，可解档恢复。</p>
+                            <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档数据只读，可解档恢复。</p>
                             <div id="archive-management-ui" class="mb-2"></div>
                             <button class="btn btn-outline-secondary btn-sm w-100" onclick="showHistoryYearSelector()">
                                 <i class="bi bi-clock-history"></i> 查看历史存档
@@ -1111,6 +1111,7 @@ body {
                         <div class="card-header bg-transparent fw-bold">汇率配置 (对人民币)</div>
                         <div class="card-body">
                             <div id="exchange-rate-inputs"></div>
+                            <p class="text-muted small mt-2">当前: <span id="current-exchange-rate"></span></p>
                         </div>
                     </div>
                 </div>
@@ -1678,7 +1679,7 @@ function gasRequestUrl(options = {}) {
     if (options.file)     params.push(`file=${encodeURIComponent(options.file)}`);
     if (options.fileName) params.push(`fileName=${encodeURIComponent(options.fileName)}`);
     if (options.mimeType) params.push(`mimeType=${encodeURIComponent(options.mimeType)}`);
-    const device = localStorage.getItem('APP_device_name') || 'unknown';
+    const device = localStorage.getItem('APP_device_name') || guessDeviceName();
     params.push(`device=${encodeURIComponent(device)}`);
     return params.length ? `${GAS_URL}?${params.join('&')}` : GAS_URL;
 }
@@ -1757,20 +1758,56 @@ function saveGasToken() {
     initGasTokenUI();
 }
 
+function guessDeviceName() {
+    const ua = navigator.userAgent;
+
+    if (/iPhone/.test(ua)) {
+        const v = ua.match(/OS (\d+)_/);
+        return v ? `iPhone (iOS ${v[1]})` : 'iPhone';
+    }
+    if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+        const v = ua.match(/OS (\d+)_/);
+        return v ? `iPad (iOS ${v[1]})` : 'iPad';
+    }
+    const android = ua.match(/Android[^;]*;\s*([^)]+)\)/);
+    if (android) {
+        const model = android[1].replace(/\s*Build\/\S+/, '').trim();
+        return model || 'Android 设备';
+    }
+    if (/Macintosh/.test(ua)) return 'Mac';
+    const win = ua.match(/Windows NT ([\d.]+)/);
+    if (win) {
+        const m = { '10.0': 'Windows 10/11', '6.3': 'Windows 8.1', '6.1': 'Windows 7' };
+        return m[win[1]] || 'Windows PC';
+    }
+    if (/Linux/.test(ua)) return 'Linux';
+    return '未知设备';
+}
+
 function initDeviceNameUI() {
     const saved = localStorage.getItem('APP_device_name') || '';
     const input = $('device-name-input');
     const hint = $('device-name-hint');
-    if (input) input.value = saved;
-    if (hint) hint.textContent = saved ? `当前：${saved}` : '未设置，日志中显示为 unknown';
+    if (!input) return;
+    if (saved) {
+        input.value = saved;
+        if (hint) hint.textContent = `当前：${saved}`;
+    } else {
+        const guessed = guessDeviceName();
+        input.value = guessed;
+        if (hint) hint.textContent = '自动识别，可修改后保存';
+    }
 }
 
 function saveDeviceName() {
-    const val = ($('device-name-input').value || '').trim();
+    let val = ($('device-name-input').value || '').trim();
+    // 用户清空时，回退到自动生成的昵称
+    if (!val) val = guessDeviceName();
     localStorage.setItem('APP_device_name', val);
+    $('device-name-input').value = val;
     const hint = $('device-name-hint');
-    if (hint) hint.textContent = val ? `已保存：${val}` : '已清除，日志中显示为 unknown';
-    showToast(val ? `设备昵称已保存：${val}` : '设备昵称已清除', 'success', 2000);
+    if (hint) hint.textContent = `已保存：${val}`;
+    showToast(`设备昵称已保存：${val}`, 'success', 2000);
 }
 
 // ==================== 离线模式管理 ====================
