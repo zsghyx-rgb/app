@@ -842,6 +842,12 @@ body {
                                     <i class="bi bi-person"></i> <span id="trans-user-filter-text">所有用户</span>
                                 </button>
                             </div>
+                            <div>
+                                <button class="btn btn-sm btn-primary" id="transfer-mode-toggle" onclick="toggleDisplayMode()" title="点击切换显示模式">
+                                    <i class="bi bi-eye" id="transfer-mode-icon"></i>
+                                    <span id="transfer-mode-text">收支+转账</span>
+                                </button>
+                            </div>
                             <div style="width: 120px;">
                                 <input type="date" class="form-control form-control-sm" id="filter-start-date" onchange="applyTransactionFilter()">
                             </div>
@@ -856,12 +862,6 @@ body {
                                     <button class="btn btn-outline-secondary" onclick="quickDateFilter('year')">本年</button>
                                     <button class="btn btn-outline-secondary" onclick="quickDateFilter('all')">全部</button>
                                 </div>
-                            </div>
-                            <div>
-                                <button class="btn btn-sm btn-primary" id="transfer-mode-toggle" onclick="toggleDisplayMode()" title="点击切换显示模式">
-                                    <i class="bi bi-eye" id="transfer-mode-icon"></i>
-                                    <span id="transfer-mode-text">收支+转账</span>
-                                </button>
                             </div>
                         </div>
                     </div>
