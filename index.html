@@ -570,7 +570,7 @@ body {
 
         <!-- 标题栏 + 齿轮 -->
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i>记一笔 v1.1</h4>
+            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i>记一笔</h4>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleLoginSettings()" title="连接设置">
                 <i class="bi bi-gear" id="login-settings-gear"></i>
             </button>
@@ -1257,6 +1257,9 @@ body {
                     </div>
                 </div>
             </div>
+            <div class="text-center mt-3 mb-2">
+                <span class="text-muted" style="font-size:0.75rem;">v1.1.1</span>
+            </div>
         </div>
     </div>
 </div>
@@ -1382,6 +1385,10 @@ body {
                         <label class="compact-form-label" id="acc-balance-label">初始余额</label>
                         <input type="number" step="0.01" class="form-control compact-form-control" id="acc-balance" value="0" required="">
                         <div class="form-text d-none" id="acc-balance-hint">修改余额将自动生成一笔调整记录</div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="compact-form-label">备注</label>
+                        <input type="text" class="form-control compact-form-control" id="acc-notes" placeholder="账户备注（可选）">
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100 mt-2" id="acc-submit-btn">保存</button>
                 </form>
@@ -3215,6 +3222,7 @@ function renderAccounts() {
                         <div style="flex:1">
                             <div class="fw-bold text-truncate">${acc.name}</div>
                             <div class="small text-muted">${acc.currency}</div>
+                            ${acc.notes ? `<div class="small text-muted text-truncate" style="max-width:120px;" title="${acc.notes}">${acc.notes}</div>` : ''}
                         </div>
                         <div class="text-end">
                             <h5 class="mb-0 ${balClass}">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(bal, acc.currency)}</h5>
@@ -3259,6 +3267,17 @@ function renderAccounts() {
     renderStatsCurrencyButtons();
 }
 
+function getOrCreateBalanceAdjCategory(type) {
+    const list = type === 'income' ? categories.income : categories.expense;
+    const keywords = ['其他', '其它', '余额调整'];
+    const found = list.find(c => keywords.some(k => c === k || c.includes(k)));
+    if (found) return found;
+    // 未找到，创建「余额调整」分类
+    list.push('余额调整');
+    saveUserData();
+    return '余额调整';
+}
+
 function calculateBalance(accId) {
     const acc = accounts.find(a => a.id == accId);
     let bal = parseFloat(acc.initialBalance);
@@ -3298,6 +3317,7 @@ function openNewAccount() {
     $('acc-add-only-fields').style.display = '';
     $('acc-balance-label').textContent = '初始余额';
     $('acc-balance-hint').classList.add('d-none');
+    $('acc-notes').value = '';
     new bootstrap.Modal($('accountModal')).show();
 }
 
@@ -3313,6 +3333,7 @@ function openEditAccount(id) {
     $('acc-add-only-fields').style.display = 'none';
     $('acc-balance-label').textContent = '账户余额';
     $('acc-balance-hint').classList.remove('d-none');
+    $('acc-notes').value = acc.notes || '';
     new bootstrap.Modal($('accountModal')).show();
 }
 
@@ -3321,6 +3342,7 @@ $('account-form').addEventListener('submit', (e) => {
     const mode = $('acc-mode').value;
     const name = $('acc-name').value;
     const balance = parseFloat($('acc-balance').value);
+    const notes = $('acc-notes').value.trim();
 
     if (mode === 'add') {
         accounts.push({
@@ -3329,6 +3351,7 @@ $('account-form').addEventListener('submit', (e) => {
             accountType: $('acc-type').value,
             currency: $('acc-currency').value,
             initialBalance: balance,
+            notes,
             ownerName: currentUserName,
             updatedAt: Date.now()
         });
@@ -3343,13 +3366,16 @@ $('account-form').addEventListener('submit', (e) => {
             const oldBalance = calculateBalance(id);
             const diff = balance - oldBalance;
             acc.name = name;
+            acc.notes = notes;
             acc.updatedAt = Date.now();
             if (Math.abs(diff) > 0.01) {
+                const adjType = diff > 0 ? 'income' : 'expense';
+                const adjCategory = getOrCreateBalanceAdjCategory(adjType);
                 transactions.unshift({
                     id: Date.now() + Math.random(),
                     date: new Date().toISOString().split('T')[0],
-                    type: diff > 0 ? 'income' : 'expense',
-                    accountId: id, amount: diff, category: '其他',
+                    type: adjType,
+                    accountId: id, amount: diff, category: adjCategory,
                     desc: `余额调整 (${oldBalance.toFixed(2)} → ${balance.toFixed(2)})`,
                     ownerName: currentUserName, isTransfer: false, tags: '', updatedAt: Date.now()
                 });
