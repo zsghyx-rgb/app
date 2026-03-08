@@ -635,6 +635,9 @@ body {
                     <i class="bi bi-file-earmark-plus"></i> 新建数据文件
                 </button>
             </div>
+            <div class="text-end mt-2">
+                <span class="text-muted" style="font-size:0.7rem;">v1.1.3</span>
+            </div>
         </div>
 
         <!-- ① 选择数据文件 -->
@@ -1256,9 +1259,6 @@ body {
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="text-center mt-3 mb-2">
-                <span class="text-muted" style="font-size:0.75rem;">v1.1.1</span>
             </div>
         </div>
     </div>
@@ -3220,9 +3220,8 @@ function renderAccounts() {
                      data-id="${acc.id}" onclick="openAccountDetail(${acc.id})" style="cursor:pointer;">
                     <div class="d-flex justify-content-between align-items-center">
                         <div style="flex:1">
-                            <div class="fw-bold text-truncate">${acc.name}</div>
-                            <div class="small text-muted">${acc.currency}</div>
-                            ${acc.notes ? `<div class="small text-muted text-truncate" style="max-width:120px;" title="${acc.notes}">${acc.notes}</div>` : ''}
+                            <div class="fw-bold text-truncate">${acc.name} · <span class="fw-normal">${acc.currency}</span></div>
+                            ${acc.notes ? `<div class="small text-muted text-truncate" style="max-width:140px;" title="${acc.notes}">${acc.notes}</div>` : ''}
                         </div>
                         <div class="text-end">
                             <h5 class="mb-0 ${balClass}">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(bal, acc.currency)}</h5>
