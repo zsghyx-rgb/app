@@ -3218,7 +3218,7 @@ function renderAccounts() {
             col.innerHTML = `
                 <div class="card account-card p-3 shadow-sm" 
                      data-id="${acc.id}" onclick="openAccountDetail(${acc.id})" style="cursor:pointer;">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div style="flex:1">
                             <div class="fw-bold text-truncate">${acc.name} · <span class="fw-normal">${acc.currency}</span></div>
                             ${acc.notes ? `<div class="small text-muted text-truncate" style="max-width:140px;" title="${acc.notes}">${acc.notes}</div>` : ''}
@@ -3247,7 +3247,7 @@ function renderAccounts() {
             const initial = acc.ownerName.charAt(0).toLowerCase();
             col.innerHTML = `
                 <div class="card account-card account-card-other p-3 shadow-sm">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="fw-bold text-truncate">[${initial}] ${acc.name}</div>
                             <div class="small text-muted">${acc.currency}</div>
