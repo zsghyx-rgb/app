@@ -639,7 +639,7 @@ body {
                 </button>
             </div>
             <div class="text-end mt-2">
-                <span class="text-muted" style="font-size:0.7rem;">v1.2.0</span>
+                <span class="text-muted" style="font-size:0.7rem;">v1.2.1</span>
             </div>
         </div>
 
@@ -4644,6 +4644,8 @@ function updateDescHint(descId, hintId, typeId, catId, accId) {
     const hint = $(hintId);
     if (!hint) return;
     if (desc.trim().length < 2) { hint.style.display = 'none'; return; }
+    // 多笔模式下不推荐分类（一备注对多分类，推荐无意义）
+    if (_multiItemsDraft && _multiItemsDraft.length > 1) { hint.style.display = 'none'; return; }
 
     const result = findBestCategoryFromHistory(desc, type);
     if (!result) { hint.style.display = 'none'; return; }
@@ -4888,12 +4890,12 @@ function applyDescHint(catId, category) {
 async function checkHistoryCategories() {
     const suspects = [];
     const myTrans = transactions.filter(t =>
-        !t.isTransfer && t.ownerName === currentUserName && t.desc
+        !t.isTransfer && t.ownerName === currentUserName && t.desc && !(t.items && t.items.length > 1)
     );
     myTrans.forEach(t => {
         const type = t.amount > 0 ? 'income' : 'expense';
-        // 查找除自身外的历史，避免自我强化
-        const pool = myTrans.filter(x => x !== t && x.category);
+        // 查找除自身外的历史，避免自我强化；排除多笔交易（一备注多分类会污染参考样本）
+        const pool = myTrans.filter(x => x !== t && x.category && !(x.items && x.items.length > 1));
         const catScores = {};
         pool.forEach(x => {
             const score = descSimilarityScore(t.desc, x.desc);
