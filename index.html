@@ -537,6 +537,9 @@ body {
     }
 }
 
+.multi-row-amt::-webkit-outer-spin-button,
+.multi-row-amt::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.multi-row-amt { -moz-appearance: textfield; }
 </style>
     <!-- 鸿蒙HarmonyOS 3.0 兼容补丁 -->
     <script>
@@ -636,7 +639,7 @@ body {
                 </button>
             </div>
             <div class="text-end mt-2">
-                <span class="text-muted" style="font-size:0.7rem;">v1.1.4</span>
+                <span class="text-muted" style="font-size:0.7rem;">v1.2.0</span>
             </div>
         </div>
 
@@ -1264,6 +1267,49 @@ body {
     </div>
 </div>
 
+<!-- ==================== 多笔交易子弹窗 ==================== -->
+<div class="modal fade" id="multiItemsModal" tabindex="-1" data-bs-backdrop="false" style="z-index:1065;">
+    <div class="modal-dialog modal-sm" style="z-index:1066;">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title fs-6">多笔记录</h5>
+                <button type="button" class="btn-close" onclick="closeMultiItemsModal()"></button>
+            </div>
+            <div class="modal-body p-2">
+                <div class="d-flex mb-1" style="font-size:0.75rem;color:var(--bs-secondary);padding:0 2px;">
+                    <div style="flex:2;">类别</div>
+                    <div style="flex:1;text-align:right;padding-right:30px;">金额</div>
+                </div>
+                <div id="multi-items-list"></div>
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-1" onclick="addMultiItemRow()">
+                    <i class="bi bi-plus"></i> 添加一行
+                </button>
+            </div>
+            <div class="modal-footer py-2 gap-2">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearMultiItems()" title="清除多笔，恢复单笔">清除多笔</button>
+                <button type="button" class="btn btn-primary btn-sm flex-grow-1" onclick="confirmMultiItems()">确认</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 多笔明细查看弹窗 ==================== -->
+<div class="modal fade" id="transItemsDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title fs-6" id="transItemsDetailTitle">分录明细</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-2" id="transItemsDetailBody"></div>
+            <div class="modal-footer py-2 gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" id="transItemsEditBtn">编辑</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ==================== 模态框 ==================== -->
 
 <!-- 新增/编辑计划交易 -->
@@ -1430,14 +1476,27 @@ body {
                             <select class="form-select compact-form-control" id="edit-trans-account" required=""></select>
                         </div>
                         <div class="col-6">
-                            <label class="compact-form-label">类别</label>
+                            <label class="compact-form-label d-flex justify-content-between align-items-center">
+                                <span>类别</span>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size:0.7rem;line-height:1.4;" onclick="openMultiItemsModal()" id="multi-items-btn" title="多笔记录">
+                                    <i class="bi bi-list-ul"></i> 多笔
+                                </button>
+                            </label>
+                            <!-- 单笔：正常下拉 -->
                             <select class="form-select compact-form-control" id="edit-trans-category" required=""></select>
+                            <!-- 多笔：灰显文字，点击可编辑 -->
+                            <div id="edit-trans-category-multi" class="form-control compact-form-control text-muted d-none" style="cursor:pointer;background:var(--bs-secondary-bg);" onclick="openMultiItemsModal()"></div>
                         </div>
                     </div>
 
                     <div class="row g-2 mb-2">
                         <div class="col-6">
-                            <label class="compact-form-label">金额</label>
+                            <label class="compact-form-label d-flex justify-content-between align-items-center">
+                                <span>金额</span>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1 d-none" style="font-size:0.7rem;line-height:1.4;" onclick="openMultiItemsModal()" id="edit-trans-multi-hint" title="编辑多笔明细">
+                                    <i class="bi bi-list-ul"></i> 多笔
+                                </button>
+                            </label>
                             <input type="number" step="0.01" class="form-control compact-form-control" id="edit-trans-amount" required="">
                         </div>
                         <div class="col-6">
@@ -3045,7 +3104,16 @@ function exportTransactionCsv() {
     let csv = '日期,类型,金额,类别,所有者,账户,备注,标签\n';
     transactions.filter(t => !t.isTransfer).forEach(t => {
         const acc = accounts.find(a => a.id == t.accountId);
-        csv += `${t.date},${t.type},${Math.abs(t.amount)},${t.category || ''},${t.ownerName},${acc?.name || ''},"${(t.desc || '').replace(/"/g, '""')}","${(t.tags || '').replace(/"/g, '""')}"\n`;
+        const accName = acc?.name || '';
+        const descEsc = (t.desc || '').replace(/"/g, '""');
+        const tagsEsc = (t.tags || '').replace(/"/g, '""');
+        if (t.items && t.items.length > 1) {
+            t.items.forEach(it => {
+                csv += `${t.date},${t.type},${Math.abs(it.amount)},${it.category || ''},${t.ownerName},${accName},"${descEsc}","${tagsEsc}"\n`;
+            });
+        } else {
+            csv += `${t.date},${t.type},${Math.abs(t.amount)},${t.category || ''},${t.ownerName},${accName},"${descEsc}","${tagsEsc}"\n`;
+        }
     });
     const blob = new Blob(['\ufeff' + csv], {type: 'text/csv'});
     const a = document.createElement('a');
@@ -3471,7 +3539,8 @@ function renderDetailContent(id) {
                 if (cleanDesc) subLine += ' · ' + cleanDesc;
             } else {
                 const tagsHtml = t.tags ? `<span style="font-size:0.72rem;color:var(--bs-secondary);margin-left:4px;">@${t.tags}</span>` : '';
-                titleHtml = `<span style="font-weight:600;font-size:0.83rem;">${t.category || ''}${tagsHtml}</span>`;
+                const catDisplay = t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || '');
+                titleHtml = `<span style="font-weight:600;font-size:0.83rem;">${catDisplay}${tagsHtml}</span>`;
                 if (t.desc) subLine += ' · ' + t.desc;
             }
 
@@ -3483,7 +3552,14 @@ function renderDetailContent(id) {
             if (canEdit) {
                 item.addEventListener('mouseenter', () => item.style.background = 'rgba(var(--bs-primary-rgb),0.06)');
                 item.addEventListener('mouseleave', () => item.style.background = 'var(--bs-body-bg)');
-                item.addEventListener('click', () => { openedFromDetail = true; isTransfer ? openEditTransfer(t.id) : openEditTransaction(t.id); });
+                item.addEventListener('click', () => {
+                    if (!isTransfer && t.items && t.items.length > 1) {
+                        showTransItemsDetail(t);
+                    } else {
+                        openedFromDetail = true;
+                        isTransfer ? openEditTransfer(t.id) : openEditTransaction(t.id);
+                    }
+                });
             }
             item.innerHTML = `
                 <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
@@ -3542,7 +3618,7 @@ function renderDetailContent(id) {
                 amtColorClass = t.amount < 0 ? 'text-danger' : 'text-success';
                 accountOutDisplay = `<small>${getAccountDisplayName(acc)}</small>`;
                 displayAmt = `${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}`;
-                categoryDisplay = t.category || '';
+                categoryDisplay = t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || '');
                 descDisplay = t.desc || '';
             }
 
@@ -3620,6 +3696,7 @@ function openNewTransFromDetail() {
     $('edit-trans-amount').value = '';
     $('edit-trans-tags').value = '';
     $('edit-trans-desc').value = '';
+    resetMultiItems();
     new bootstrap.Modal($('editTransactionModal')).show();
 }
 
@@ -3677,6 +3754,7 @@ function openNewTransaction() {
     $('edit-trans-amount').value = '';
     $('edit-trans-tags').value = '';
     $('edit-trans-desc').value = '';
+    resetMultiItems();
     new bootstrap.Modal($('editTransactionModal')).show();
 }
 
@@ -3800,10 +3878,25 @@ function openEditTransaction(id) {
     $('edit-trans-type').value = t.type;
     updateEditFormCategories();
     $('edit-trans-account').value = t.accountId;
-    $('edit-trans-category').value = t.category;
-    $('edit-trans-amount').value = Math.abs(t.amount);
     $('edit-trans-tags').value = t.tags || '';
     $('edit-trans-desc').value = t.desc || '';
+    // 加载多笔 or 单笔
+    if (t.items && t.items.length > 1) {
+        const type = t.type;
+        _multiItemsDraft = t.items.slice();
+        const total = t.items.reduce((s, it) => s + Math.abs(it.amount), 0);
+        $('edit-trans-amount').value = total.toFixed(2);
+        const firstCat = t.items[0].category;
+        const moreCount = t.items.length - 1;
+        $('edit-trans-category-multi').textContent = `${firstCat}等${moreCount}项`;
+        setMultiMode(true);
+        // 选中第一项分类（隐藏状态，供回退用）
+        $('edit-trans-category').value = firstCat;
+    } else {
+        resetMultiItems();
+        $('edit-trans-category').value = t.category;
+        $('edit-trans-amount').value = Math.abs(t.amount);
+    }
     // 加载附件
     resetAttachmentUI();
     if (t.attachmentId) {
@@ -3852,6 +3945,35 @@ function openEditTransfer(id) {
     new bootstrap.Modal($('editTransferModal')).show();
 }
 
+function showTransItemsDetail(t) {
+    const acc = accounts.find(a => a.id == t.accountId);
+    const sym = acc ? (CURRENCY_SYMBOLS[acc.currency] || '') : '';
+    const cur = acc ? acc.currency : '';
+    const colorClass = t.type === 'expense' ? 'text-danger' : 'text-success';
+    let html = `<div class="mb-2 small text-muted">${t.date} · ${acc ? acc.name : ''}</div>`;
+    html += '<table class="table table-sm mb-2"><tbody>';
+    t.items.forEach(it => {
+        html += `<tr>
+            <td class="ps-0 py-1">${it.category}</td>
+            <td class="text-end fw-bold ${colorClass} pe-0 py-1">${sym}${formatAmount(Math.abs(it.amount), cur)}</td>
+        </tr>`;
+    });
+    html += `</tbody><tfoot><tr class="border-top">
+        <td class="ps-0 fw-bold py-1">合计</td>
+        <td class="text-end fw-bold ${colorClass} pe-0 py-1">${sym}${formatAmount(Math.abs(t.amount), cur)}</td>
+    </tr></tfoot></table>`;
+    if (t.desc) html += `<div class="small text-muted mb-1">备注：${t.desc}</div>`;
+    if (t.tags) html += `<div class="small text-muted">标签：${t.tags}</div>`;
+    $('transItemsDetailBody').innerHTML = html;
+    $('transItemsDetailTitle').textContent = `${t.items.length} 条分录明细`;
+    $('transItemsEditBtn').onclick = () => {
+        bootstrap.Modal.getInstance($('transItemsDetailModal')).hide();
+        openedFromDetail = true;
+        openEditTransaction(t.id);
+    };
+    new bootstrap.Modal($('transItemsDetailModal')).show();
+}
+
 function maybeReturnToDetail() {
     if (openedFromDetail && currentDetailAccountId) {
         openedFromDetail = false;
@@ -3878,6 +4000,159 @@ function deleteCurrentTransfer() {
         maybeReturnToDetail();
     }
 }
+
+// ==================== 多笔交易 ====================
+// 当前暂存的多笔分录（确认前）
+let _multiItemsDraft = null; // null = 单笔模式, [{category, amount}] = 多笔模式
+
+function openMultiItemsModal() {
+    const type = $('edit-trans-type').value;
+    const cats = type === 'expense' ? categories.expense : categories.income;
+
+    // 初始化草稿：若已有多笔数据则加载，否则从当前单笔字段预填第一行
+    let rows = _multiItemsDraft ? _multiItemsDraft.map(r => ({ category: r.category, amount: Math.abs(r.amount) })) : [];
+    if (rows.length === 0) {
+        const singleAmt = parseFloat($('edit-trans-amount').value);
+        const singleCat = $('edit-trans-category').value || cats[0] || '';
+        rows = [{ category: singleCat, amount: isNaN(singleAmt) ? '' : Math.abs(singleAmt) }];
+    }
+
+    // 渲染行
+    renderMultiItemRows(rows, cats);
+
+    // 显示子 modal（backdrop:static 防止关闭父modal，但添加点击空白关闭）
+    const bsModal = new bootstrap.Modal(document.getElementById('multiItemsModal'), { backdrop: false, keyboard: true });
+    bsModal.show();
+    // 点击子 modal 背景（非内容区）关闭
+    const el = document.getElementById('multiItemsModal');
+    el._closeHandler = function(e) { if (e.target === el) closeMultiItemsModal(); };
+    el.addEventListener('click', el._closeHandler);
+}
+
+function renderMultiItemRows(rows, cats) {
+    const list = $('multi-items-list');
+    list.innerHTML = '';
+    const type = $('edit-trans-type').value;
+    const catList = cats || (type === 'expense' ? categories.expense : categories.income);
+    rows.forEach((row, i) => {
+        const div = document.createElement('div');
+        div.className = 'd-flex gap-1 mb-1 align-items-center';
+        div.dataset.idx = i;
+        const catOpts = catList.map(c => `<option value="${c}"${c === row.category ? ' selected' : ''}>${c}</option>`).join('');
+        div.innerHTML = `
+            <select class="form-select compact-form-control multi-row-cat" style="flex:2;">${catOpts}</select>
+            <input type="number" step="0.01" min="0.01" class="form-control compact-form-control multi-row-amt" style="flex:1;" placeholder="金额" value="${row.amount || ''}" required>
+            <button type="button" class="btn btn-outline-danger btn-sm multi-row-del" style="width:28px;padding:0;flex-shrink:0;" onclick="removeMultiItemRow(this)"><i class="bi bi-x"></i></button>`;
+        list.appendChild(div);
+    });
+    updateRemoveMultiBtns();
+}
+
+function addMultiItemRow() {
+    const type = $('edit-trans-type').value;
+    const cats = type === 'expense' ? categories.expense : categories.income;
+    const list = $('multi-items-list');
+    const rows = getMultiItemRowData();
+    rows.push({ category: cats[0] || '', amount: '' });
+    renderMultiItemRows(rows, cats);
+}
+
+function removeMultiItemRow(btn) {
+    const rows = getMultiItemRowData();
+    const idx = parseInt(btn.closest('[data-idx]').dataset.idx);
+    if (rows.length <= 1) return;
+    rows.splice(idx, 1);
+    renderMultiItemRows(rows);
+}
+
+function updateRemoveMultiBtns() {
+    const btns = $('multi-items-list').querySelectorAll('.multi-row-del');
+    btns.forEach(b => b.style.visibility = btns.length > 1 ? 'visible' : 'hidden');
+}
+
+function getMultiItemRowData() {
+    const rows = [];
+    $('multi-items-list').querySelectorAll('[data-idx]').forEach(div => {
+        rows.push({
+            category: div.querySelector('.multi-row-cat').value,
+            amount: parseFloat(div.querySelector('.multi-row-amt').value) || ''
+        });
+    });
+    return rows;
+}
+
+function confirmMultiItems() {
+    const rows = getMultiItemRowData();
+    const validRows = rows.filter(r => r.amount > 0);
+    if (validRows.length === 0) { alert('请至少填写一条有效金额'); return; }
+
+    if (validRows.length === 1) {
+        // 只有一行，退回单笔模式
+        _multiItemsDraft = null;
+        const type = $('edit-trans-type').value;
+        const sign = type === 'expense' ? -1 : 1;
+        $('edit-trans-amount').value = validRows[0].amount;
+        $('edit-trans-category').value = validRows[0].category;
+        setMultiMode(false);
+    } else {
+        const type = $('edit-trans-type').value;
+        const sign = type === 'expense' ? -1 : 1;
+        _multiItemsDraft = validRows.map(r => ({ category: r.category, amount: sign * Math.abs(r.amount) }));
+        const total = validRows.reduce((s, r) => s + r.amount, 0);
+        const firstCat = validRows[0].category;
+        const moreCount = validRows.length - 1;
+        // update main modal display
+        $('edit-trans-amount').value = total.toFixed(2);
+        $('edit-trans-category-multi').textContent = `${firstCat}等${moreCount}项`;
+        setMultiMode(true);
+    }
+    closeMultiItemsModal();
+}
+
+function clearMultiItems() {
+    _multiItemsDraft = null;
+    setMultiMode(false);
+    closeMultiItemsModal();
+}
+
+function setMultiMode(on) {
+    const catSel = $('edit-trans-category');
+    const catMulti = $('edit-trans-category-multi');
+    const amtInput = $('edit-trans-amount');
+    const hint = $('edit-trans-multi-hint');
+    if (on) {
+        catSel.classList.add('d-none');
+        catMulti.classList.remove('d-none');
+        amtInput.readOnly = true;
+        amtInput.style.background = 'var(--bs-secondary-bg)';
+        amtInput.style.color = 'var(--bs-secondary)';
+        amtInput.removeAttribute('required');
+        if (hint) hint.classList.remove('d-none');
+    } else {
+        catSel.classList.remove('d-none');
+        catMulti.classList.add('d-none');
+        amtInput.readOnly = false;
+        amtInput.style.background = '';
+        amtInput.style.color = '';
+        amtInput.setAttribute('required', '');
+        if (hint) hint.classList.add('d-none');
+        $('edit-trans-amount').value = '';
+    }
+}
+
+function closeMultiItemsModal() {
+    const el = document.getElementById('multiItemsModal');
+    if (el._closeHandler) { el.removeEventListener('click', el._closeHandler); el._closeHandler = null; }
+    const inst = bootstrap.Modal.getInstance(el);
+    if (inst) inst.hide();
+}
+
+function resetMultiItems() {
+    _multiItemsDraft = null;
+    setMultiMode(false);
+}
+
+// ==================== 多笔交易 END ====================
 
 function updateEditFormCategories() {
     const type = $('edit-trans-type').value;
@@ -3908,37 +4183,47 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
     const date = $('edit-trans-date').value;
     const type = $('edit-trans-type').value;
     const accountId = $('edit-trans-account').value;
-    const category = $('edit-trans-category').value;
-    const amount = parseFloat($('edit-trans-amount').value);
     const tags = $('edit-trans-tags').value;
     const desc = $('edit-trans-desc').value;
     const attachmentId = $('edit-trans-attachment-id')?.value || '';
-    const finalAmount = type === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+
+    // 多笔 or 单笔
+    let category, finalAmount, itemsData;
+    if (_multiItemsDraft && _multiItemsDraft.length > 1) {
+        const sign = type === 'expense' ? -1 : 1;
+        itemsData = _multiItemsDraft.map(it => ({ category: it.category, amount: sign * Math.abs(it.amount) }));
+        finalAmount = itemsData.reduce((s, it) => s + it.amount, 0);
+        category = itemsData[0].category;
+    } else {
+        category = $('edit-trans-category').value;
+        const amount = parseFloat($('edit-trans-amount').value);
+        if (isNaN(amount) || amount <= 0) { alert('请输入有效金额'); return; }
+        finalAmount = type === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+        itemsData = null;
+    }
 
     if (mode === 'add') {
-        // 记住本次输入的日期/类型/账户/分类，供下次新增时预填
         _lastTransPrefs = { type, accountId, category };
         transactions.unshift({
             id: Date.now() + Math.random(), date, type, accountId,
             amount: finalAmount, category, tags, desc,
+            ...(itemsData ? { items: itemsData } : {}),
             ...(attachmentId ? { attachmentId } : {}),
             ownerName: currentUserName, isTransfer: false, updatedAt: Date.now()
         });
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
         displayedTransactionCount = 100; renderAllTransactions(); renderAccounts();
-        // renderAccounts() -> updateSelectOptions() 会重置下拉框，需要手动还原
         $('edit-trans-account').value = accountId;
         const catEl = $('edit-trans-category');
         if (catEl && [...catEl.options].find(o => o.value === category)) catEl.value = category;
-        // 若在账户详情页，只刷新内容（不触发switchTab，保持modal开着）
         if (currentDetailAccountId) refreshDetailContent(currentDetailAccountId);
-        // 清空金额/标签/备注，不聚焦任何输入框
         $('edit-trans-amount').value = '';
         $('edit-trans-tags').value = '';
         $('edit-trans-desc').value = '';
         const hintEl = $('edit-trans-desc-hint');
         if (hintEl) hintEl.style.display = 'none';
         resetAttachmentUI();
+        resetMultiItems();
         showToast('已添加', 'success', 1500);
     } else {
         const id = parseFloat($('edit-trans-id').value);
@@ -3946,13 +4231,14 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
         if (t) {
             t.date = date; t.type = type; t.accountId = accountId;
             t.category = category; t.amount = finalAmount; t.tags = tags; t.desc = desc;
-            if (attachmentId) t.attachmentId = attachmentId;
-            else delete t.attachmentId;
+            if (itemsData) t.items = itemsData; else delete t.items;
+            if (attachmentId) t.attachmentId = attachmentId; else delete t.attachmentId;
             t.updatedAt = Date.now();
             saveUserData(); triggerAutoSave(); filterUserData();
             displayedTransactionCount = 100;
             renderAllTransactions(); renderAccounts();
             bootstrap.Modal.getInstance($('editTransactionModal')).hide();
+            resetMultiItems();
             maybeReturnToDetail();
         }
     }
@@ -4208,7 +4494,7 @@ function renderAllTransactions() {
         tr.innerHTML = `
             <td>${t.date}</td>
             <td><div class="text-start ps-2 ${typeColorClass}">${typeText}</div></td>
-            <td>${t.isTransfer ? '' : (t.category || '')}</td>
+            <td>${t.isTransfer ? '' : (t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || ''))}</td>
             <td><small>${getAccountDisplayName(acc)}</small></td>
             <td><div class="fw-bold ${t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success')}">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div></td>
             <td>${toAccountDisplay}</td>
@@ -4260,7 +4546,7 @@ function renderAllTransactions() {
                 const attachIconHtml = t.attachmentId ? ` <i class="bi bi-paperclip" style="color:var(--bs-secondary);font-size:0.72rem;"></i>` : '';
                 card.innerHTML = `
                     <div class="card-line-1">
-                        <span class="category-text">${t.category || ''}${tagsHtml}${attachIconHtml}</span>
+                        <span class="category-text">${(t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || ''))}${tagsHtml}${attachIconHtml}</span>
                         <div class="${amountClass} fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
                     </div>
                     <div class="card-line-2">
@@ -4736,9 +5022,15 @@ function renderExpenseChart(data) {
     const cats = {};
     data.filter(t => t.amount < 0 && !t.isTransfer).forEach(t => {
         const acc = accounts.find(a => a.id == t.accountId);
-        let amt = Math.abs(t.amount);
-        amt = convertAmt(amt, acc.currency);
-        cats[t.category] = (cats[t.category] || 0) + amt;
+        if (t.items && t.items.length > 1) {
+            t.items.forEach(it => {
+                const amt = convertAmt(Math.abs(it.amount), acc.currency);
+                cats[it.category] = (cats[it.category] || 0) + amt;
+            });
+        } else {
+            const amt = convertAmt(Math.abs(t.amount), acc.currency);
+            cats[t.category] = (cats[t.category] || 0) + amt;
+        }
     });
     const sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
     chartInstances.expense = new Chart(ctx, {
@@ -4859,11 +5151,16 @@ function renderCategoryTrendChart(data) {
     if (chartInstances.cattrend) { chartInstances.cattrend.destroy(); chartInstances.cattrend = null; }
     if (!cat) return;
     const months = {};
-    (data || []).filter(t => t.category === cat && t.amount < 0 && !t.isTransfer).forEach(t => {
-        const m = t.date.substring(0, 7);
+    (data || []).filter(t => t.amount < 0 && !t.isTransfer).forEach(t => {
         const acc = accounts.find(a => a.id == t.accountId);
-        let amt = convertAmt(Math.abs(t.amount), acc.currency);
-        months[m] = (months[m] || 0) + amt;
+        const m = t.date.substring(0, 7);
+        if (t.items && t.items.length > 1) {
+            t.items.filter(it => it.category === cat).forEach(it => {
+                months[m] = (months[m] || 0) + convertAmt(Math.abs(it.amount), acc.currency);
+            });
+        } else if (t.category === cat) {
+            months[m] = (months[m] || 0) + convertAmt(Math.abs(t.amount), acc.currency);
+        }
     });
     const labels = Object.keys(months).sort();
     const canvas = $('categoryTrendChart');
