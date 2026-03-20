@@ -317,7 +317,8 @@ body {
 .sort-indicator { margin-left: 5px; opacity: 0.5; }
 
 .compact-form-label { margin-bottom: 0.1rem; font-size: 0.85rem; }
-.compact-form-control { padding: 0.25rem 0.5rem; font-size: 0.9rem; }
+.compact-form-control { padding: 0.25rem 0.5rem; font-size: 0.9rem; height: 2.1rem; }
+select.compact-form-control { height: 2.1rem; }
 
 .modal-body { padding: 1rem; }
 
@@ -639,7 +640,7 @@ body {
                 </button>
             </div>
             <div class="text-end mt-2">
-                <span class="text-muted" style="font-size:0.7rem;">v1.3.2</span>
+                <span class="text-muted" style="font-size:0.7rem;">v1.3.9</span>
             </div>
         </div>
 
@@ -943,6 +944,9 @@ body {
         <div id="view-stats" class="view-section">
             <div class="d-flex align-items-center mb-3 gap-2">
                 <h4 class="mb-0 flex-shrink-0">数据分析</h4>
+                <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="openSpendingAnalysis()">
+                    <i class="bi bi-pie-chart-fill"></i> 消费类型
+                </button>
                 <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1;min-width:0;">
                     <div class="btn-group flex-nowrap" id="stats-currency-btns" style="white-space:nowrap;">
                         <!-- dynamically rendered based on account currencies -->
@@ -1182,8 +1186,14 @@ body {
                     </div>
                 </div>
 
-                <div class="col-12 mobile-hide">
-                    <div class="card shadow-sm">
+                <div class="col-12">
+                    <!-- 手机端显示提示，桌面端显示完整管理 -->
+                    <div class="card shadow-sm d-md-none">
+                        <div class="card-body py-3 text-center text-muted small">
+                            <i class="bi bi-laptop me-1"></i> 类别管理功能请在电脑端操作
+                        </div>
+                    </div>
+                    <div class="card shadow-sm d-none d-md-block">
                         <div class="card-header bg-transparent fw-bold">类别管理 (可拖拽排序)</div>
                         <div class="card-body">
                             <div class="row">
@@ -1206,6 +1216,7 @@ body {
                             </div>
                         </div>
                     </div>
+                    </div><!-- end d-none d-md-block -->
                 </div>
 
                 <div class="col-12">
@@ -1268,6 +1279,63 @@ body {
 </div>
 
 <!-- ==================== 多笔交易子弹窗 ==================== -->
+<!-- ==================== 消费类型统计全屏视图 ==================== -->
+<div id="view-spending-analysis" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bs-body-bg);z-index:2000;display:none;flex-direction:column;">
+    <!-- 固定顶部：标题 + 筛选栏 -->
+    <div class="p-3 pb-2 flex-shrink-0 border-bottom" style="background:var(--bs-body-bg);">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <button class="btn btn-sm btn-outline-secondary" onclick="closeSpendingAnalysis()"><i class="bi bi-arrow-left"></i></button>
+            <h5 class="mb-0">消费类型分析</h5>
+        </div>
+        <!-- 日期 + 快速筛选 + 用户按钮 同一行 -->
+        <div class="d-flex gap-2 align-items-center" style="overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;">
+            <input type="date" class="form-control form-control-sm flex-shrink-0" id="sa-start-date" style="width:130px;min-width:130px;" onchange="renderSpendingAnalysis()">
+            <input type="date" class="form-control form-control-sm flex-shrink-0" id="sa-end-date" style="width:130px;min-width:130px;" onchange="renderSpendingAnalysis()">
+            <div class="btn-group btn-group-sm flex-shrink-0">
+                <button class="btn btn-outline-secondary" onclick="saQuickDate('month')">本月</button>
+                <button class="btn btn-outline-secondary" onclick="saQuickDate('3months')">3月</button>
+                <button class="btn btn-outline-secondary" onclick="saQuickDate('year')">本年</button>
+                <button class="btn btn-outline-secondary" onclick="saQuickDate('all')">全部</button>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary flex-shrink-0" id="sa-user-filter-btn" onclick="saCycleUser()">
+                <i class="bi bi-person"></i> <span id="sa-user-filter-text">所有用户</span>
+            </button>
+        </div>
+    </div>
+    <!-- 可滚动内容区 -->
+    <div class="p-3 pt-2" style="overflow-y:auto;flex:1;">
+        <!-- 汇总卡片 -->
+        <div class="row g-2 mb-3" id="sa-summary-cards"></div>
+        <!-- 图表 -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">占比分布</h6>
+                <div style="height:260px;"><canvas id="saTypeChart"></canvas></div>
+            </div>
+        </div>
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">月度趋势</h6>
+                <div style="height:260px;overflow-x:auto;"><canvas id="saTrendChart"></canvas></div>
+            </div>
+        </div>
+        <!-- 明细列表 -->
+        <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
+            <h6 class="mb-0 me-1">支出明细</h6>
+            <select class="form-select form-select-sm" id="sa-filter-type" style="width:110px;" onchange="renderSaDetailList()">
+                <option value="">全部类型</option>
+                <option value="need">必须的</option>
+                <option value="want">想要的</option>
+                <option value="regret">后悔的</option>
+                <option value="none">未标记</option>
+            </select>
+            <input type="text" class="form-control form-control-sm" id="sa-filter-search" style="width:150px;" placeholder="搜索类别/备注..." oninput="renderSaDetailList()">
+            <span class="text-muted small ms-auto" id="sa-detail-count"></span>
+        </div>
+        <div id="sa-detail-list" class="mb-4"></div>
+    </div>
+</div>
+
 <!-- ==================== 多笔明细查看弹窗 ==================== -->
 <div class="modal fade" id="transItemsDetailModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
@@ -1453,21 +1521,30 @@ body {
                         </div>
                     </div>
 
-                    <!-- 主分录行 -->
-                    <div class="row g-2 mb-1">
-                        <div class="col-6">
+                    <!-- 主分录行：类别 | 金额 | 消费类型 -->
+                    <div class="d-flex gap-1 mb-1 align-items-end" id="spending-type-row">
+                        <div style="flex:2;min-width:0;">
                             <label class="compact-form-label">类别</label>
                             <select class="form-select compact-form-control" id="edit-trans-category" required=""></select>
                             <div id="edit-trans-category-multi" class="form-control compact-form-control text-muted d-none"
                                  style="background:var(--bs-secondary-bg);font-size:0.85rem;cursor:default;"></div>
                         </div>
-                        <div class="col-6">
+                        <div style="flex:1.4;min-width:0;">
                             <label class="compact-form-label d-flex justify-content-between align-items-center">
                                 <span>金额</span>
                                 <small id="amount-total-hint" class="d-none fw-normal"
                                        style="font-size:0.68rem;color:var(--bs-secondary);background:var(--bs-secondary-bg);border-radius:3px;padding:0 4px;">合计</small>
                             </label>
                             <input type="number" step="0.01" class="form-control compact-form-control" id="edit-trans-amount" required="">
+                        </div>
+                        <div style="flex:1.6;min-width:0;" id="spending-type-select-wrap">
+                            <label class="compact-form-label" style="font-size:0.78rem;">消费类型</label>
+                            <select class="form-select compact-form-control" id="edit-trans-spending-type" style="font-size:0.8rem;">
+                                <option value="">未标记</option>
+                                <option value="need">必须的</option>
+                                <option value="want">想要的</option>
+                                <option value="regret">后悔的</option>
+                            </select>
                         </div>
                     </div>
 
@@ -3713,6 +3790,7 @@ function switchTransTab(tab, skipReset) {
         if (attachSec) attachSec.style.display = tab === 'expense' ? '' : 'none';
         if (attachBtn) attachBtn.style.display = tab === 'expense' ? '' : 'none';
         if (addBtn) addBtn.style.display = tab === 'expense' ? '' : 'none';
+        showSpendingTypeRow(tab === 'expense');
         // 收入切换时清除已有额外行
         if (tab === 'income') { $('extra-items-container').innerHTML = ''; refreshInlineTotal(); }
     }
@@ -3734,6 +3812,7 @@ function _initNewTransModal(mode, title) {
     if (hintEl) hintEl.style.display = 'none';
     resetInlineItems();
     resetAttachmentUI();
+    resetSpendingType();
     $('trans-tab-bar').style.display = '';
 }
 
@@ -3895,18 +3974,24 @@ function deleteTransaction(id) {
 
 function openEditTransaction(id) {
     const t = transactions.find(x => x.id === id);
-    if (!t || t.ownerName !== currentUserName) { alert('无法编辑此交易'); return; }
+    if (!t) { alert('找不到此交易'); return; }
     if (t.isTransfer) { openEditTransfer(id); return; }
 
+    const isOwner = t.ownerName === currentUserName;
+    const readOnly = !isOwner || t._isArchived;
+
     $('edit-trans-id').value = t.id;
-    $('edit-trans-mode').value = 'edit';
-    $('editTransactionModalTitle').textContent = '编辑交易';
+    $('edit-trans-mode').value = readOnly ? 'view' : 'edit';
+    $('editTransactionModalTitle').textContent = readOnly ? `查看交易（${t.ownerName}）` : '编辑交易';
     $('edit-trans-submit-btn').textContent = '保存修改';
-    $('edit-trans-delete-btn').style.removeProperty('display');
+    $('edit-trans-submit-btn').style.display = readOnly ? 'none' : '';
+    $('edit-trans-delete-btn').style.display = 'none';
+    if (!readOnly) $('edit-trans-delete-btn').style.removeProperty('display');
     $('edit-trans-date').value = t.date;
     $('edit-trans-account').value = t.accountId;
     $('edit-trans-tags').value = t.tags || '';
     $('edit-trans-desc').value = t.desc || '';
+    setSpendingType(t.spendingType || '');
     // 编辑时隐藏 tab bar（固定类型）
     $('trans-tab-bar').style.display = 'none';
     switchTransTab(t.type, true);
@@ -3925,6 +4010,12 @@ function openEditTransaction(id) {
         const ids = t.attachmentId.split(',').filter(id => id.trim());
         renderAttachmentThumbs(ids);
     }
+    // 只读模式：禁用所有表单控件
+    const form = $('edit-transaction-form');
+    form.querySelectorAll('input,select,textarea,button[type="button"]:not([data-bs-dismiss])').forEach(el => {
+        if (el.id === 'edit-trans-submit-btn' || el.id === 'edit-trans-delete-btn') return;
+        el.disabled = readOnly;
+    });
     new bootstrap.Modal($('editTransactionModal')).show();
 }
 
@@ -4021,14 +4112,21 @@ function deleteCurrentTransfer() {
 
 // ==================== 内联多笔分录 ====================
 
-function _buildItemRow(defCat, defAmt, cats) {
-    // 构建一行分录 DOM（类别 | 金额 | 删除），类别和金额等宽
+function _buildItemRow(defCat, defAmt, cats, defSpendingType) {
+    // 构建一行分录 DOM（类别 | 金额 | 消费类型 | 删除）
     const catOpts = cats.map(c => `<option value="${c}"${c === defCat ? ' selected' : ''}>${c}</option>`).join('');
+    const stOpts = [
+        {v:'',     l:'未标记'},
+        {v:'need', l:'必须的'},
+        {v:'want', l:'想要的'},
+        {v:'regret',l:'后悔的'},
+    ].map(o => `<option value="${o.v}"${o.v === (defSpendingType||'') ? ' selected' : ''}>${o.l}</option>`).join('');
     const row = document.createElement('div');
     row.className = 'd-flex gap-1 mb-1 align-items-center extra-item-row';
     row.innerHTML = `
-        <select class="form-select compact-form-control extra-row-cat" style="flex:1;min-width:0;" onchange="refreshInlineTotal()">${catOpts}</select>
+        <select class="form-select compact-form-control extra-row-cat" style="flex:1.5;min-width:0;" onchange="refreshInlineTotal()">${catOpts}</select>
         <input type="number" step="0.01" min="0.01" class="form-control compact-form-control extra-row-amt" style="flex:1;min-width:0;" placeholder="金额" value="${defAmt !== undefined && defAmt !== '' ? defAmt : ''}" oninput="refreshInlineTotal()">
+        <select class="form-select compact-form-control extra-row-st" style="flex:1.2;min-width:0;font-size:0.78rem;">${stOpts}</select>
         <button type="button" class="btn btn-outline-danger btn-sm" style="padding:2px 4px;font-size:0.72rem;flex-shrink:0;" onclick="removeInlineItemRow(this)"><i class="bi bi-x"></i></button>`;
     return row;
 }
@@ -4068,6 +4166,9 @@ function refreshInlineTotal() {
         if (totalHint) totalHint.classList.add('d-none');
         // 收入 tab 时始终隐藏添加按钮
         if (addBtn) addBtn.style.display = $('edit-trans-type').value === 'income' ? 'none' : '';
+        // 恢复主行消费类型可选
+        const mainSt = $('edit-trans-spending-type');
+        if (mainSt) { mainSt.disabled = false; mainSt.style.background = ''; mainSt.style.color = ''; }
         return;
     }
 
@@ -4080,6 +4181,9 @@ function refreshInlineTotal() {
     amtInput.removeAttribute('required');
     if (totalHint) totalHint.classList.remove('d-none');
     if (addBtn) addBtn.style.display = '';
+    // 主行消费类型变灰不可选
+    const mainSt = $('edit-trans-spending-type');
+    if (mainSt) { mainSt.disabled = true; mainSt.style.background = 'var(--bs-secondary-bg)'; mainSt.style.color = 'var(--bs-secondary)'; }
 
     // 合计金额 = 所有分录行之和（主行仅显示汇总，不参与计算）
     let total = 0;
@@ -4102,7 +4206,8 @@ function getInlineItems() {
     extraRows.forEach(r => {
         const amt = parseFloat(r.querySelector('.extra-row-amt').value);
         const cat = r.querySelector('.extra-row-cat').value;
-        if (!isNaN(amt) && amt > 0) items.push({ category: cat, amount: sign * Math.abs(amt) });
+        const st  = r.querySelector('.extra-row-st')?.value || '';
+        if (!isNaN(amt) && amt > 0) items.push({ category: cat, amount: sign * Math.abs(amt), ...(st ? { spendingType: st } : {}) });
     });
     if (items.length === 0) { alert('请至少填写一条有效金额'); return null; }
     return items.length > 1 ? items : null;
@@ -4125,12 +4230,256 @@ function loadInlineItems(items, type) {
     if (!items || items.length <= 1) { resetInlineItems(); return; }
     const cats = type === 'expense' ? categories.expense : categories.income;
     items.forEach(it => {
-        $('extra-items-container').appendChild(_buildItemRow(it.category, Math.abs(it.amount), cats));
+        $('extra-items-container').appendChild(_buildItemRow(it.category, Math.abs(it.amount), cats, it.spendingType || ''));
     });
     refreshInlineTotal();
 }
 
 // ==================== 内联多笔分录 END ====================
+
+// ==================== 消费类型 ====================
+const SPENDING_TYPE_CONFIG = {
+    need:   { label: '必须的', color: '#0d6efd', bg: 'rgba(13,110,253,0.12)' },
+    want:   { label: '想要的', color: '#fd7e14', bg: 'rgba(253,126,20,0.12)' },
+    regret: { label: '后悔的', color: '#dc3545', bg: 'rgba(220,53,69,0.12)' },
+};
+
+function setSpendingType(val) {
+    const sel = $('edit-trans-spending-type');
+    if (sel) sel.value = val || '';
+}
+
+function resetSpendingType() {
+    const sel = $('edit-trans-spending-type');
+    if (sel) sel.value = '';
+}
+
+function showSpendingTypeRow(show) {
+    // 消费类型下拉框随支出/收入 tab 显示或隐藏
+    const wrap = $('spending-type-select-wrap');
+    if (wrap) wrap.style.display = show ? '' : 'none';
+}
+
+// ==================== 消费类型统计 ====================
+let saChartType = null, saChartTrend = null;
+
+let _saCurrentUser = ''; // '' = 所有用户
+
+function saCycleUser() {
+    const options = ['', ...dataUsers];
+    const idx = options.indexOf(_saCurrentUser);
+    _saCurrentUser = options[(idx + 1) % options.length];
+    const btn = $('sa-user-filter-btn');
+    const textEl = $('sa-user-filter-text');
+    if (textEl) textEl.textContent = _saCurrentUser || '所有用户';
+    if (btn) btn.className = _saCurrentUser
+        ? 'btn btn-sm btn-primary flex-shrink-0'
+        : 'btn btn-sm btn-outline-secondary flex-shrink-0';
+    renderSpendingAnalysis();
+}
+
+function openSpendingAnalysis() {
+    const view = $('view-spending-analysis');
+    view.style.display = 'flex';
+    // sync dates from stats filter
+    const sd = $('stats-start-date')?.value || '';
+    const ed = $('stats-end-date')?.value || '';
+    $('sa-start-date').value = sd;
+    $('sa-end-date').value = ed;
+    renderSpendingAnalysis();
+}
+
+function closeSpendingAnalysis() {
+    const v = $('view-spending-analysis');
+    v.style.display = 'none';
+}
+
+function saQuickDate(p) {
+    const today = new Date();
+    let start = '', end = '';
+    if (p === 'month') { start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; }
+    else if (p === '3months') { start = new Date(today); start.setMonth(start.getMonth()-3); end = today; }
+    else if (p === 'year') { start = new Date(today.getFullYear(),0,1); end = new Date(today.getFullYear(),11,31); }
+    $('sa-start-date').value = start ? formatLocal(start) : '';
+    $('sa-end-date').value = end ? formatLocal(end) : '';
+    renderSpendingAnalysis();
+}
+
+function renderSpendingAnalysis() {
+    const start = $('sa-start-date').value;
+    const end   = $('sa-end-date').value;
+    const saUser = _saCurrentUser || '';
+    const rawData = transactions.filter(t => {
+        if (t.isTransfer || t._isBaseline || t.amount >= 0) return false;
+        if (start && t.date < start) return false;
+        if (end   && t.date > end)   return false;
+        if (saUser && t.ownerName !== saUser) return false;
+        return true;
+    });
+
+    // 展开多笔分录：每条 item 作为独立统计单元
+    const data = [];
+    rawData.forEach(t => {
+        const acc = accounts.find(a => a.id == t.accountId);
+        if (t.items && t.items.length > 1) {
+            t.items.forEach(it => {
+                data.push({
+                    ...t,
+                    amount: it.amount,
+                    category: it.category,
+                    spendingType: it.spendingType || t.spendingType || '',
+                    _parentId: t.id,
+                });
+            });
+        } else {
+            data.push(t);
+        }
+    });
+
+    // Group by spendingType
+    const groups = { need: 0, want: 0, regret: 0, '': 0 };
+    data.forEach(t => {
+        const acc = accounts.find(a => a.id == t.accountId);
+        const amt = acc ? convertAmt(Math.abs(t.amount), acc.currency) : Math.abs(t.amount);
+        const key = t.spendingType || '';
+        groups[key] = (groups[key] || 0) + amt;
+    });
+    const total = Object.values(groups).reduce((s, v) => s + v, 0);
+
+    // Summary cards
+    const cardsEl = $('sa-summary-cards');
+    cardsEl.innerHTML = '';
+    const types = [
+        { key: 'need', label: '必须的', icon: 'bi-shield-check', color: '#0d6efd' },
+        { key: 'want', label: '想要的', icon: 'bi-star', color: '#fd7e14' },
+        { key: 'regret', label: '后悔的', icon: 'bi-emoji-frown', color: '#dc3545' },
+        { key: '',     label: '未标记', icon: 'bi-question-circle', color: '#6c757d' },
+    ];
+    types.forEach(tp => {
+        const amt = groups[tp.key] || 0;
+        const pct = total > 0 ? ((amt / total) * 100).toFixed(1) : '0.0';
+        cardsEl.innerHTML += `<div class="col-6">
+            <div class="card shadow-sm text-center py-2">
+                <div style="color:${tp.color};font-size:1.3rem;"><i class="bi ${tp.icon}"></i></div>
+                <div class="fw-bold" style="font-size:0.85rem;">${tp.label}</div>
+                <div class="fw-bold" style="color:${tp.color};">${formatAmount(amt,'RMB')}</div>
+                <div class="text-muted" style="font-size:0.75rem;">${pct}%</div>
+            </div>
+        </div>`;
+    });
+
+    // Pie chart
+    if (saChartType) { saChartType.destroy(); saChartType = null; }
+    const ctxPie = $('saTypeChart');
+    const pieLabels = types.map(t => t.label);
+    const pieData   = types.map(t => groups[t.key] || 0);
+    const pieColors = types.map(t => t.color);
+    saChartType = new Chart(ctxPie, {
+        type: 'doughnut',
+        data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors }] },
+        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, animation: { duration: 400 } }
+    });
+
+    // Trend chart (monthly)
+    if (saChartTrend) { saChartTrend.destroy(); saChartTrend = null; }
+    const months = {};
+    data.forEach(t => {
+        const m = t.date.substring(0,7);
+        const acc = accounts.find(a => a.id == t.accountId);
+        const amt = acc ? convertAmt(Math.abs(t.amount), acc.currency) : Math.abs(t.amount);
+        if (!months[m]) months[m] = { need:0, want:0, regret:0, '':0 };
+        const key = t.spendingType || '';
+        months[m][key] = (months[m][key] || 0) + amt;
+    });
+    const mLabels = Object.keys(months).sort();
+    const ctxTrend = $('saTrendChart');
+    ctxTrend.width = Math.max(mLabels.length * 70, 400);
+    saChartTrend = new Chart(ctxTrend, {
+        type: 'bar',
+        data: {
+            labels: mLabels,
+            datasets: [
+                { label:'必须', data: mLabels.map(m => months[m].need), backgroundColor:'#0d6efd' },
+                { label:'想要', data: mLabels.map(m => months[m].want), backgroundColor:'#fd7e14' },
+                { label:'后悔的', data: mLabels.map(m => months[m].regret), backgroundColor:'#dc3545', stack:'s' },
+                { label:'未标记', data: mLabels.map(m => months[m]['']), backgroundColor:'#adb5bd' },
+            ]
+        },
+        options: { maintainAspectRatio: false, scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } }, animation:{ duration:400 } }
+    });
+
+    // store data for filter re-render
+    window._saCurrentData = data;
+    renderSaDetailList();
+}
+
+function renderSaDetailList() {
+    const data = window._saCurrentData || [];
+    const filterType   = $('sa-filter-type')?.value || '';
+    const filterSearch = ($('sa-filter-search')?.value || '').toLowerCase();
+
+    let filtered = [...data].sort((a,b) => b.date.localeCompare(a.date));
+    if (filterType === 'none') {
+        filtered = filtered.filter(t => !t.spendingType || t.spendingType === '');
+    } else if (filterType) {
+        filtered = filtered.filter(t => t.spendingType === filterType);
+    }
+    if (filterSearch) {
+        filtered = filtered.filter(t =>
+            (t.category || '').toLowerCase().includes(filterSearch) ||
+            (t.desc || '').toLowerCase().includes(filterSearch)
+        );
+    }
+
+    const countEl = $('sa-detail-count');
+    if (countEl) countEl.textContent = `共 ${filtered.length} 条`;
+
+    const listEl = $('sa-detail-list');
+    listEl.innerHTML = '';
+
+    filtered.slice(0, 100).forEach(t => {
+        const acc = accounts.find(a => a.id == t.accountId);
+        if (!acc) return;
+        const sym = CURRENCY_SYMBOLS[acc.currency] || '';
+        const accDisplayName = getAccountDisplayName(acc);
+        const cfg = SPENDING_TYPE_CONFIG[t.spendingType] || { label:'未标记', color:'#6c757d', bg:'rgba(108,117,125,0.12)' };
+        const editId = t._parentId || t.id;
+        const isExpanded = !!t._parentId;
+        const descClean = t.desc || '';
+        const tagsHtml = t.tags ? `<span style="color:var(--bs-secondary);"> @${t.tags}</span>` : '';
+        const noteHtml = descClean ? `<span style="color:var(--bs-secondary);"> · ${descClean}</span>` : '';
+        const stBadge = `<span style="font-size:0.62rem;background:${cfg.bg || cfg.color};color:${cfg.color};border-radius:3px;padding:0 4px;margin-left:4px;border:1px solid ${cfg.color};vertical-align:middle;">${cfg.label}</span>`;
+
+        const card = document.createElement('div');
+        card.className = 'mobile-transaction-card';
+        card.style.cursor = 'pointer';
+        card.innerHTML = `
+            <div class="card-line-1">
+                <span class="category-text">${t.category || ''}${stBadge}${isExpanded ? '' : ''}${tagsHtml}</span>
+                <div class="amount-expense fw-bold">${sym}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
+            </div>
+            <div class="card-line-2">
+                <span class="text-muted small">${t.date} · ${accDisplayName}${noteHtml}</span>
+            </div>`;
+
+        card.addEventListener('click', () => {
+            const modalEl = $('editTransactionModal');
+            modalEl.style.zIndex = '2100';
+            const backdrop = () => { document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = '2050'); };
+            const onHide = () => {
+                modalEl.style.zIndex = '';
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = '');
+                modalEl.removeEventListener('hidden.bs.modal', onHide);
+            };
+            modalEl.addEventListener('hidden.bs.modal', onHide);
+            openEditTransaction(editId);
+            setTimeout(backdrop, 50);
+        });
+        listEl.appendChild(card);
+    });
+}
+
+// ==================== 消费类型 END ====================
 
 function updateEditFormCategories() {
     const type = $('edit-trans-type').value;
@@ -4150,20 +4499,25 @@ function onSubModalHide() {
     const hintEl = $('edit-trans-desc-hint');
     if (hintEl) hintEl.style.display = 'none';
     resetAttachmentUI();
+    // 重置只读状态
+    const form = $('edit-transaction-form');
+    form.querySelectorAll('input,select,textarea,button[type="button"]').forEach(el => { el.disabled = false; });
+    $('edit-trans-submit-btn').style.display = '';
     maybeReturnToDetail();
-
 }
 $('editTransactionModal').addEventListener('hidden.bs.modal', onSubModalHide);
 
 $('edit-transaction-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const mode = $('edit-trans-mode').value;
+    if (mode === 'view') return; // 只读模式不保存
     const date = $('edit-trans-date').value;
     const type = $('edit-trans-type').value;
     const accountId = $('edit-trans-account').value;
     const tags = $('edit-trans-tags').value;
     const desc = $('edit-trans-desc').value;
     const attachmentId = $('edit-trans-attachment-id')?.value || '';
+    const spendingType = type === 'expense' ? ($('edit-trans-spending-type').value || '') : '';
 
     // 取分录（内联多笔）
     const itemsData = getInlineItems();
@@ -4187,6 +4541,7 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
             amount: finalAmount, category, tags, desc,
             ...(itemsData ? { items: itemsData } : {}),
             ...(attachmentId ? { attachmentId } : {}),
+            ...(spendingType ? { spendingType } : {}),
             ownerName: currentUserName, isTransfer: false, updatedAt: Date.now()
         });
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
@@ -4200,6 +4555,7 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
         }
         if (currentDetailAccountId) refreshDetailContent(currentDetailAccountId);
         resetInlineItems();
+        resetSpendingType();
         $('edit-trans-tags').value = '';
         $('edit-trans-desc').value = '';
         const hintEl = $('edit-trans-desc-hint');
@@ -4212,6 +4568,7 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
         if (t) {
             t.date = date; t.type = type; t.accountId = accountId;
             t.category = category; t.amount = finalAmount; t.tags = tags; t.desc = desc;
+            if (spendingType) t.spendingType = spendingType; else delete t.spendingType;
             if (itemsData) t.items = itemsData; else delete t.items;
             if (attachmentId) t.attachmentId = attachmentId; else delete t.attachmentId;
             t.updatedAt = Date.now();
