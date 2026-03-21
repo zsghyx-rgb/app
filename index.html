@@ -1612,6 +1612,11 @@ select.compact-form-control { height: 2.1rem; }
 
                     <!-- 附件（拆分模式也保留） -->
                     <div class="mb-2" id="attachment-section" style="display:none;">
+                        <!-- 拆分模式下显示独立的添加附件按钮（单笔模式时隐藏，用备注行的按钮代替） -->
+                        <button type="button" id="attachment-trigger-split" class="btn btn-outline-secondary btn-sm mb-2 d-none"
+                                style="font-size:0.78rem;" onclick="document.getElementById('attachment-file-input').click()">
+                            <i class="bi bi-image"></i> 添加附件
+                        </button>
                         <input type="file" id="attachment-file-input" accept="image/*,image/heic,image/heif,application/pdf" class="d-none" onchange="handleAttachmentSelected(this)">
                         <div id="attachment-preview-container" class="d-flex flex-wrap gap-2 mt-2" style="display:none !important;"></div>
                         <div id="attachment-upload-status" class="small text-muted mt-1" style="display:none;">
@@ -4491,10 +4496,12 @@ function applySplitToMainForm(items) {
     const metaSection = $('single-trans-meta');
 
     if (!items || items.length === 0) {
-        // 单笔模式：显示标签/备注/附件
+        // 单笔模式：显示标签/备注/附件，隐藏独立附件按钮
         if (singleRow)   singleRow.classList.remove('d-none');
         if (summaryRow)  summaryRow.classList.add('d-none');
         if (metaSection) metaSection.style.display = '';
+        const splitAttachBtn = $('attachment-trigger-split');
+        if (splitAttachBtn) splitAttachBtn.classList.add('d-none');
         if (splitBtn)   { splitBtn.innerHTML = '<i class="bi bi-scissors"></i> 拆分账单'; splitBtn.classList.remove('btn-warning'); splitBtn.classList.add('btn-outline-secondary'); }
         amtInput.readOnly = false;
         amtInput.style.background = '';
@@ -4504,13 +4511,15 @@ function applySplitToMainForm(items) {
         return;
     }
 
-    // 拆分模式：隐藏总体标签/备注/附件（每项有自己的）
+    // 拆分模式：隐藏总体标签/备注，显示独立附件按钮
     const total = items.reduce((s, it) => s + it.amount, 0);
     const firstCat = items[0].category;
     const moreCount = items.length - 1;
     if (singleRow)   singleRow.classList.add('d-none');
     if (summaryRow)  summaryRow.classList.remove('d-none');
     if (metaSection) metaSection.style.display = 'none';
+    const splitAttachBtn = $('attachment-trigger-split');
+    if (splitAttachBtn) splitAttachBtn.classList.remove('d-none');
     $('split-summary-text').textContent = moreCount > 0 ? `${firstCat} 等 ${items.length} 项` : firstCat;
     $('split-summary-total').textContent = total.toFixed(2);
     if (splitBtn) { splitBtn.innerHTML = `<i class="bi bi-pencil-square"></i> 编辑拆分（${items.length} 项）`; splitBtn.classList.remove('btn-outline-secondary'); splitBtn.classList.add('btn-warning'); }
