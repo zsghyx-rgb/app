@@ -325,7 +325,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     transition: left 0.4s ease, transform 0.4s ease, padding 0.3s ease, max-width 0.3s ease;
-    animation: toastBreath 10s ease-in-out infinite;
+    animation: toastBreath 2s ease-in-out infinite;
 }
 
 .amount-hidden { filter: blur(8px); user-select: none; }
@@ -1375,7 +1375,7 @@ select.compact-form-control { height: 2.1rem; }
             </div>
             <div class="modal-body p-2" id="transItemsDetailBody"></div>
             <div class="modal-footer py-2 gap-2">
-                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" id="transItemsEditBtn">编辑</button>
+                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" id="transItemsEditBtn" style="display:none;">编辑</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">关闭</button>
             </div>
         </div>
@@ -1589,7 +1589,7 @@ select.compact-form-control { height: 2.1rem; }
                         </button>
                     </div>
 
-                    <!-- 标签/备注/附件（拆分模式时隐藏） -->
+                    <!-- 标签/备注（拆分模式时隐藏） -->
                     <div id="single-trans-meta">
                     <div class="mb-2">
                         <label class="compact-form-label">标签</label>
@@ -1608,7 +1608,9 @@ select.compact-form-control { height: 2.1rem; }
                         </div>
                         <div id="edit-trans-desc-hint" style="display:none;align-items:center;gap:6px;margin-top:3px;padding:3px 8px;border-radius:5px;background:rgba(var(--bs-primary-rgb),0.08);border:1px solid rgba(var(--bs-primary-rgb),0.2);font-size:0.78rem;"></div>
                     </div>
+                    </div><!-- /single-trans-meta -->
 
+                    <!-- 附件（拆分模式也保留） -->
                     <div class="mb-2" id="attachment-section" style="display:none;">
                         <input type="file" id="attachment-file-input" accept="image/*,image/heic,image/heif,application/pdf" class="d-none" onchange="handleAttachmentSelected(this)">
                         <div id="attachment-preview-container" class="d-flex flex-wrap gap-2 mt-2" style="display:none !important;"></div>
@@ -1618,7 +1620,6 @@ select.compact-form-control { height: 2.1rem; }
                         </div>
                         <input type="hidden" id="edit-trans-attachment-id" value="">
                     </div>
-                    </div><!-- /single-trans-meta -->
 
                     <button type="submit" class="btn btn-primary btn-sm w-100 mt-2" id="edit-trans-submit-btn">保存</button>
                     <button type="button" class="btn btn-outline-danger btn-sm w-100 mt-2 d-md-none" id="edit-trans-delete-btn" onclick="deleteCurrentTransaction()" style="display:none!important;">删除交易</button>
@@ -3754,13 +3755,18 @@ function renderDetailContent(id) {
                 item.addEventListener('mouseenter', () => item.style.background = 'rgba(var(--bs-primary-rgb),0.06)');
                 item.addEventListener('mouseleave', () => item.style.background = 'var(--bs-body-bg)');
                 item.addEventListener('click', () => {
-                    if (!isTransfer && t.items && t.items.length > 1) {
-                        showTransItemsDetail(t);
+                    if (isTransfer) {
+                        openedFromDetail = true;
+                        openEditTransfer(t.id);
                     } else {
                         openedFromDetail = true;
-                        isTransfer ? openEditTransfer(t.id) : openEditTransaction(t.id);
+                        showTransDetail(t);
                     }
                 });
+            } else if (!isTransfer) {
+                // 其他用户的交易（含单笔和拆分）也可点击查看
+                item.style.cursor = 'pointer';
+                item.addEventListener('click', () => showTransDetail(t));
             }
             item.innerHTML = `
                 <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
@@ -4213,37 +4219,91 @@ function openEditTransfer(id) {
     new bootstrap.Modal($('editTransactionModal')).show();
 }
 
-function showTransItemsDetail(t) {
+/**
+ * 统一交易预览弹窗 —— 单笔和拆分都走这里
+ * extraZIndex: 从高层页面（如消费分析）打开时传入更高的 z-index
+ */
+function showTransDetail(t, extraZIndex) {
+    if (!t) return;
+    // 转账类型不走明细弹窗，直接编辑/查看
+    if (t.isTransfer) { openEditTransfer(t.id); return; }
+
     const acc = accounts.find(a => a.id == t.accountId);
     const sym = acc ? (CURRENCY_SYMBOLS[acc.currency] || '') : '';
     const cur = acc ? acc.currency : '';
     const colorClass = t.type === 'expense' ? 'text-danger' : 'text-success';
-    let html = `<div class="mb-2 small text-muted">${t.date} · ${acc ? acc.name : ''}</div>`;
+    const isOwn = t.ownerName === currentUserName && !t._isArchived;
+    const isSplit = t.items && t.items.length > 1;
+
+    // ── 头部：日期 / 账户 / 用户标签 ──
+    let html = `<div class="mb-2 small text-muted">${t.date} · ${acc ? getAccountDisplayName(acc) : ''}`;
+    if (!isOwn) html += ` <span class="badge bg-secondary" style="font-size:0.65rem;">${t.ownerName}</span>`;
+    html += '</div>';
+
     html += '<table class="table table-sm mb-2"><tbody>';
-    t.items.forEach(it => {
-        const stCfg = it.spendingType ? (getSpendingTypeConfig()[it.spendingType] || null) : null;
+
+    if (isSplit) {
+        // 拆分：每子项一行
+        t.items.forEach(it => {
+            const stCfg = it.spendingType ? (getSpendingTypeConfig()[it.spendingType] || null) : null;
+            const stBadge = stCfg ? `<span style="font-size:0.65rem;padding:0 4px;border-radius:3px;color:${stCfg.color};border:1px solid ${stCfg.color};margin-left:4px;">${stCfg.label}</span>` : '';
+            const subMeta = [it.tags ? `@${it.tags}` : '', it.desc || ''].filter(Boolean).join(' · ');
+            html += `<tr>
+                <td class="ps-0 py-1" style="white-space:normal;">${it.category}${stBadge}${subMeta ? `<div style="font-size:0.7rem;color:var(--bs-secondary);">${subMeta}</div>` : ''}</td>
+                <td class="text-end fw-bold ${colorClass} pe-0 py-1 text-nowrap">${sym}${formatAmount(Math.abs(it.amount), cur)}</td>
+            </tr>`;
+        });
+        html += `</tbody><tfoot><tr class="border-top">
+            <td class="ps-0 fw-bold py-1">合计</td>
+            <td class="text-end fw-bold ${colorClass} pe-0 py-1 text-nowrap">${sym}${formatAmount(Math.abs(t.amount), cur)}</td>
+        </tr></tfoot>`;
+    } else {
+        // 单笔：一行显示
+        const stCfg = t.spendingType ? (getSpendingTypeConfig()[t.spendingType] || null) : null;
         const stBadge = stCfg ? `<span style="font-size:0.65rem;padding:0 4px;border-radius:3px;color:${stCfg.color};border:1px solid ${stCfg.color};margin-left:4px;">${stCfg.label}</span>` : '';
-        const subMeta = [it.tags ? `@${it.tags}` : '', it.desc || ''].filter(Boolean).join(' · ');
+        const meta = [t.tags ? `@${t.tags}` : '', t.desc || ''].filter(Boolean).join(' · ');
         html += `<tr>
-            <td class="ps-0 py-1" style="white-space:normal;">${it.category}${stBadge}${subMeta ? `<div style="font-size:0.7rem;color:var(--bs-secondary);">${subMeta}</div>` : ''}</td>
-            <td class="text-end fw-bold ${colorClass} pe-0 py-1">${sym}${formatAmount(Math.abs(it.amount), cur)}</td>
+            <td class="ps-0 py-1" style="white-space:normal;">${t.category || ''}${stBadge}${meta ? `<div style="font-size:0.7rem;color:var(--bs-secondary);">${meta}</div>` : ''}</td>
+            <td class="text-end fw-bold ${colorClass} pe-0 py-1 text-nowrap">${sym}${formatAmount(Math.abs(t.amount), cur)}</td>
         </tr>`;
-    });
-    html += `</tbody><tfoot><tr class="border-top">
-        <td class="ps-0 fw-bold py-1">合计</td>
-        <td class="text-end fw-bold ${colorClass} pe-0 py-1">${sym}${formatAmount(Math.abs(t.amount), cur)}</td>
-    </tr></tfoot></table>`;
-    if (t.desc) html += `<div class="small text-muted mb-1">备注：${t.desc}</div>`;
-    if (t.tags) html += `<div class="small text-muted">标签：${t.tags}</div>`;
+        html += '</tbody>';
+    }
+
+    html += '</table>';
+    if (t.attachmentId) html += `<div class="small text-muted mb-1"><i class="bi bi-paperclip"></i> <a href="${getDriveAttachmentUrl(t.attachmentId)}" target="_blank">查看附件</a></div>`;
+
     $('transItemsDetailBody').innerHTML = html;
-    $('transItemsDetailTitle').textContent = `${t.items.length} 条分录明细`;
-    $('transItemsEditBtn').onclick = () => {
-        bootstrap.Modal.getInstance($('transItemsDetailModal')).hide();
-        openedFromDetail = true;
-        openEditTransaction(t.id);
-    };
-    new bootstrap.Modal($('transItemsDetailModal')).show();
+    $('transItemsDetailTitle').textContent = isSplit ? `${t.items.length} 项明细` : '交易详情';
+
+    // ── 编辑按钮：仅自己的交易显示 ──
+    const editBtn = $('transItemsEditBtn');
+    if (isOwn) {
+        editBtn.style.display = '';
+        editBtn.onclick = () => {
+            bootstrap.Modal.getInstance($('transItemsDetailModal')).hide();
+            openedFromDetail = true;
+            openEditTransaction(t.id);
+        };
+    } else {
+        editBtn.style.display = 'none';
+    }
+
+    // ── z-index（从高层页面打开时） ──
+    const modalEl = $('transItemsDetailModal');
+    if (extraZIndex) {
+        modalEl.style.zIndex = String(extraZIndex);
+        setTimeout(() => {
+            const bds = document.querySelectorAll('.modal-backdrop');
+            if (bds.length > 0) bds[bds.length - 1].style.zIndex = String(extraZIndex - 10);
+        }, 50);
+        const cleanup = () => { modalEl.style.zIndex = ''; modalEl.removeEventListener('hidden.bs.modal', cleanup); };
+        modalEl.addEventListener('hidden.bs.modal', cleanup);
+    }
+    new bootstrap.Modal(modalEl).show();
 }
+
+// 旧名称兼容（保留，部分地方仍用旧名）
+function showTransItemsDetail(t, extraZIndex) { showTransDetail(t, extraZIndex); }
 
 function maybeReturnToDetail() {
     if (openedFromDetail && currentDetailAccountId) {
@@ -4770,17 +4830,9 @@ function renderSaDetailList() {
             </div>`;
 
         card.addEventListener('click', () => {
-            const modalEl = $('editTransactionModal');
-            modalEl.style.zIndex = '2100';
-            const backdrop = () => { document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = '2050'); };
-            const onHide = () => {
-                modalEl.style.zIndex = '';
-                document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = '');
-                modalEl.removeEventListener('hidden.bs.modal', onHide);
-            };
-            modalEl.addEventListener('hidden.bs.modal', onHide);
-            openEditTransaction(editId);
-            setTimeout(backdrop, 50);
+            const parentId = t._parentId || t.id;
+            const parentTrans = transactions.find(x => x.id === parentId);
+            if (parentTrans) showTransDetail(parentTrans, 2150);
         });
         listEl.appendChild(card);
     });
@@ -5084,7 +5136,8 @@ function getFilteredTransactions() {
 function initMobileSwipeGestures(card, transactionId) {
     card.addEventListener('click', (e) => {
         const t = transactions.find(x => x.id === transactionId);
-        if (t && t.ownerName === currentUserName && !t._isArchived) { openEditTransaction(transactionId); }
+        if (!t || t.ownerName !== currentUserName || t._isArchived) return;
+        showTransDetail(t);
     });
 }
 
@@ -5142,7 +5195,7 @@ function renderAllTransactions() {
             (t._isArchived ? '<span class="badge bg-secondary" style="font-size:0.6rem;">存档</span>' :
              (t.isTransfer
                ? `<i class="bi bi-eye text-secondary" style="cursor:pointer;font-size:1rem;" title="查看转账（${t.ownerName}）" onclick="openEditTransfer(${t.id})"></i>`
-               : `<i class="bi bi-eye text-secondary" style="cursor:pointer;font-size:1rem;" title="查看交易（${t.ownerName}）" onclick="openEditTransaction(${t.id})"></i>`));
+               : `<i class="bi bi-eye text-secondary" style="cursor:pointer;font-size:1rem;" title="查看（${t.ownerName}）" onclick="showTransDetail(transactions.find(x=>x.id==${t.id}))"></i>`));
 
         const tr = document.createElement('tr');
         const tDescDisplay = t.desc||'';
@@ -5199,13 +5252,24 @@ function renderAllTransactions() {
                 const tagsHtml = t.tags ? `<span style="color:var(--bs-secondary);"> @${t.tags}</span>` : '';
                 const noteHtml = descClean ? `<span style="color:var(--bs-secondary);"> · ${descClean}</span>` : '';
                 const attachIconHtml = t.attachmentId ? ` <i class="bi bi-paperclip" style="color:var(--bs-secondary);font-size:0.72rem;"></i>` : '';
+                // 拆分交易：拼接子项备注
+                let splitNotesHtml = '';
+                if (t.items && t.items.length > 1) {
+                    const parts = t.items
+                        .filter(it => it.desc || it.tags)
+                        .slice(0, 3)
+                        .map(it => [it.desc, it.tags ? `@${it.tags}` : ''].filter(Boolean).join(' '));
+                    if (parts.length > 0) {
+                        splitNotesHtml = `<span style="color:var(--bs-secondary);"> · ${parts.join(' / ')}</span>`;
+                    }
+                }
                 card.innerHTML = `
                     <div class="card-line-1">
                         <span class="category-text">${(t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || ''))}${tagsHtml}${attachIconHtml}</span>
                         <div class="${amountClass} fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
                     </div>
                     <div class="card-line-2">
-                        <span class="text-muted small">${t.date} · ${accDisplayName}${noteHtml}</span>
+                        <span class="text-muted small">${t.date} · ${accDisplayName}${noteHtml}${splitNotesHtml}</span>
                     </div>`;
             }
 
@@ -5217,7 +5281,7 @@ function renderAllTransactions() {
                 card.style.opacity = '0.82';
                 card.addEventListener('click', () => {
                     if (t.isTransfer) openEditTransfer(t.id);
-                    else openEditTransaction(t.id);
+                    else showTransDetail(t);
                 });
             }
             mobileContainer.appendChild(card);
@@ -5926,6 +5990,12 @@ function showToast(msg, type = 'success', duration = 3000) {
     const el = $('app-toast');
     if (!el) return;
     clearTimeout(_toastTimer);
+    // 同步中：清除未保存角标的计时器，防止在同步期间被缩小覆盖
+    if (type === 'syncing') {
+        clearTimeout(_toastMinimizeTimer);
+        el.classList.remove('minimized');
+        el.onclick = null;
+    }
     applyToastStyle(el, type);
     el.innerHTML = `${toastIcons[type] || ''} ${msg}`;
     el.classList.add('show');
