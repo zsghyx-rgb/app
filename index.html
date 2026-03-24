@@ -324,7 +324,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     transition: left 0.4s ease, transform 0.4s ease, padding 0.3s ease, max-width 0.3s ease;
-    animation: toastBreath 2s ease-in-out infinite;
+    animation: toastBreath 5s ease-in-out infinite;
 }
 
 .amount-hidden { filter: blur(8px); user-select: none; }
@@ -392,6 +392,40 @@ select.compact-form-control { height: 2.1rem; }
     cursor: pointer;
     box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
+
+/* ── 交易卡片（手机列表 + SA详情列表 共用） ── */
+.mobile-transaction-card {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    position: relative;
+    font-size: 0.85rem;
+    user-select: none;
+}
+.mobile-transaction-card .card-line-1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    min-width: 100%;
+}
+.mobile-transaction-card .card-line-2 {
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--bs-secondary);
+    white-space: nowrap;
+    gap: 0.3rem;
+    min-width: 100%;
+}
+.mobile-transaction-card .card-line-2 > div { overflow: hidden; text-overflow: ellipsis; }
+.mobile-transaction-card .amount-expense { color: #dc3545; font-weight: bold; font-size: 1rem; }
+.mobile-transaction-card .amount-income  { color: #198754; font-weight: bold; font-size: 1rem; }
+.mobile-transaction-card .amount-transfer{ color: #ff8c00; font-weight: bold; font-size: 1rem; }
+.mobile-transaction-card .category-text  { font-weight: bold; color: var(--bs-body-color); }
 
 @media (max-width: 768px) {
     body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
@@ -464,55 +498,12 @@ select.compact-form-control { height: 2.1rem; }
     .excel-table-container { display: none; }
     #mobile-transaction-list { display: flex !important; flex-direction: column; flex: 1; overflow-y: auto; min-height: 0; }
 
+    /* 手机端卡片额外样式 */
     .mobile-transaction-card {
-        background: var(--bs-body-bg);
-        border: 1px solid var(--bs-border-color);
-        border-radius: 6px;
-        padding: 8px 10px;
-        margin-bottom: 8px;
-        position: relative;
         transition: transform 0.3s ease-out;
-        font-size: 0.85rem;
         touch-action: pan-y;
-        user-select: none;
         overflow-x: auto;
     }
-
-    .scrolling-note {
-        white-space: nowrap;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
-        mask-image: linear-gradient(90deg, #000 90%, transparent);
-        -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
-    }
-    .scrolling-note::-webkit-scrollbar { display: none; }
-
-    .mobile-transaction-card .card-line-1 {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 4px;
-        white-space: nowrap;
-        min-width: 100%;
-    }
-
-    .mobile-transaction-card .card-line-2 {
-        display: flex;
-        align-items: center;
-        font-size: 0.8rem;
-        color: var(--bs-secondary);
-        white-space: nowrap;
-        gap: 0.3rem;
-        min-width: 100%;
-    }
-
-    .mobile-transaction-card .card-line-2 > div { overflow: hidden; text-overflow: ellipsis; }
-
-    .mobile-transaction-card .amount-expense { color: #dc3545; font-weight: bold; font-size: 1rem; }
-    .mobile-transaction-card .amount-income { color: #198754; font-weight: bold; font-size: 1rem; }
-    .mobile-transaction-card .amount-transfer { color: #ff8c00; font-weight: bold; font-size: 1rem; }
-    .mobile-transaction-card .category-text { font-weight: bold; color: var(--bs-body-color); }
 
     .row.g-3 > div { width: 100% !important; }
     .mobile-hide { display: none !important; }
@@ -539,6 +530,16 @@ select.compact-form-control { height: 2.1rem; }
     #mobile-transaction-list { display: none !important; }
     .user-name-short { display: none; }
     .user-name-full { display: inline; }
+
+    /* SA支出明细：桌面端双列网格 */
+    #sa-detail-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    #sa-detail-list .mobile-transaction-card {
+        margin-bottom: 0;
+    }
 
     .desc-content { cursor: help; }
     .desc-content:hover { position: relative; overflow: visible; white-space: normal; z-index: 1000; }
@@ -750,12 +751,8 @@ select.compact-form-control { height: 2.1rem; }
                     <i class="bi bi-file-earmark-plus"></i> 新建数据文件
                 </button>
             </div>
-            <div class="text-end mt-2">
-                <span class="text-muted" style="font-size:0.7rem;">v1.5.0</span>
-            </div>
         </div>
 
-        <!-- ① 选择数据文件 -->
         <div class="mb-3">
             <label class="form-label small text-muted fw-bold mb-2" id="select-file-label">选择数据文件</label>
             <div id="offline-file-bar">
@@ -767,9 +764,9 @@ select.compact-form-control { height: 2.1rem; }
                 </button>
             </div>
             <div id="file-status" class="form-text mt-1" style="display:none;"></div>
+
         </div>
 
-        <!-- ② 输入密码 -->
         <div class="mb-3" id="password-section" style="display:none;">
             <label class="form-label small text-muted fw-bold">输入密码</label>
             <div class="input-group input-group-sm">
@@ -784,10 +781,12 @@ select.compact-form-control { height: 2.1rem; }
             </div>
         </div>
 
-        <!-- ③ 选择用户 -->
         <div class="mb-3" id="user-section" style="display:none;">
             <label class="form-label small text-muted fw-bold">选择用户</label>
             <div id="user-buttons" class="d-flex gap-2 flex-wrap"></div>
+        </div>
+        <div class="text-end mt-2">
+            <span class="text-muted" style="font-size:0.7rem;">v1.5.0</span>
         </div>
     </div>
 </div>
@@ -4995,7 +4994,7 @@ function renderAllTransactions() {
             ? t.items.filter(it => it.desc).map(it => it.desc).join(' / ')
             : (t.desc||'');
         const tTagsDisplay = t.items && t.items.length > 1
-            ? t.items.filter(it => it.tags).map(it => `@${it.tags}`).join(' ')
+            ? t.items.filter(it => it.tags).map(it => `${it.tags}`).join(' ')
             : (t.tags||'');
         tr.innerHTML = `
             <td>${t.date}</td>
