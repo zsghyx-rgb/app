@@ -2062,18 +2062,16 @@ function switchUser() {
     if (hasUnsavedChanges) {
         if (!confirm('有未保存的更改，确定切换用户？')) return;
     }
-    // 重置当前用户状态，但保留内存中的数据和密码
     currentUser = null;
     currentUserName = null;
     hasUnsavedChanges = false;
     clearTimeout(driveAutoSaveTimer);
 
-    // 隐藏主界面，显示登录界面
     $('app-wrapper').classList.add('d-none');
     $('login-overlay').classList.remove('d-none');
 
-    // 数据已在内存，直接跳到用户选择步骤
     if (inMemoryLoadedData) {
+        window._suppressAutoLogin = true;  // 手动切换时不自动选用户
         onDataLoaded();
         showToast('数据已就绪，请选择用户', 'success', 3000);
     }
@@ -2254,11 +2252,11 @@ function onDataLoaded() {
     // 自动登录：如果上次登录的用户仍在列表中，直接登录
     try {
         const lastUser = localStorage.getItem('APP_last_user');
-        if (lastUser && dataUsers.includes(lastUser)) {
-            // 延迟一帧，让用户看到"数据加载成功"提示后再跳转
+        if (lastUser && dataUsers.includes(lastUser) && !window._suppressAutoLogin) {
             setTimeout(() => loginWithUser(lastUser), 300);
         }
     } catch(_) {}
+    window._suppressAutoLogin = false;
 }
 
 /**
