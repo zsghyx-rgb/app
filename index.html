@@ -193,6 +193,9 @@ body {
 }
 
 .account-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.account-col.drag-over { outline: 2px dashed var(--bs-primary); border-radius: 8px; opacity: 0.7; }
+.account-col[draggable="true"] { cursor: grab; }
+.account-col.dragging { opacity: 0.4; }
 .account-card-other {
     opacity: 0.7;
     background-color: rgba(var(--bs-secondary-rgb), 0.1);
@@ -324,7 +327,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     transition: left 0.4s ease, transform 0.4s ease, padding 0.3s ease, max-width 0.3s ease;
-    animation: toastBreath 5s ease-in-out infinite;
+    animation: toastBreath 2s ease-in-out infinite;
 }
 
 .amount-hidden { filter: blur(8px); user-select: none; }
@@ -751,8 +754,11 @@ select.compact-form-control { height: 2.1rem; }
                     <i class="bi bi-file-earmark-plus"></i> 新建数据文件
                 </button>
             </div>
+            <div class="text-end mt-2">
+            </div>
         </div>
 
+        <!-- ① 选择数据文件 -->
         <div class="mb-3">
             <label class="form-label small text-muted fw-bold mb-2" id="select-file-label">选择数据文件</label>
             <div id="offline-file-bar">
@@ -764,9 +770,9 @@ select.compact-form-control { height: 2.1rem; }
                 </button>
             </div>
             <div id="file-status" class="form-text mt-1" style="display:none;"></div>
-
         </div>
 
+        <!-- ② 输入密码 -->
         <div class="mb-3" id="password-section" style="display:none;">
             <label class="form-label small text-muted fw-bold">输入密码</label>
             <div class="input-group input-group-sm">
@@ -781,13 +787,14 @@ select.compact-form-control { height: 2.1rem; }
             </div>
         </div>
 
+        <!-- ③ 选择用户 -->
         <div class="mb-3" id="user-section" style="display:none;">
             <label class="form-label small text-muted fw-bold">选择用户</label>
             <div id="user-buttons" class="d-flex gap-2 flex-wrap"></div>
         </div>
-        <div class="text-end mt-2">
-            <span class="text-muted" style="font-size:0.7rem;">v1.5.0</span>
-        </div>
+    </div>
+    <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
+        <span class="text-muted" style="font-size:0.7rem;">v1.5.1</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1296,7 +1303,7 @@ select.compact-form-control { height: 2.1rem; }
                     <!-- 手机端显示提示，桌面端显示完整管理 -->
                     <div class="card shadow-sm d-md-none">
                         <div class="card-body py-3 text-center text-muted small">
-                            <i class="bi bi-laptop me-1"></i> 类别管理功能请在电脑端操作
+                            <i class="bi bi-laptop me-1"></i> 类别管理及账户排序请在电脑端操作
                         </div>
                     </div>
                     <div class="card shadow-sm d-none d-md-block">
@@ -2243,6 +2250,15 @@ function onDataLoaded() {
         btn.onclick = () => loginWithUser(name);
         container.appendChild(btn);
     });
+
+    // 自动登录：如果上次登录的用户仍在列表中，直接登录
+    try {
+        const lastUser = localStorage.getItem('APP_last_user');
+        if (lastUser && dataUsers.includes(lastUser)) {
+            // 延迟一帧，让用户看到"数据加载成功"提示后再跳转
+            setTimeout(() => loginWithUser(lastUser), 300);
+        }
+    } catch(_) {}
 }
 
 /**
@@ -2290,6 +2306,8 @@ function loginWithUser(name) {
 
     currentUser = { name: name };
     currentUserName = name;
+    // 记录本设备最近登录的用户
+    try { localStorage.setItem('APP_last_user', name); } catch(_) {}
 
     $('login-overlay').classList.add('d-none');
     $('app-wrapper').classList.remove('d-none');
@@ -2763,15 +2781,43 @@ function loadAllData() {
 function saveUserData() {
     if (!currentUser) return;
     dataUsers.forEach(u => {
+        // 保留已有的 accountOrder，不覆盖
+        const prevOrder = (inMemoryLoadedData.allUserData[u] || {}).accountOrder;
         inMemoryLoadedData.allUserData[u] = {
             accounts: accounts.filter(a => a.ownerName === u),
-            transactions: transactions.filter(t => t.ownerName === u && !t._isArchived), // 排除历史模式临时加载的存档交易
-            plannedTransactions: plannedTransactions.filter(p => p.ownerName === u)
+            transactions: transactions.filter(t => t.ownerName === u && !t._isArchived),
+            plannedTransactions: plannedTransactions.filter(p => p.ownerName === u),
+            ...(prevOrder ? { accountOrder: prevOrder } : {})
         };
     });
     inMemoryLoadedData.users = dataUsers;
     inMemoryLoadedData.categories = categories;
     inMemoryLoadedData.exchangeRates = exchangeRates;
+}
+
+/** 获取当前用户的账户顺序数组，不存在则返回 null */
+function getAccountOrder() {
+    return (inMemoryLoadedData.allUserData[currentUserName] || {}).accountOrder || null;
+}
+
+/** 保存账户顺序并触发同步 */
+function saveAccountOrder(idArray) {
+    if (!inMemoryLoadedData.allUserData[currentUserName]) return;
+    inMemoryLoadedData.allUserData[currentUserName].accountOrder = idArray;
+    triggerAutoSave();
+}
+
+/** 按 accountOrder 对账户数组排序（不在列表里的追加到末尾） */
+function sortedUserAccounts(accs) {
+    const order = getAccountOrder();
+    if (!order || order.length === 0) return accs;
+    const idxMap = {};
+    order.forEach((id, i) => { idxMap[String(id)] = i; });
+    return [...accs].sort((a, b) => {
+        const ia = idxMap[String(a.id)] ?? 9999;
+        const ib = idxMap[String(b.id)] ?? 9999;
+        return ia - ib;
+    });
 }
 
 function filterUserData() {
@@ -3418,32 +3464,73 @@ function renderAccounts() {
             <div class="col-4">净值: <b class="text-primary ${hiddenClass}">¥${(totalAssets + totalLiabilities).toFixed(2)}</b></div>
         </div>`;
 
+    const isDesktop = window.innerWidth >= 769;
     ['Asset', 'Liability', 'Receivable'].forEach(type => {
-        const myTypeAccs = userAccounts.filter(a => (a.accountType || 'Asset') === type);
-        if (myTypeAccs.length === 0) return;
+        const rawAccs = userAccounts.filter(a => (a.accountType || 'Asset') === type);
+        if (rawAccs.length === 0) return;
+        const myTypeAccs = sortedUserAccounts(rawAccs);
         const color = type === 'Liability' ? 'danger' : (type === 'Asset' ? 'success' : 'info');
         container.innerHTML += `<h6 class="mt-3 mb-2 text-${color} border-bottom border-${color} pb-2">${type === 'Asset' ? '资产' : (type === 'Liability' ? '负债' : '应收')}</h6>`;
         const row = document.createElement('div');
         row.className = 'd-flex flex-wrap g-3 gap-3';
+        row.dataset.accType = type;
         myTypeAccs.forEach(acc => {
             const bal = calculateBalance(acc.id);
             const col = document.createElement('div');
             col.className = 'account-col';
+            col.dataset.accId = acc.id;
             const balClass = amountsHidden ? 'amount-hidden' : (bal < 0 ? 'text-danger' : 'text-success');
+            const dragHandle = isDesktop
+                ? `<div class="text-muted d-none d-md-flex align-items-center px-1" style="cursor:grab;opacity:0.35;font-size:0.85rem;" title="拖拽排序"><i class="bi bi-grip-vertical"></i></div>`
+                : '';
             col.innerHTML = `
-                <div class="card account-card p-3 shadow-sm"
-                     data-id="${acc.id}" onclick="openAccountDetail(${acc.id})" style="cursor:pointer;">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div style="flex:1">
-                            <div class="fw-bold text-truncate">${acc.name} · <span class="fw-normal">${acc.currency}</span></div>
-                            ${acc.notes ? `<div class="small text-muted text-truncate" style="max-width:140px;" title="${acc.notes}">${acc.notes}</div>` : ''}
-                        </div>
-                        <div class="text-end">
-                            <h5 class="mb-0 ${balClass}">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(bal, acc.currency)}</h5>
-                            <small class="text-muted"><i class="bi bi-chevron-right"></i></small>
+                <div class="card account-card p-3 shadow-sm d-flex flex-row align-items-center gap-1"
+                     data-id="${acc.id}" style="cursor:pointer;">
+                    ${dragHandle}
+                    <div class="flex-grow-1" onclick="openAccountDetail(${acc.id})">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex:1">
+                                <div class="fw-bold text-truncate">${acc.name} · <span class="fw-normal">${acc.currency}</span></div>
+                                ${acc.notes ? `<div class="small text-muted text-truncate" style="max-width:140px;" title="${acc.notes}">${acc.notes}</div>` : ''}
+                            </div>
+                            <div class="text-end">
+                                <h5 class="mb-0 ${balClass}">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(bal, acc.currency)}</h5>
+                                <small class="text-muted"><i class="bi bi-chevron-right"></i></small>
+                            </div>
                         </div>
                     </div>
                 </div>`;
+            if (isDesktop) {
+                col.draggable = true;
+                col.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('accId', acc.id);
+                    e.dataTransfer.setData('accType', type);
+                    col.classList.add('dragging');
+                });
+                col.addEventListener('dragend', () => col.classList.remove('dragging'));
+                col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+                col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+                col.addEventListener('drop', e => {
+                    e.preventDefault();
+                    col.classList.remove('drag-over');
+                    const fromId = Number(e.dataTransfer.getData('accId'));
+                    const fromType = e.dataTransfer.getData('accType');
+                    if (fromType !== type || fromId === acc.id) return;
+                    // Reorder: build new order from current DOM, swap
+                    const allOfType = sortedUserAccounts(userAccounts.filter(a => (a.accountType || 'Asset') === type));
+                    const ids = allOfType.map(a => a.id);
+                    const fi = ids.indexOf(fromId), ti = ids.indexOf(acc.id);
+                    if (fi < 0 || ti < 0) return;
+                    ids.splice(fi, 1); ids.splice(ti, 0, fromId);
+                    // Merge with order for other types
+                    const otherOrder = (getAccountOrder() || []).filter(id => !ids.includes(id));
+                    saveAccountOrder([...otherOrder.filter(id => {
+                        const a = accounts.find(x => x.id === id);
+                        return a && (a.accountType || 'Asset') !== type;
+                    }), ...ids]);
+                    renderAccounts();
+                });
+            }
             row.appendChild(col);
         });
         container.appendChild(row);
@@ -4994,7 +5081,7 @@ function renderAllTransactions() {
             ? t.items.filter(it => it.desc).map(it => it.desc).join(' / ')
             : (t.desc||'');
         const tTagsDisplay = t.items && t.items.length > 1
-            ? t.items.filter(it => it.tags).map(it => `${it.tags}`).join(' ')
+            ? t.items.filter(it => it.tags).map(it => `@${it.tags}`).join(' ')
             : (t.tags||'');
         tr.innerHTML = `
             <td>${t.date}</td>
@@ -5407,12 +5494,29 @@ function applyDescHint(catId, category) {
  */
 async function checkHistoryCategories() {
     const suspects = [];
+
+    // ── 第一步：孤立分类（优先级最高，排在最前）──
+    const allValidCats = new Set([...categories.expense, ...categories.income]);
+    const orphanTrans = transactions.filter(t =>
+        !t.isTransfer && t.ownerName === currentUserName && !t._isArchived && t.category &&
+        !allValidCats.has(t.category)
+    );
+    // 去重：同一个孤立分类只提示一次，让用户选择新分类
+    const orphanGroups = {};
+    orphanTrans.forEach(t => {
+        if (!orphanGroups[t.category]) orphanGroups[t.category] = [];
+        orphanGroups[t.category].push(t);
+    });
+    Object.entries(orphanGroups).forEach(([orphanCat, txList]) => {
+        suspects.push({ isOrphan: true, orphanCat, txList, t: txList[0], suggested: null });
+    });
+
+    // ── 第二步：相似备注但分类不一致（原有逻辑）──
     const myTrans = transactions.filter(t =>
         !t.isTransfer && t.ownerName === currentUserName && t.desc && !(t.items && t.items.length > 1)
     );
     myTrans.forEach(t => {
         const type = t.amount > 0 ? 'income' : 'expense';
-        // 查找除自身外的历史，避免自我强化；排除多笔交易（一备注多分类会污染参考样本）
         const pool = myTrans.filter(x => x !== t && x.category && !(x.items && x.items.length > 1));
         const catScores = {};
         pool.forEach(x => {
@@ -5423,29 +5527,55 @@ async function checkHistoryCategories() {
             catScores[x.category] = (catScores[x.category] || 0) + score;
         });
         if (Object.keys(catScores).length === 0) return;
-        const [bestCat, bestScore] = Object.entries(catScores)
-            .sort((a, b) => b[1] - a[1])[0];
-        // 只在建议分类明显压倒当前分类时才标记（建议分≥5且比当前分高出50%）
+        const [bestCat, bestScore] = Object.entries(catScores).sort((a, b) => b[1] - a[1])[0];
         const currentScore = catScores[t.category] || 0;
         if (bestCat !== t.category && bestScore >= 5 && bestScore > currentScore * 1.5) {
-            suspects.push({ t, suggested: bestCat, bestScore });
+            suspects.push({ isOrphan: false, t, suggested: bestCat, bestScore });
         }
     });
 
-    if (suspects.length === 0) { alert('校对完成！所有分类均与历史记忆一致。'); return; }
+    if (suspects.length === 0) { alert('校对完成！所有分类均正常。'); return; }
+
+    const orphanCount = suspects.filter(s => s.isOrphan).length;
+    const suggCount   = suspects.filter(s => !s.isOrphan).length;
+    let summary = `发现 ${suspects.length} 条需处理：`;
+    if (orphanCount) summary += `\n⚠️ ${orphanCount} 个孤立分类（不在分类列表中）`;
+    if (suggCount)   summary += `\n💡 ${suggCount} 条建议修改`;
+    if (!confirm(summary + '\n\n点击确定开始逐条处理。')) return;
 
     let updated = 0;
     for (let i = 0; i < suspects.length; i++) {
-        const { t, suggested } = suspects[i];
-        const typeLabel = t.amount > 0 ? '收入' : '支出';
-        const ok = confirm(
-            `【${i + 1}/${suspects.length}】\n\n` +
-            `日期：${t.date}\n备注：${t.desc}\n` +
-            `金额：${Math.abs(t.amount)} (${typeLabel})\n\n` +
-            `当前分类：${t.category}\n历史建议：${suggested}\n\n` +
-            `点击"确定"修改，点击"取消"跳过。`
-        );
-        if (ok) { t.category = suggested; updated++; }
+        const s = suspects[i];
+        let ok = false;
+
+        if (s.isOrphan) {
+            // 孤立分类：提示选择新分类
+            const type = s.txList[0].amount > 0 ? 'income' : 'expense';
+            const validList = (type === 'expense' ? categories.expense : categories.income).join('、');
+            const newCat = prompt(
+                `【${i + 1}/${suspects.length}】⚠️ 孤立分类\n\n` +
+                `分类名称：「${s.orphanCat}」（已不在分类列表中）\n` +
+                `涉及交易：${s.txList.length} 条\n\n` +
+                `请输入新分类名称（可选）：\n${validList}\n\n` +
+                `留空跳过，输入分类名后点确定修改。`,
+                s.orphanCat
+            );
+            if (newCat && newCat.trim() && newCat.trim() !== s.orphanCat) {
+                s.txList.forEach(t => { t.category = newCat.trim(); });
+                updated += s.txList.length;
+            }
+        } else {
+            const typeLabel = s.t.amount > 0 ? '收入' : '支出';
+            ok = confirm(
+                `【${i + 1}/${suspects.length}】💡 分类建议\n\n` +
+                `日期：${s.t.date}\n备注：${s.t.desc}\n` +
+                `金额：${Math.abs(s.t.amount)} (${typeLabel})\n\n` +
+                `当前分类：${s.t.category}\n历史建议：${s.suggested}\n\n` +
+                `点击"确定"修改，点击"取消"跳过。`
+            );
+            if (ok) { s.t.category = s.suggested; updated++; }
+        }
+
         if (i > 0 && i % 10 === 0 && i < suspects.length - 1) {
             if (!confirm(`已处理 ${i + 1} 条，继续？`)) break;
         }
