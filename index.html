@@ -2155,7 +2155,7 @@ function decryptAndLoadData() {
             categories = data.categories || DEFAULT_CATEGORIES;
             exchangeRates = data.exchangeRates || DEFAULT_RATES;
             $('password-error').classList.add('d-none');
-            showToast('Drive 数据解密成功，自动选择上次用户', 'success', 3000);
+            showToast('Drive 数据解密成功，请选择用户', 'success', 3000);
             window._driveMode = false;
             window._driveRawContent = null;
             onDataLoaded();
@@ -2231,7 +2231,7 @@ function onDataLoaded() {
         }
     });
 
-    showToast('数据加载成功，自动选择用户', 'success', 3000);
+    showToast('数据加载成功，请选择用户', 'success', 3000);
     $('user-section').style.display = 'block';
 
     // 渲染用户按钮
@@ -3161,7 +3161,7 @@ async function loadFromDrive() {
             categories = parsed.categories || DEFAULT_CATEGORIES;
             exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
             $('password-section').style.display = 'none';
-            showToast('已从 Drive 加载，自动选择用户', 'success', 3000);
+            showToast('已从 Drive 加载，请选择用户', 'success', 3000);
             onDataLoaded();
             return;
         } catch(_) {}
@@ -3542,7 +3542,15 @@ function renderAccounts() {
         otherContainer.innerHTML = `<h6 class="mt-4 mb-2 text-secondary border-bottom pb-2">其他用户的账户</h6>`;
         const otherRow = document.createElement('div');
         otherRow.className = 'd-flex flex-wrap g-3 gap-3';
-        otherAccs.forEach(acc => {
+        // 按各用户自己的 accountOrder 排序
+        const sortedOthers = [...otherAccs].sort((a, b) => {
+            const orderA = (inMemoryLoadedData.allUserData[a.ownerName] || {}).accountOrder || [];
+            const orderB = (inMemoryLoadedData.allUserData[b.ownerName] || {}).accountOrder || [];
+            const ia = orderA.indexOf(a.id) >= 0 ? orderA.indexOf(a.id) : 9999;
+            const ib = orderB.indexOf(b.id) >= 0 ? orderB.indexOf(b.id) : 9999;
+            return a.ownerName === b.ownerName ? ia - ib : 0;
+        });
+        sortedOthers.forEach(acc => {
             const bal = calculateBalance(acc.id);
             const col = document.createElement('div');
             col.className = 'account-col';
@@ -4066,18 +4074,21 @@ function fillTransferSelects(fromValue, toValue) {
     const fromSelect = $('edit-transfer-from');
     const toSelect = $('edit-transfer-to');
     fromSelect.innerHTML = '';
-    accounts.filter(a => a.ownerName === currentUserName).forEach(a => {
+    // 转出：只有自己的账户，按手动排序
+    sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName)).forEach(a => {
         fromSelect.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`, a.id));
     });
     toSelect.innerHTML = '';
-    accounts.forEach(a => {
+    // 转入：自己的账户（排序）+ 其他用户账户
+    const sortedMine = sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName));
+    const others = accounts.filter(a => a.ownerName !== currentUserName);
+    [...sortedMine, ...others].forEach(a => {
         toSelect.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`, a.id));
     });
     if (fromValue) fromSelect.value = fromValue;
     else if (fromSelect.options.length > 0) fromSelect.selectedIndex = 0;
     if (toValue) toSelect.value = toValue;
     else {
-        // 默认选一个与 from 不同的账户
         const fromId = fromSelect.value;
         const other = accounts.find(a => a.id != fromId);
         if (other) toSelect.value = other.id;
@@ -5859,7 +5870,8 @@ function updateSelectOptions() {
         const el = $(id);
         if (!el) return;
         el.innerHTML = '';
-        const accsToShow = includeOthers ? accounts : userAccounts;
+        const myAccs = sortedUserAccounts(userAccounts);
+        const accsToShow = includeOthers ? [...myAccs, ...accounts.filter(a => a.ownerName !== currentUserName)] : myAccs;
         accsToShow.forEach(a => {
             el.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency] || a.currency})`, a.id));
         });
