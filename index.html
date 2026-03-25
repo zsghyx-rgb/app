@@ -2155,7 +2155,7 @@ function decryptAndLoadData() {
             categories = data.categories || DEFAULT_CATEGORIES;
             exchangeRates = data.exchangeRates || DEFAULT_RATES;
             $('password-error').classList.add('d-none');
-            showToast('Drive 数据解密成功，请选择用户', 'success', 3000);
+            showToast('Drive 数据解密成功，自动选择上次用户', 'success', 3000);
             window._driveMode = false;
             window._driveRawContent = null;
             onDataLoaded();
