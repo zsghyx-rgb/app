@@ -504,7 +504,7 @@ select.compact-form-control { height: 2.1rem; }
     /* 手机端卡片额外样式 */
     .mobile-transaction-card {
         transition: transform 0.3s ease-out;
-        touch-action: pan-y;
+        touch-action: pan-x pan-y;
         overflow-x: auto;
     }
 
@@ -2964,11 +2964,14 @@ function mergeData(local, remote) {
         const remoteU = ((remote && remote.allUserData) || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
         const mergedTransactions = mergeArray(localU.transactions, remoteU.transactions)
             .filter(t => !deletedIdSet.has(String(t.id))); // 过滤已删除的交易
+        // accountOrder：优先保留 local 的，local 没有则用 remote 的
+        const mergedOrder = localU.accountOrder || remoteU.accountOrder || undefined;
         merged.allUserData[u] = {
             accounts: mergeArray(localU.accounts, remoteU.accounts)
                 .filter(a => !deletedIdSet.has(String(a.id))), // 过滤已删除的账户
             transactions: mergedTransactions,
-            plannedTransactions: mergeArray(localU.plannedTransactions, remoteU.plannedTransactions)
+            plannedTransactions: mergeArray(localU.plannedTransactions, remoteU.plannedTransactions),
+            ...(mergedOrder ? { accountOrder: mergedOrder } : {})
         };
     });
 
