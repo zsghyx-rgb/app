@@ -2729,6 +2729,10 @@ function logout() {
 function initAppUI() {
     renderAccounts();
 
+    // 默认只显示当前用户的流水
+    currentUserFilterValue = currentUserName;
+    updateUserFilterBtn();
+
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 30);
