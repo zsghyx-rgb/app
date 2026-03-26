@@ -2155,7 +2155,7 @@ function decryptAndLoadData() {
             categories = data.categories || DEFAULT_CATEGORIES;
             exchangeRates = data.exchangeRates || DEFAULT_RATES;
             $('password-error').classList.add('d-none');
-            showToast('Drive 数据解密成功，请选择用户', 'success', 3000);
+            showToast('Drive 数据解密成功，自动选择用户', 'success', 3000);
             window._driveMode = false;
             window._driveRawContent = null;
             onDataLoaded();
@@ -2231,7 +2231,7 @@ function onDataLoaded() {
         }
     });
 
-    showToast('数据加载成功，请选择用户', 'success', 3000);
+    showToast('数据加载成功，自动选择用户', 'success', 3000);
     $('user-section').style.display = 'block';
 
     // 渲染用户按钮
@@ -3165,7 +3165,7 @@ async function loadFromDrive() {
             categories = parsed.categories || DEFAULT_CATEGORIES;
             exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
             $('password-section').style.display = 'none';
-            showToast('已从 Drive 加载，请选择用户', 'success', 3000);
+            showToast('已从 Drive 加载，自动选择用户', 'success', 3000);
             onDataLoaded();
             return;
         } catch(_) {}
