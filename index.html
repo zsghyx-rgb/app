@@ -658,15 +658,15 @@ select.compact-form-control { height: 2.1rem; }
 .split-item-card[data-accent="2"] { border-left-color: #198754; background: rgba(25,135,84,0.05) !important; }
 .split-item-card[data-accent="3"] { border-left-color: #9c27b0; background: rgba(156,39,176,0.05) !important; }
 
-    /* ===== EASTER 2026 START — 删除此块及对应HTML即可移除复活节主题 ===== */
+/* ===== EASTER 2026 START — 修正版 ===== */
 
-    /* 背景渐变 */
-    #login-overlay {
+#login-overlay {
         background: linear-gradient(160deg, #fef6e4 0%, #e8f5e9 40%, #f3e5f5 80%, #fce4ec 100%) !important;
         overflow: hidden;
+        position: relative;
     }
 
-    /* 浮动彩蛋（背景装饰） */
+    /* 2. 背景浮动彩蛋装饰 */
     .easter-egg-float {
         position: absolute;
         border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
@@ -679,13 +679,11 @@ select.compact-form-control { height: 2.1rem; }
         50% { transform: translateY(-18px) rotate(6deg); }
     }
 
-    /* 登录卡片加春日感 */
+    /* 3. 登录卡片与按钮春日美化 */
     #login-overlay > .card {
         border: 1.5px solid rgba(186,222,155,0.5) !important;
         box-shadow: 0 8px 32px rgba(120,180,100,0.13), 0 2px 8px rgba(200,160,220,0.10) !important;
     }
-
-    /* 用户选择按钮 → 春日紫绿 */
     #user-buttons .btn-outline-primary {
         border-color: #a084ca !important;
         color: #7b5ea7 !important;
@@ -694,8 +692,6 @@ select.compact-form-control { height: 2.1rem; }
         background: #a084ca !important;
         color: white !important;
     }
-
-    /* 解密按钮 */
     #login-overlay .btn-primary {
         background: #78a87e !important;
         border-color: #78a87e !important;
@@ -703,146 +699,186 @@ select.compact-form-control { height: 2.1rem; }
     #login-overlay .btn-primary:hover {
         background: #5d8f63 !important;
     }
-
-    /* 标题颜色 */
     #login-overlay h4.text-primary {
         color: #7b5ea7 !important;
     }
 
-    /* ── CSS 兔子 ── */
+    /* 4. 核心：CSS 兔子全套样式 */
     .easter-bunny-wrap {
         display: flex;
         flex-direction: column;
         align-items: center;
-        margin-bottom: 12px;
-        animation: bunnyBob 3s ease-in-out infinite;
+        margin-bottom: 15px;
+        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.08));
+        position: relative;
+        z-index: 10;
     }
-    @keyframes bunnyBob {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-6px); }
-    }
+
     .bunny {
         position: relative;
-        width: 72px;
-        height: 76px;
+        width: 80px;
+        height: 115px; 
+        animation: bunnyJump 3s ease-in-out infinite;
     }
-    /* 耳朵 */
+
+    /* 整体跳跃感 */
+    @keyframes bunnyJump {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-10px) scale(0.98, 1.02); }
+    }
+
+    /* 耳朵动画 */
     .bunny-ear {
         position: absolute;
-        width: 16px;
-        height: 46px;
+        width: 18px;
+        height: 52px;
         background: #f5e6e6;
         border-radius: 50% 50% 20% 20%;
         border: 2px solid #e8d0d0;
         top: 0;
+        z-index: 1;
     }
     .bunny-ear-inner {
         position: absolute;
-        width: 7px;
-        height: 30px;
+        width: 8px;
+        height: 35px;
         background: #f4b8c1;
         border-radius: 50%;
         top: 6px;
         left: 50%;
         transform: translateX(-50%);
     }
-    .bunny-ear-left  { left: 12px; transform: rotate(-8deg); transform-origin: bottom center; }
-    .bunny-ear-right { right: 12px; transform: rotate(8deg); transform-origin: bottom center; }
-    /* 头 */
+    .bunny-ear-left  { left: 14px; transform: rotate(-12deg); animation: earTwitchL 4s ease-in-out infinite; }
+    .bunny-ear-right { right: 14px; transform: rotate(12deg); animation: earTwitchR 4s ease-in-out infinite; }
+
+    @keyframes earTwitchL { 0%, 90%, 100% { transform: rotate(-12deg); } 95% { transform: rotate(-25deg); } }
+    @keyframes earTwitchR { 0%, 85%, 100% { transform: rotate(12deg); } 92% { transform: rotate(25deg); } }
+
+    /* 身体与尾巴 */
+    .bunny-body {
+        position: absolute;
+        width: 70px;
+        height: 62px;
+        background: #f9f0f0;
+        border-radius: 50% 50% 40% 40%;
+        border: 2px solid #e8d8d8;
+        bottom: 5px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+    }
+    .bunny-tail {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        background: #fff;
+        border-radius: 50%;
+        border: 2px solid #e8d8d8;
+        bottom: 12px;
+        right: -4px;
+        z-index: 1;
+        animation: tailWag 2s ease-in-out infinite;
+    }
+    @keyframes tailWag { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1) translateX(2px); } }
+
+    /* 爪子 */
+    .bunny-paw {
+        position: absolute;
+        width: 16px;
+        height: 12px;
+        background: #f9f0f0;
+        border: 2px solid #e8d8d8;
+        border-radius: 50%;
+        bottom: -2px;
+        z-index: 3;
+    }
+    .bunny-paw-left { left: 12px; }
+    .bunny-paw-right { right: 12px; }
+
+    /* 头部：必须保证 z-index 最高且眼睛在内部 */
     .bunny-head {
         position: absolute;
-        width: 54px;
-        height: 50px;
+        width: 62px;
+        height: 56px;
         background: #f9f0f0;
         border-radius: 50%;
         border: 2px solid #e8d8d8;
-        bottom: 0;
+        top: 28px;
         left: 50%;
         transform: translateX(-50%);
+        z-index: 10;
     }
-    /* 眼睛 */
+
+    /* 眼睛修复版 */
     .bunny-eye {
         position: absolute;
         width: 8px;
-        height: 9px;
+        height: 10px;
         background: #4a3040;
         border-radius: 50%;
-        top: 16px;
+        top: 18px;
     }
     .bunny-eye::after {
         content: '';
         position: absolute;
-        width: 3px;
-        height: 3px;
+        width: 3px; height: 3px;
         background: white;
         border-radius: 50%;
-        top: 1px;
-        right: 1px;
+        top: 1px; right: 1px;
     }
-    .bunny-eye-left  { left: 10px; }
-    .bunny-eye-right { right: 10px; }
-    /* 鼻子 */
+    .bunny-eye-left  { left: 14px; animation: eyeBlink 4s 0.2s infinite; }
+    .bunny-eye-right { right: 14px; animation: eyeBlink 4s infinite; }
+
+    @keyframes eyeBlink {
+        0%, 96%, 100% { transform: scaleY(1); }
+        98% { transform: scaleY(0.1); }
+    }
+
+    /* 鼻子、嘴巴、腮红、胡须 */
     .bunny-nose {
         position: absolute;
-        width: 7px;
-        height: 5px;
+        width: 8px; height: 6px;
         background: #f4a0b0;
         border-radius: 50%;
-        top: 26px;
-        left: 50%;
+        top: 30px; left: 50%;
         transform: translateX(-50%);
+        animation: noseWiggle 1.2s ease-in-out infinite;
     }
-    /* 嘴 */
+    @keyframes noseWiggle { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.2, 0.8); } }
+
     .bunny-mouth {
         position: absolute;
-        top: 31px;
-        left: 50%;
+        top: 36px; left: 50%;
         transform: translateX(-50%);
-        width: 14px;
-        height: 6px;
+        width: 12px; height: 8px;
         border-bottom: 2px solid #d4909e;
         border-radius: 0 0 50% 50%;
     }
-    /* 腮红 */
     .bunny-cheek {
         position: absolute;
-        width: 12px;
-        height: 7px;
+        width: 12px; height: 7px;
         background: #f9c6cb;
         border-radius: 50%;
-        opacity: 0.6;
-        top: 28px;
+        opacity: 0.5;
+        top: 32px;
     }
-    .bunny-cheek-left  { left: 4px; }
-    .bunny-cheek-right { right: 4px; }
-    /* 须 */
+    .bunny-cheek-left { left: 6px; }
+    .bunny-cheek-right { right: 6px; }
+
     .bunny-whisker {
         position: absolute;
-        height: 1.5px;
+        height: 1.5px; width: 15px;
         background: #c8a8b0;
-        border-radius: 1px;
-        top: 29px;
-        opacity: 0.7;
+        opacity: 0.4;
     }
-    .bunny-whisker-left-1  { width: 12px; left: -8px;  transform: rotate(-10deg); }
-    .bunny-whisker-left-2  { width: 12px; left: -8px;  transform: rotate(5deg); top: 33px; }
-    .bunny-whisker-right-1 { width: 12px; right: -8px; transform: rotate(10deg); }
-    .bunny-whisker-right-2 { width: 12px; right: -8px; transform: rotate(-5deg); top: 33px; }
+    .bunny-whisker-l { left: -10px; transform: rotate(-10deg); top: 34px; box-shadow: 0 6px 0 #c8a8b0; }
+    .bunny-whisker-r { right: -10px; transform: rotate(10deg); top: 34px; box-shadow: 0 6px 0 #c8a8b0; }
 
-    /* 彩蛋一排 */
-    .easter-eggs-row {
-        display: flex;
-        gap: 8px;
-        margin-top: 6px;
-    }
-    .mini-egg {
-        width: 14px;
-        height: 18px;
-        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-        opacity: 0.85;
-    }
+    /* 底部署名与彩蛋 */
+    .easter-eggs-row { display: flex; gap: 8px; margin-top: 10px; justify-content: center; }
+    .mini-egg { width: 14px; height: 18px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; }
 
-    /* ===== EASTER 2026 END ===== */
+/* ===== EASTER 2026 END ===== */
 
     </style>
     <!-- 鸿蒙HarmonyOS 3.0 兼容补丁 -->
@@ -872,19 +908,23 @@ select.compact-form-control { height: 2.1rem; }
 
 
 <div id="login-overlay">
+    
 <!-- EASTER 2026 START -->
     <!-- 背景浮动彩蛋 -->
     <div class="easter-egg-float" style="width:90px;height:110px;background:#a8d8a8;top:8%;left:5%;animation-delay:0s;animation-duration:7s;"></div>
     <div class="easter-egg-float" style="width:60px;height:74px;background:#f4a0c0;top:15%;right:8%;animation-delay:1.5s;animation-duration:5.5s;"></div>
     <div class="easter-egg-float" style="width:50px;height:62px;background:#b8a8e8;bottom:12%;left:10%;animation-delay:0.8s;animation-duration:8s;"></div>
     <div class="easter-egg-float" style="width:70px;height:86px;background:#f8d08a;bottom:8%;right:6%;animation-delay:2s;animation-duration:6.5s;"></div>
-    <div class="easter-egg-float" style="width:40px;height:50px;background:#a8d8f8;top:50%;left:2%;animation-delay:3s;animation-duration:7.5s;"></div>
 
-    <!-- 兔子 + 小彩蛋 -->
     <div class="easter-bunny-wrap">
         <div class="bunny">
+            <div class="bunny-tail"></div>
             <div class="bunny-ear bunny-ear-left"><div class="bunny-ear-inner"></div></div>
             <div class="bunny-ear bunny-ear-right"><div class="bunny-ear-inner"></div></div>
+            <div class="bunny-body">
+                <div class="bunny-paw bunny-paw-left"></div>
+                <div class="bunny-paw bunny-paw-right"></div>
+            </div>
             <div class="bunny-head">
                 <div class="bunny-eye bunny-eye-left"></div>
                 <div class="bunny-eye bunny-eye-right"></div>
@@ -892,12 +932,11 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="bunny-mouth"></div>
                 <div class="bunny-cheek bunny-cheek-left"></div>
                 <div class="bunny-cheek bunny-cheek-right"></div>
-                <div class="bunny-whisker bunny-whisker-left-1"></div>
-                <div class="bunny-whisker bunny-whisker-left-2"></div>
-                <div class="bunny-whisker bunny-whisker-right-1"></div>
-                <div class="bunny-whisker bunny-whisker-right-2"></div>
+                <div class="bunny-whisker bunny-whisker-l"></div>
+                <div class="bunny-whisker bunny-whisker-r"></div>
             </div>
         </div>
+        
         <div class="easter-eggs-row">
             <div class="mini-egg" style="background:linear-gradient(135deg,#f4a0c0,#f8d0e0);"></div>
             <div class="mini-egg" style="background:linear-gradient(135deg,#a8d8a8,#c8f0c8);"></div>
@@ -908,12 +947,12 @@ select.compact-form-control { height: 2.1rem; }
     </div>
 
     <div class="text-center mb-3">
-        <span class="badge rounded-pill bg-white bg-opacity-75 text-success border border-success border-opacity-25 px-3 py-2 shadow-sm" style="letter-spacing: 2px; color: #2e7d32 !important;">
+        <span class="badge rounded-pill bg-white bg-opacity-75 text-success border border-success border-opacity-25 px-3 py-2 shadow-sm" style="letter-spacing: 2px; color: #2e7d32 !important; font-weight: bold;">
             🐰 HAPPY EASTER 2026 🥚
         </span>
     </div>
-
 <!-- EASTER 2026 END -->
+    
     <div class="card shadow p-3 p-md-4" style="width: 480px; max-width: 95%;">
 
         <!-- 标题栏 + 齿轮 -->
@@ -5247,22 +5286,33 @@ function getFilteredTransactions() {
     const startDate = $('filter-start-date').value;
     const endDate = $('filter-end-date').value;
     const userFilter = currentUserFilterValue;
+    
     return transactions.filter(t => {
         if (t._isBaseline) return false;
         if (transactionDisplayMode === 'transactions' && t.isTransfer) return false;
         if (transactionDisplayMode === 'transfers' && !t.isTransfer) return false;
         if (startDate && t.date < startDate) return false;
         if (endDate && t.date > endDate) return false;
-        if (userFilter !== 'all') {
-            // 筛选指定用户：显示该用户的记录 + 别人转入该用户账户的收款记录
-            const isOwn = t.ownerName === userFilter;
-            const isIncomingTransfer = t.isTransfer && t.type === 'income' &&
-                accounts.some(a => a.id == t.accountId && a.ownerName === userFilter);
-            if (!isOwn && !isIncomingTransfer) return false;
-        } else {
-            // 所有用户视图：转账收入由转出那条统一展示，跳过转入避免重复
-            if (t.isTransfer && t.type === 'income') return false;
+
+        // 👇 核心修复逻辑在这里 👇
+        if (t.isTransfer && t.type === 'income') {
+            // 找到这笔钱是从哪个账户转出来的
+            const relatedAcc = accounts.find(a => a.id == t.relatedAccountId);
+            
+            // 如果是“所有用户”视图，或者转出账户的主人也是当前被筛选的人
+            // 说明这是一笔“自己转自己”的账。因为转出(expense)记录一定会被显示，
+            // 为了防止双重显示，我们直接把这条转入(income)记录隐藏掉。
+            if (userFilter === 'all' || (relatedAcc && relatedAcc.ownerName === userFilter)) {
+                return false; 
+            }
         }
+
+        if (userFilter !== 'all') {
+            const isOwn = t.ownerName === userFilter;
+            // 因为上面已经拦截了自己转自己的情况，能走到这里的 income 肯定是别人转给我的
+            if (!isOwn) return false; 
+        }
+
         if (search) {
             const acc = accounts.find(a => a.id == t.accountId);
             const accName = acc ? acc.name.toLowerCase() : '';
