@@ -657,7 +657,194 @@ select.compact-form-control { height: 2.1rem; }
 .split-item-card[data-accent="1"] { border-left-color: #fd7e14; background: rgba(253,126,20,0.05) !important; }
 .split-item-card[data-accent="2"] { border-left-color: #198754; background: rgba(25,135,84,0.05) !important; }
 .split-item-card[data-accent="3"] { border-left-color: #9c27b0; background: rgba(156,39,176,0.05) !important; }
-</style>
+
+    /* ===== EASTER 2026 START — 删除此块及对应HTML即可移除复活节主题 ===== */
+
+    /* 背景渐变 */
+    #login-overlay {
+        background: linear-gradient(160deg, #fef6e4 0%, #e8f5e9 40%, #f3e5f5 80%, #fce4ec 100%) !important;
+        overflow: hidden;
+    }
+
+    /* 浮动彩蛋（背景装饰） */
+    .easter-egg-float {
+        position: absolute;
+        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        opacity: 0.18;
+        animation: eggFloat 6s ease-in-out infinite;
+        pointer-events: none;
+    }
+    @keyframes eggFloat {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-18px) rotate(6deg); }
+    }
+
+    /* 登录卡片加春日感 */
+    #login-overlay > .card {
+        border: 1.5px solid rgba(186,222,155,0.5) !important;
+        box-shadow: 0 8px 32px rgba(120,180,100,0.13), 0 2px 8px rgba(200,160,220,0.10) !important;
+    }
+
+    /* 用户选择按钮 → 春日紫绿 */
+    #user-buttons .btn-outline-primary {
+        border-color: #a084ca !important;
+        color: #7b5ea7 !important;
+    }
+    #user-buttons .btn-outline-primary:hover {
+        background: #a084ca !important;
+        color: white !important;
+    }
+
+    /* 解密按钮 */
+    #login-overlay .btn-primary {
+        background: #78a87e !important;
+        border-color: #78a87e !important;
+    }
+    #login-overlay .btn-primary:hover {
+        background: #5d8f63 !important;
+    }
+
+    /* 标题颜色 */
+    #login-overlay h4.text-primary {
+        color: #7b5ea7 !important;
+    }
+
+    /* ── CSS 兔子 ── */
+    .easter-bunny-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 12px;
+        animation: bunnyBob 3s ease-in-out infinite;
+    }
+    @keyframes bunnyBob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
+    }
+    .bunny {
+        position: relative;
+        width: 72px;
+        height: 76px;
+    }
+    /* 耳朵 */
+    .bunny-ear {
+        position: absolute;
+        width: 16px;
+        height: 46px;
+        background: #f5e6e6;
+        border-radius: 50% 50% 20% 20%;
+        border: 2px solid #e8d0d0;
+        top: 0;
+    }
+    .bunny-ear-inner {
+        position: absolute;
+        width: 7px;
+        height: 30px;
+        background: #f4b8c1;
+        border-radius: 50%;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .bunny-ear-left  { left: 12px; transform: rotate(-8deg); transform-origin: bottom center; }
+    .bunny-ear-right { right: 12px; transform: rotate(8deg); transform-origin: bottom center; }
+    /* 头 */
+    .bunny-head {
+        position: absolute;
+        width: 54px;
+        height: 50px;
+        background: #f9f0f0;
+        border-radius: 50%;
+        border: 2px solid #e8d8d8;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    /* 眼睛 */
+    .bunny-eye {
+        position: absolute;
+        width: 8px;
+        height: 9px;
+        background: #4a3040;
+        border-radius: 50%;
+        top: 16px;
+    }
+    .bunny-eye::after {
+        content: '';
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: white;
+        border-radius: 50%;
+        top: 1px;
+        right: 1px;
+    }
+    .bunny-eye-left  { left: 10px; }
+    .bunny-eye-right { right: 10px; }
+    /* 鼻子 */
+    .bunny-nose {
+        position: absolute;
+        width: 7px;
+        height: 5px;
+        background: #f4a0b0;
+        border-radius: 50%;
+        top: 26px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    /* 嘴 */
+    .bunny-mouth {
+        position: absolute;
+        top: 31px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 14px;
+        height: 6px;
+        border-bottom: 2px solid #d4909e;
+        border-radius: 0 0 50% 50%;
+    }
+    /* 腮红 */
+    .bunny-cheek {
+        position: absolute;
+        width: 12px;
+        height: 7px;
+        background: #f9c6cb;
+        border-radius: 50%;
+        opacity: 0.6;
+        top: 28px;
+    }
+    .bunny-cheek-left  { left: 4px; }
+    .bunny-cheek-right { right: 4px; }
+    /* 须 */
+    .bunny-whisker {
+        position: absolute;
+        height: 1.5px;
+        background: #c8a8b0;
+        border-radius: 1px;
+        top: 29px;
+        opacity: 0.7;
+    }
+    .bunny-whisker-left-1  { width: 12px; left: -8px;  transform: rotate(-10deg); }
+    .bunny-whisker-left-2  { width: 12px; left: -8px;  transform: rotate(5deg); top: 33px; }
+    .bunny-whisker-right-1 { width: 12px; right: -8px; transform: rotate(10deg); }
+    .bunny-whisker-right-2 { width: 12px; right: -8px; transform: rotate(-5deg); top: 33px; }
+
+    /* 彩蛋一排 */
+    .easter-eggs-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+    }
+    .mini-egg {
+        width: 14px;
+        height: 18px;
+        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        opacity: 0.85;
+    }
+
+    /* ===== EASTER 2026 END ===== */
+
+    </style>
     <!-- 鸿蒙HarmonyOS 3.0 兼容补丁 -->
     <script>
     // canvas.toBlob polyfill (HarmonyOS 3.0 部分机型缺失)
@@ -685,11 +872,53 @@ select.compact-form-control { height: 2.1rem; }
 
 
 <div id="login-overlay">
+<!-- EASTER 2026 START -->
+    <!-- 背景浮动彩蛋 -->
+    <div class="easter-egg-float" style="width:90px;height:110px;background:#a8d8a8;top:8%;left:5%;animation-delay:0s;animation-duration:7s;"></div>
+    <div class="easter-egg-float" style="width:60px;height:74px;background:#f4a0c0;top:15%;right:8%;animation-delay:1.5s;animation-duration:5.5s;"></div>
+    <div class="easter-egg-float" style="width:50px;height:62px;background:#b8a8e8;bottom:12%;left:10%;animation-delay:0.8s;animation-duration:8s;"></div>
+    <div class="easter-egg-float" style="width:70px;height:86px;background:#f8d08a;bottom:8%;right:6%;animation-delay:2s;animation-duration:6.5s;"></div>
+    <div class="easter-egg-float" style="width:40px;height:50px;background:#a8d8f8;top:50%;left:2%;animation-delay:3s;animation-duration:7.5s;"></div>
+
+    <!-- 兔子 + 小彩蛋 -->
+    <div class="easter-bunny-wrap">
+        <div class="bunny">
+            <div class="bunny-ear bunny-ear-left"><div class="bunny-ear-inner"></div></div>
+            <div class="bunny-ear bunny-ear-right"><div class="bunny-ear-inner"></div></div>
+            <div class="bunny-head">
+                <div class="bunny-eye bunny-eye-left"></div>
+                <div class="bunny-eye bunny-eye-right"></div>
+                <div class="bunny-nose"></div>
+                <div class="bunny-mouth"></div>
+                <div class="bunny-cheek bunny-cheek-left"></div>
+                <div class="bunny-cheek bunny-cheek-right"></div>
+                <div class="bunny-whisker bunny-whisker-left-1"></div>
+                <div class="bunny-whisker bunny-whisker-left-2"></div>
+                <div class="bunny-whisker bunny-whisker-right-1"></div>
+                <div class="bunny-whisker bunny-whisker-right-2"></div>
+            </div>
+        </div>
+        <div class="easter-eggs-row">
+            <div class="mini-egg" style="background:linear-gradient(135deg,#f4a0c0,#f8d0e0);"></div>
+            <div class="mini-egg" style="background:linear-gradient(135deg,#a8d8a8,#c8f0c8);"></div>
+            <div class="mini-egg" style="background:linear-gradient(135deg,#f8d08a,#faeac0);"></div>
+            <div class="mini-egg" style="background:linear-gradient(135deg,#b8a8e8,#d8d0f8);"></div>
+            <div class="mini-egg" style="background:linear-gradient(135deg,#a8d8f8,#c8ecf8);"></div>
+        </div>
+    </div>
+
+    <div class="text-center mb-3">
+        <span class="badge rounded-pill bg-white bg-opacity-75 text-success border border-success border-opacity-25 px-3 py-2 shadow-sm" style="letter-spacing: 2px; color: #2e7d32 !important;">
+            🐰 HAPPY EASTER 2026 🥚
+        </span>
+    </div>
+
+<!-- EASTER 2026 END -->
     <div class="card shadow p-3 p-md-4" style="width: 480px; max-width: 95%;">
 
         <!-- 标题栏 + 齿轮 -->
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i>记一笔</h4>
+            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i>记一笔 <span style="font-size:0.7em;">🌷</span></h4>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleLoginSettings()" title="连接设置">
                 <i class="bi bi-gear" id="login-settings-gear"></i>
             </button>
@@ -794,7 +1023,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">v1.5.1</span>
+        <span class="text-muted" style="font-size:0.7rem;">v1.5.2</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2155,7 +2384,7 @@ function decryptAndLoadData() {
             categories = data.categories || DEFAULT_CATEGORIES;
             exchangeRates = data.exchangeRates || DEFAULT_RATES;
             $('password-error').classList.add('d-none');
-            showToast('Drive 数据解密成功，自动选择用户', 'success', 3000);
+            showToast('Drive 数据解密成功，请选择用户', 'success', 3000);
             window._driveMode = false;
             window._driveRawContent = null;
             onDataLoaded();
@@ -2231,7 +2460,7 @@ function onDataLoaded() {
         }
     });
 
-    showToast('数据加载成功，自动选择用户', 'success', 3000);
+    showToast('数据加载成功，请选择用户', 'success', 3000);
     $('user-section').style.display = 'block';
 
     // 渲染用户按钮
@@ -3165,7 +3394,7 @@ async function loadFromDrive() {
             categories = parsed.categories || DEFAULT_CATEGORIES;
             exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
             $('password-section').style.display = 'none';
-            showToast('已从 Drive 加载，自动选择用户', 'success', 3000);
+            showToast('已从 Drive 加载，请选择用户', 'success', 3000);
             onDataLoaded();
             return;
         } catch(_) {}
@@ -4006,6 +4235,11 @@ function _initNewTransModal(mode, title) {
     const today = new Date().toISOString().split('T')[0];
     $('edit-trans-id').value = '';
     $('edit-trans-mode').value = mode;
+
+// 👇 新增下面这两行：确保转账表单的模式也被正确初始化为 'add'
+    $('edit-transfer-id').value = '';
+    $('edit-transfer-mode').value = mode;
+
     $('editTransactionModalTitle').textContent = title;
     $('edit-trans-submit-btn').textContent = '保存';
     $('edit-trans-delete-btn').style.setProperty('display','none','important');
@@ -5014,12 +5248,21 @@ function getFilteredTransactions() {
     const endDate = $('filter-end-date').value;
     const userFilter = currentUserFilterValue;
     return transactions.filter(t => {
-        if (t._isBaseline) return false; // 基准交易不在列表中显示
+        if (t._isBaseline) return false;
         if (transactionDisplayMode === 'transactions' && t.isTransfer) return false;
         if (transactionDisplayMode === 'transfers' && !t.isTransfer) return false;
         if (startDate && t.date < startDate) return false;
         if (endDate && t.date > endDate) return false;
-        if (userFilter !== 'all' && t.ownerName !== userFilter) return false;
+        if (userFilter !== 'all') {
+            // 筛选指定用户：显示该用户的记录 + 别人转入该用户账户的收款记录
+            const isOwn = t.ownerName === userFilter;
+            const isIncomingTransfer = t.isTransfer && t.type === 'income' &&
+                accounts.some(a => a.id == t.accountId && a.ownerName === userFilter);
+            if (!isOwn && !isIncomingTransfer) return false;
+        } else {
+            // 所有用户视图：转账收入由转出那条统一展示，跳过转入避免重复
+            if (t.isTransfer && t.type === 'income') return false;
+        }
         if (search) {
             const acc = accounts.find(a => a.id == t.accountId);
             const accName = acc ? acc.name.toLowerCase() : '';
@@ -5067,8 +5310,9 @@ function renderAllTransactions() {
     displayData.forEach(t => {
         const acc = accounts.find(a => a.id == t.accountId);
         if (!acc) return;
-        const typeText = t.isTransfer ? '转账' : (t.amount < 0 ? '支出' : '收入');
-        const typeColorClass = t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success');
+        const isIncomingTransfer = t.isTransfer && t.type === 'income';
+        const typeText = t.isTransfer ? (isIncomingTransfer ? '收款' : '转账') : (t.amount < 0 ? '支出' : '收入');
+        const typeColorClass = isIncomingTransfer ? 'text-success' : (t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success'));
 
         let toAccountDisplay = '', amountInDisplay = '';
         if (t.isTransfer && t.type === 'expense') {
@@ -5082,7 +5326,12 @@ function renderAllTransactions() {
                 amountInDisplay = `<div class="fw-bold text-warning">${CURRENCY_SYMBOLS[accTo.currency]}${formatAmount(amountIn, accTo.currency)}</div>`;
             }
         } else if (t.isTransfer && t.type === 'income') {
-            return; // 跳过转入记录
+            // 别人转入我的账户：渲染为收款记录
+            const accFrom = accounts.find(a => a.id == t.relatedAccountId);
+            if (accFrom) {
+                toAccountDisplay = `<small>${getAccountDisplayName(accFrom)}</small>`;
+            }
+            amountInDisplay = `<div class="fw-bold text-success">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>`;
         }
 
         const canEdit = t.ownerName === currentUserName && !t._isArchived;
@@ -5118,7 +5367,6 @@ function renderAllTransactions() {
         displayData.forEach(t => {
             const acc = accounts.find(a => a.id == t.accountId);
             if (!acc) return;
-            if (t.isTransfer && t.type === 'income') return;
 
             const card = document.createElement('div');
             card.className = 'mobile-transaction-card';
@@ -5146,6 +5394,18 @@ function renderAllTransactions() {
     <div class="card-line-2 d-flex justify-content-between align-items-center">
         <span class="text-muted small">${t.date}${descClean ? ` · ${descClean}` : ''}${tagsDisplay}${attachIcon}</span>
         ${isCrossCurrency ? `<span class="small text-primary fw-bold">→ ${CURRENCY_SYMBOLS[accTo.currency]}${formatAmount(amountIn, accTo.currency)}</span>` : ''}
+    </div>`;
+            } else if (t.isTransfer && t.type === 'income') {
+                // 别人转入我的账户：显示为收款
+                const accFrom = accounts.find(a => a.id == t.relatedAccountId);
+                const fromName = accFrom ? getAccountDisplayName(accFrom) : '?';
+                card.innerHTML = `
+    <div class="card-line-1">
+        <div class="fw-bold flex-grow-1" style="font-size:0.85rem;">${fromName} <i class="bi bi-arrow-right-short text-success"></i> ${accDisplayName}</div>
+        <div class="amount-income fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
+    </div>
+    <div class="card-line-2">
+        <span class="text-muted small">${t.date}${descClean ? ` · ${descClean}` : ''}${attachIcon}</span>
     </div>`;
             } else {
                 const amountClass = t.amount < 0 ? 'amount-expense' : 'amount-income';
