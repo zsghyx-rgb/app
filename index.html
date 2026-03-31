@@ -170,7 +170,7 @@ body {
 #view-transactions.active-view,
 #view-account-detail.active-view { display: flex; flex-direction: column; overflow-y: hidden; }
 
-/* 账户详情视图：桌面表格撑满，手机列表滚动 */
+/* 账户详情视图 */
 #view-account-detail .excel-table-container { flex: 1; min-height: 0; }
 #account-detail-view-list { overflow-y: auto; flex: 1; min-height: 0; }
 
@@ -396,7 +396,7 @@ select.compact-form-control { height: 2.1rem; }
     box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 
-/* ── 交易卡片（手机列表 + SA详情列表 共用） ── */
+/* ── 交易卡片 ── */
 .mobile-transaction-card {
     background: var(--bs-body-bg);
     border: 1px solid var(--bs-border-color);
@@ -456,7 +456,8 @@ select.compact-form-control { height: 2.1rem; }
     .nav-pills .nav-link i { font-size: 1.2rem; }
 
     .sidebar-footer { display: none; }
-/* ---- 交易页悬浮操作按钮 (FAB) ---- */
+
+/* ---- 交易页悬浮按钮  ---- */
 #mobile-fab-group {
     position: fixed;
     right: 18px;
@@ -658,7 +659,7 @@ select.compact-form-control { height: 2.1rem; }
 .split-item-card[data-accent="2"] { border-left-color: #198754; background: rgba(25,135,84,0.05) !important; }
 .split-item-card[data-accent="3"] { border-left-color: #9c27b0; background: rgba(156,39,176,0.05) !important; }
 
-/* ===== EASTER 2026 START — 修正版 ===== */
+/* ===== EASTER 2026 START  ===== */
 
 #login-overlay {
         background: linear-gradient(160deg, #fef6e4 0%, #e8f5e9 40%, #f3e5f5 80%, #fce4ec 100%) !important;
@@ -880,35 +881,15 @@ select.compact-form-control { height: 2.1rem; }
 
 /* ===== EASTER 2026 END ===== */
 
-    </style>
-    <!-- 鸿蒙HarmonyOS 3.0 兼容补丁 -->
-    <script>
-    // canvas.toBlob polyfill (HarmonyOS 3.0 部分机型缺失)
-    if (typeof HTMLCanvasElement !== 'undefined' && !HTMLCanvasElement.prototype.toBlob) {
-        Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
-            value: function(callback, type, quality) {
-                const dataURL = this.toDataURL(type || 'image/jpeg', quality);
-                const binStr = atob(dataURL.split(',')[1]);
-                const arr = new Uint8Array(binStr.length);
-                for (let i = 0; i < binStr.length; i++) arr[i] = binStr.charCodeAt(i);
-                callback(new Blob([arr], { type: type || 'image/jpeg' }));
-            }
-        });
-    }
-    // HarmonyOS 3.0: input[type=file] 的 capture 属性兼容
-    // 鸿蒙浏览器对 accept="image/*" 的文件选择已可用，无需额外处理
-    // 检测是否为鸿蒙浏览器，记录供后续判断
-    window._isHarmony = /HarmonyOS/.test(navigator.userAgent);
-    </script>
+</style>
 </head>
 <body>
 
 <!-- 统一通知 toast -->
 <div id="app-toast"></div>
 
-
 <div id="login-overlay">
-    
+
 <!-- EASTER 2026 START -->
     <!-- 背景浮动彩蛋 -->
     <div class="easter-egg-float" style="width:90px;height:110px;background:#a8d8a8;top:8%;left:5%;animation-delay:0s;animation-duration:7s;"></div>
@@ -952,18 +933,18 @@ select.compact-form-control { height: 2.1rem; }
         </span>
     </div>
 <!-- EASTER 2026 END -->
-    
+
     <div class="card shadow p-3 p-md-4" style="width: 480px; max-width: 95%;">
 
         <!-- 标题栏 + 齿轮 -->
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i>记一笔 <span style="font-size:0.7em;">🌷</span></h4>
+            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i> 🥚记一笔</h4>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleLoginSettings()" title="连接设置">
                 <i class="bi bi-gear" id="login-settings-gear"></i>
             </button>
         </div>
 
-        <!-- 齿轮设置面板（默认隐藏） -->
+        <!-- 齿轮设置面板 -->
         <div id="login-settings-panel" style="display:none;" class="border rounded p-3 mb-3 bg-body-tertiary">
             <div class="small text-muted fw-bold mb-2"><i class="bi bi-plug"></i> 连接设置（仅存储在本设备）</div>
 
@@ -1026,7 +1007,7 @@ select.compact-form-control { height: 2.1rem; }
             </div>
         </div>
 
-        <!-- ① 选择数据文件 -->
+        <!-- 选择数据文件 -->
         <div class="mb-3">
             <label class="form-label small text-muted fw-bold mb-2" id="select-file-label">选择数据文件</label>
             <div id="offline-file-bar">
@@ -1040,7 +1021,7 @@ select.compact-form-control { height: 2.1rem; }
             <div id="file-status" class="form-text mt-1" style="display:none;"></div>
         </div>
 
-        <!-- ② 输入密码 -->
+        <!-- 输入密码 -->
         <div class="mb-3" id="password-section" style="display:none;">
             <label class="form-label small text-muted fw-bold">输入密码</label>
             <div class="input-group input-group-sm">
@@ -1055,14 +1036,14 @@ select.compact-form-control { height: 2.1rem; }
             </div>
         </div>
 
-        <!-- ③ 选择用户 -->
+        <!-- 选择用户 -->
         <div class="mb-3" id="user-section" style="display:none;">
             <label class="form-label small text-muted fw-bold">选择用户</label>
             <div id="user-buttons" class="d-flex gap-2 flex-wrap"></div>
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">v1.5.2</span>
+        <span class="text-muted" style="font-size:0.7rem;">v2.0.0</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1094,7 +1075,7 @@ select.compact-form-control { height: 2.1rem; }
             </li>
             <li class="nav-item">
                 <button class="nav-link" onclick="switchTab('settings', this)">
-                    <i class="bi bi-gear"></i><span>设置</span>
+                    <i class="bi bi-gear"></i><span>🐰设置</span>
                 </button>
             </li>
         </ul>
@@ -3171,11 +3152,16 @@ function clearUnsavedFlag() {
     clearTimeout(_toastMinimizeTimer);
     const el = $('app-toast');
     if (el) { el.classList.remove('minimized'); el.onclick = null; }
-    // 同步成功后清掉本地草稿
-    if (currentUserName) {
-        localStorage.removeItem(`APP_local_draft_${currentUserName}`);
-        localStorage.removeItem(`APP_local_draft_time_${currentUserName}`);
+    
+    // 清空 localStorage 中所有用户的本地草稿
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('APP_local_draft_')) {
+            keysToRemove.push(key);
+        }
     }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
 }
 
 /**
@@ -4274,11 +4260,6 @@ function _initNewTransModal(mode, title) {
     const today = new Date().toISOString().split('T')[0];
     $('edit-trans-id').value = '';
     $('edit-trans-mode').value = mode;
-
-// 👇 新增下面这两行：确保转账表单的模式也被正确初始化为 'add'
-    $('edit-transfer-id').value = '';
-    $('edit-transfer-mode').value = mode;
-
     $('editTransactionModalTitle').textContent = title;
     $('edit-trans-submit-btn').textContent = '保存';
     $('edit-trans-delete-btn').style.setProperty('display','none','important');
@@ -5286,33 +5267,13 @@ function getFilteredTransactions() {
     const startDate = $('filter-start-date').value;
     const endDate = $('filter-end-date').value;
     const userFilter = currentUserFilterValue;
-    
     return transactions.filter(t => {
-        if (t._isBaseline) return false;
+        if (t._isBaseline) return false; // 基准交易不在列表中显示
         if (transactionDisplayMode === 'transactions' && t.isTransfer) return false;
         if (transactionDisplayMode === 'transfers' && !t.isTransfer) return false;
         if (startDate && t.date < startDate) return false;
         if (endDate && t.date > endDate) return false;
-
-        // 👇 核心修复逻辑在这里 👇
-        if (t.isTransfer && t.type === 'income') {
-            // 找到这笔钱是从哪个账户转出来的
-            const relatedAcc = accounts.find(a => a.id == t.relatedAccountId);
-            
-            // 如果是“所有用户”视图，或者转出账户的主人也是当前被筛选的人
-            // 说明这是一笔“自己转自己”的账。因为转出(expense)记录一定会被显示，
-            // 为了防止双重显示，我们直接把这条转入(income)记录隐藏掉。
-            if (userFilter === 'all' || (relatedAcc && relatedAcc.ownerName === userFilter)) {
-                return false; 
-            }
-        }
-
-        if (userFilter !== 'all') {
-            const isOwn = t.ownerName === userFilter;
-            // 因为上面已经拦截了自己转自己的情况，能走到这里的 income 肯定是别人转给我的
-            if (!isOwn) return false; 
-        }
-
+        if (userFilter !== 'all' && t.ownerName !== userFilter) return false;
         if (search) {
             const acc = accounts.find(a => a.id == t.accountId);
             const accName = acc ? acc.name.toLowerCase() : '';
@@ -5360,9 +5321,8 @@ function renderAllTransactions() {
     displayData.forEach(t => {
         const acc = accounts.find(a => a.id == t.accountId);
         if (!acc) return;
-        const isIncomingTransfer = t.isTransfer && t.type === 'income';
-        const typeText = t.isTransfer ? (isIncomingTransfer ? '收款' : '转账') : (t.amount < 0 ? '支出' : '收入');
-        const typeColorClass = isIncomingTransfer ? 'text-success' : (t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success'));
+        const typeText = t.isTransfer ? '转账' : (t.amount < 0 ? '支出' : '收入');
+        const typeColorClass = t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success');
 
         let toAccountDisplay = '', amountInDisplay = '';
         if (t.isTransfer && t.type === 'expense') {
@@ -5376,12 +5336,7 @@ function renderAllTransactions() {
                 amountInDisplay = `<div class="fw-bold text-warning">${CURRENCY_SYMBOLS[accTo.currency]}${formatAmount(amountIn, accTo.currency)}</div>`;
             }
         } else if (t.isTransfer && t.type === 'income') {
-            // 别人转入我的账户：渲染为收款记录
-            const accFrom = accounts.find(a => a.id == t.relatedAccountId);
-            if (accFrom) {
-                toAccountDisplay = `<small>${getAccountDisplayName(accFrom)}</small>`;
-            }
-            amountInDisplay = `<div class="fw-bold text-success">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>`;
+            return; // 跳过转入记录
         }
 
         const canEdit = t.ownerName === currentUserName && !t._isArchived;
@@ -5417,6 +5372,7 @@ function renderAllTransactions() {
         displayData.forEach(t => {
             const acc = accounts.find(a => a.id == t.accountId);
             if (!acc) return;
+            if (t.isTransfer && t.type === 'income') return;
 
             const card = document.createElement('div');
             card.className = 'mobile-transaction-card';
@@ -5444,18 +5400,6 @@ function renderAllTransactions() {
     <div class="card-line-2 d-flex justify-content-between align-items-center">
         <span class="text-muted small">${t.date}${descClean ? ` · ${descClean}` : ''}${tagsDisplay}${attachIcon}</span>
         ${isCrossCurrency ? `<span class="small text-primary fw-bold">→ ${CURRENCY_SYMBOLS[accTo.currency]}${formatAmount(amountIn, accTo.currency)}</span>` : ''}
-    </div>`;
-            } else if (t.isTransfer && t.type === 'income') {
-                // 别人转入我的账户：显示为收款
-                const accFrom = accounts.find(a => a.id == t.relatedAccountId);
-                const fromName = accFrom ? getAccountDisplayName(accFrom) : '?';
-                card.innerHTML = `
-    <div class="card-line-1">
-        <div class="fw-bold flex-grow-1" style="font-size:0.85rem;">${fromName} <i class="bi bi-arrow-right-short text-success"></i> ${accDisplayName}</div>
-        <div class="amount-income fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
-    </div>
-    <div class="card-line-2">
-        <span class="text-muted small">${t.date}${descClean ? ` · ${descClean}` : ''}${attachIcon}</span>
     </div>`;
             } else {
                 const amountClass = t.amount < 0 ? 'amount-expense' : 'amount-income';
