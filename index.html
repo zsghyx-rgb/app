@@ -2765,6 +2765,13 @@ async function archiveYear(year) {
         // 从主数据删除该年原始交易
         const removeIds = new Set(yearTrans.map(t => t.id));
         transactions = transactions.filter(t => !removeIds.has(t.id));
+        
+        // 【新增代码】记录到删除日志，防止被 mergeData 幽灵复活
+        if (!inMemoryLoadedData.deletedLog) inMemoryLoadedData.deletedLog = [];
+        const nowTime = Date.now();
+        removeIds.forEach(id => {
+            inMemoryLoadedData.deletedLog.push({ id: String(id), deletedAt: nowTime, type: 'transaction' });
+        });
 
         // 标记存档年份
         if (!inMemoryLoadedData.archivedYears) inMemoryLoadedData.archivedYears = [];
@@ -2837,8 +2844,20 @@ async function unarchiveYear(year) {
             archiveData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
         }
 
+        // 【新增代码】先找出要删除的基准交易 ID
+        const baselineIdsToRemove = transactions
+            .filter(t => t._isBaseline && t._archiveYear == year)
+            .map(t => String(t.id));
+        
         // 删除该年的基准交易
         transactions = transactions.filter(t => !(t._isBaseline && t._archiveYear == year));
+        
+        // 【新增代码】记录到删除日志
+        if (!inMemoryLoadedData.deletedLog) inMemoryLoadedData.deletedLog = [];
+        const nowTime = Date.now();
+        baselineIdsToRemove.forEach(id => {
+            inMemoryLoadedData.deletedLog.push({ id: id, deletedAt: nowTime, type: 'transaction' });
+        });
 
         // 将存档交易合并回主数据
         dataUsers.forEach(u => {
