@@ -565,6 +565,45 @@ select.compact-form-control { height: 2.1rem; }
     }
 }
 
+/* ── 标签建议下拉 ── */
+.tag-suggest-wrap { position: relative; }
+.tag-suggest-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1060;
+    width: 100%;
+    min-width: 160px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    padding: 4px 0;
+    margin: 0;
+    list-style: none;
+}
+.tag-suggest-list.open { display: block; }
+.tag-suggest-list li a {
+    display: block;
+    padding: 5px 12px;
+    font-size: 0.875rem;
+    color: var(--bs-body-color);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tag-suggest-list li a:hover,
+.tag-suggest-list li a:focus { background: rgba(var(--bs-primary-rgb),0.1); }
+.tag-suggest-list .ts-empty {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    color: var(--bs-secondary);
+}
+
 .multi-row-amt::-webkit-outer-spin-button,
 .multi-row-amt::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .multi-row-amt { -moz-appearance: textfield; }
@@ -659,227 +698,7 @@ select.compact-form-control { height: 2.1rem; }
 .split-item-card[data-accent="2"] { border-left-color: #198754; background: rgba(25,135,84,0.05) !important; }
 .split-item-card[data-accent="3"] { border-left-color: #9c27b0; background: rgba(156,39,176,0.05) !important; }
 
-/* ===== EASTER 2026 START  ===== */
 
-#login-overlay {
-        background: linear-gradient(160deg, #fef6e4 0%, #e8f5e9 40%, #f3e5f5 80%, #fce4ec 100%) !important;
-        overflow: hidden;
-        position: relative;
-    }
-
-    /* 2. 背景浮动彩蛋装饰 */
-    .easter-egg-float {
-        position: absolute;
-        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-        opacity: 0.18;
-        animation: eggFloat 6s ease-in-out infinite;
-        pointer-events: none;
-    }
-    @keyframes eggFloat {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-18px) rotate(6deg); }
-    }
-
-    /* 3. 登录卡片与按钮春日美化 */
-    #login-overlay > .card {
-        border: 1.5px solid rgba(186,222,155,0.5) !important;
-        box-shadow: 0 8px 32px rgba(120,180,100,0.13), 0 2px 8px rgba(200,160,220,0.10) !important;
-    }
-    #user-buttons .btn-outline-primary {
-        border-color: #a084ca !important;
-        color: #7b5ea7 !important;
-    }
-    #user-buttons .btn-outline-primary:hover {
-        background: #a084ca !important;
-        color: white !important;
-    }
-    #login-overlay .btn-primary {
-        background: #78a87e !important;
-        border-color: #78a87e !important;
-    }
-    #login-overlay .btn-primary:hover {
-        background: #5d8f63 !important;
-    }
-    #login-overlay h4.text-primary {
-        color: #7b5ea7 !important;
-    }
-
-    /* 4. 核心：CSS 兔子全套样式 */
-    .easter-bunny-wrap {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-bottom: 15px;
-        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.08));
-        position: relative;
-        z-index: 10;
-    }
-
-    .bunny {
-        position: relative;
-        width: 80px;
-        height: 115px; 
-        animation: bunnyJump 3s ease-in-out infinite;
-    }
-
-    /* 整体跳跃感 */
-    @keyframes bunnyJump {
-        0%, 100% { transform: translateY(0) scale(1); }
-        50% { transform: translateY(-10px) scale(0.98, 1.02); }
-    }
-
-    /* 耳朵动画 */
-    .bunny-ear {
-        position: absolute;
-        width: 18px;
-        height: 52px;
-        background: #f5e6e6;
-        border-radius: 50% 50% 20% 20%;
-        border: 2px solid #e8d0d0;
-        top: 0;
-        z-index: 1;
-    }
-    .bunny-ear-inner {
-        position: absolute;
-        width: 8px;
-        height: 35px;
-        background: #f4b8c1;
-        border-radius: 50%;
-        top: 6px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    .bunny-ear-left  { left: 14px; transform: rotate(-12deg); animation: earTwitchL 4s ease-in-out infinite; }
-    .bunny-ear-right { right: 14px; transform: rotate(12deg); animation: earTwitchR 4s ease-in-out infinite; }
-
-    @keyframes earTwitchL { 0%, 90%, 100% { transform: rotate(-12deg); } 95% { transform: rotate(-25deg); } }
-    @keyframes earTwitchR { 0%, 85%, 100% { transform: rotate(12deg); } 92% { transform: rotate(25deg); } }
-
-    /* 身体与尾巴 */
-    .bunny-body {
-        position: absolute;
-        width: 70px;
-        height: 62px;
-        background: #f9f0f0;
-        border-radius: 50% 50% 40% 40%;
-        border: 2px solid #e8d8d8;
-        bottom: 5px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 2;
-    }
-    .bunny-tail {
-        position: absolute;
-        width: 22px;
-        height: 22px;
-        background: #fff;
-        border-radius: 50%;
-        border: 2px solid #e8d8d8;
-        bottom: 12px;
-        right: -4px;
-        z-index: 1;
-        animation: tailWag 2s ease-in-out infinite;
-    }
-    @keyframes tailWag { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1) translateX(2px); } }
-
-    /* 爪子 */
-    .bunny-paw {
-        position: absolute;
-        width: 16px;
-        height: 12px;
-        background: #f9f0f0;
-        border: 2px solid #e8d8d8;
-        border-radius: 50%;
-        bottom: -2px;
-        z-index: 3;
-    }
-    .bunny-paw-left { left: 12px; }
-    .bunny-paw-right { right: 12px; }
-
-    /* 头部：必须保证 z-index 最高且眼睛在内部 */
-    .bunny-head {
-        position: absolute;
-        width: 62px;
-        height: 56px;
-        background: #f9f0f0;
-        border-radius: 50%;
-        border: 2px solid #e8d8d8;
-        top: 28px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10;
-    }
-
-    /* 眼睛修复版 */
-    .bunny-eye {
-        position: absolute;
-        width: 8px;
-        height: 10px;
-        background: #4a3040;
-        border-radius: 50%;
-        top: 18px;
-    }
-    .bunny-eye::after {
-        content: '';
-        position: absolute;
-        width: 3px; height: 3px;
-        background: white;
-        border-radius: 50%;
-        top: 1px; right: 1px;
-    }
-    .bunny-eye-left  { left: 14px; animation: eyeBlink 4s 0.2s infinite; }
-    .bunny-eye-right { right: 14px; animation: eyeBlink 4s infinite; }
-
-    @keyframes eyeBlink {
-        0%, 96%, 100% { transform: scaleY(1); }
-        98% { transform: scaleY(0.1); }
-    }
-
-    /* 鼻子、嘴巴、腮红、胡须 */
-    .bunny-nose {
-        position: absolute;
-        width: 8px; height: 6px;
-        background: #f4a0b0;
-        border-radius: 50%;
-        top: 30px; left: 50%;
-        transform: translateX(-50%);
-        animation: noseWiggle 1.2s ease-in-out infinite;
-    }
-    @keyframes noseWiggle { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.2, 0.8); } }
-
-    .bunny-mouth {
-        position: absolute;
-        top: 36px; left: 50%;
-        transform: translateX(-50%);
-        width: 12px; height: 8px;
-        border-bottom: 2px solid #d4909e;
-        border-radius: 0 0 50% 50%;
-    }
-    .bunny-cheek {
-        position: absolute;
-        width: 12px; height: 7px;
-        background: #f9c6cb;
-        border-radius: 50%;
-        opacity: 0.5;
-        top: 32px;
-    }
-    .bunny-cheek-left { left: 6px; }
-    .bunny-cheek-right { right: 6px; }
-
-    .bunny-whisker {
-        position: absolute;
-        height: 1.5px; width: 15px;
-        background: #c8a8b0;
-        opacity: 0.4;
-    }
-    .bunny-whisker-l { left: -10px; transform: rotate(-10deg); top: 34px; box-shadow: 0 6px 0 #c8a8b0; }
-    .bunny-whisker-r { right: -10px; transform: rotate(10deg); top: 34px; box-shadow: 0 6px 0 #c8a8b0; }
-
-    /* 底部署名与彩蛋 */
-    .easter-eggs-row { display: flex; gap: 8px; margin-top: 10px; justify-content: center; }
-    .mini-egg { width: 14px; height: 18px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; }
-
-/* ===== EASTER 2026 END ===== */
 
 </style>
 </head>
@@ -890,55 +709,13 @@ select.compact-form-control { height: 2.1rem; }
 
 <div id="login-overlay">
 
-<!-- EASTER 2026 START -->
-    <!-- 背景浮动彩蛋 -->
-    <div class="easter-egg-float" style="width:90px;height:110px;background:#a8d8a8;top:8%;left:5%;animation-delay:0s;animation-duration:7s;"></div>
-    <div class="easter-egg-float" style="width:60px;height:74px;background:#f4a0c0;top:15%;right:8%;animation-delay:1.5s;animation-duration:5.5s;"></div>
-    <div class="easter-egg-float" style="width:50px;height:62px;background:#b8a8e8;bottom:12%;left:10%;animation-delay:0.8s;animation-duration:8s;"></div>
-    <div class="easter-egg-float" style="width:70px;height:86px;background:#f8d08a;bottom:8%;right:6%;animation-delay:2s;animation-duration:6.5s;"></div>
 
-    <div class="easter-bunny-wrap">
-        <div class="bunny">
-            <div class="bunny-tail"></div>
-            <div class="bunny-ear bunny-ear-left"><div class="bunny-ear-inner"></div></div>
-            <div class="bunny-ear bunny-ear-right"><div class="bunny-ear-inner"></div></div>
-            <div class="bunny-body">
-                <div class="bunny-paw bunny-paw-left"></div>
-                <div class="bunny-paw bunny-paw-right"></div>
-            </div>
-            <div class="bunny-head">
-                <div class="bunny-eye bunny-eye-left"></div>
-                <div class="bunny-eye bunny-eye-right"></div>
-                <div class="bunny-nose"></div>
-                <div class="bunny-mouth"></div>
-                <div class="bunny-cheek bunny-cheek-left"></div>
-                <div class="bunny-cheek bunny-cheek-right"></div>
-                <div class="bunny-whisker bunny-whisker-l"></div>
-                <div class="bunny-whisker bunny-whisker-r"></div>
-            </div>
-        </div>
-        
-        <div class="easter-eggs-row">
-            <div class="mini-egg" style="background:linear-gradient(135deg,#f4a0c0,#f8d0e0);"></div>
-            <div class="mini-egg" style="background:linear-gradient(135deg,#a8d8a8,#c8f0c8);"></div>
-            <div class="mini-egg" style="background:linear-gradient(135deg,#f8d08a,#faeac0);"></div>
-            <div class="mini-egg" style="background:linear-gradient(135deg,#b8a8e8,#d8d0f8);"></div>
-            <div class="mini-egg" style="background:linear-gradient(135deg,#a8d8f8,#c8ecf8);"></div>
-        </div>
-    </div>
-
-    <div class="text-center mb-3">
-        <span class="badge rounded-pill bg-white bg-opacity-75 text-success border border-success border-opacity-25 px-3 py-2 shadow-sm" style="letter-spacing: 2px; color: #2e7d32 !important; font-weight: bold;">
-            🐰 HAPPY EASTER 2026 🥚
-        </span>
-    </div>
-<!-- EASTER 2026 END -->
 
     <div class="card shadow p-3 p-md-4" style="width: 480px; max-width: 95%;">
 
         <!-- 标题栏 + 齿轮 -->
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i> 🥚记一笔</h4>
+            <h4 class="mb-0 text-primary"><i class="bi bi-wallet2"></i> 记一笔</h4>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleLoginSettings()" title="连接设置">
                 <i class="bi bi-gear" id="login-settings-gear"></i>
             </button>
@@ -1043,7 +820,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.0</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.2</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1075,7 +852,7 @@ select.compact-form-control { height: 2.1rem; }
             </li>
             <li class="nav-item">
                 <button class="nav-link" onclick="switchTab('settings', this)">
-                    <i class="bi bi-gear"></i><span>🐰设置</span>
+                    <i class="bi bi-gear"></i><span>设置</span>
                 </button>
             </li>
         </ul>
@@ -1916,7 +1693,13 @@ select.compact-form-control { height: 2.1rem; }
                     <div id="single-meta-section">
                         <div class="mb-2">
                             <label class="compact-form-label">标签</label>
-                            <input type="text" class="form-control compact-form-control" id="edit-trans-tags" placeholder="添加标签…">
+                            <div class="tag-suggest-wrap">
+                                <input type="text" class="form-control compact-form-control" id="edit-trans-tags"
+                                       placeholder="添加标签…" autocomplete="off"
+                                       onfocus="openTagSuggest(this,'ts-single')"
+                                       onblur="scheduleCloseTagSuggest('ts-single')">
+                                <ul class="tag-suggest-list" id="ts-single"></ul>
+                            </div>
                         </div>
                         <div class="mb-2">
                             <label class="compact-form-label">备注</label>
@@ -4670,9 +4453,16 @@ function _buildSplitItemCard(item, idx) {
                 <button type="button" class="btn btn-link text-danger btn-sm p-0"
                         onclick="removeSplitItem(${idx})"><i class="bi bi-x-lg"></i></button>
             </div>
-            <input type="text" class="form-control compact-form-control split-card-tags"
-                   placeholder="添加标签…"
-                   value="${item.tags||''}" oninput="_splitData[${idx}].tags=this.value">
+            <div class="split-card-tags tag-suggest-wrap">
+                <input type="text" class="form-control compact-form-control split-card-tags-input"
+                       placeholder="添加标签…"
+                       value="${item.tags||''}"
+                       autocomplete="off"
+                       oninput="_splitData[${idx}].tags=this.value"
+                       onfocus="openTagSuggest(this,'ts-split-${idx}')"
+                       onblur="scheduleCloseTagSuggest('ts-split-${idx}')">
+                <ul class="tag-suggest-list" id="ts-split-${idx}"></ul>
+            </div>
             <input type="text" class="form-control compact-form-control split-card-desc"
                    placeholder="添加备注…"
                    value="${item.desc||''}" oninput="_splitData[${idx}].desc=this.value">
@@ -6881,6 +6671,66 @@ function removeUser(name) {
     saveUserData(); triggerAutoSave();
     renderUserManagement();
     showToast(`已删除用户 "${name}"`, 'success');
+}
+
+// ── 标签建议下拉（点击/聚焦触发） ──
+let _tagSuggestCloseTimer = {};
+
+function getRecentTags() {
+    const tagSet = new Map();
+    const sorted = [...transactions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    for (const t of sorted) {
+        if (t.tags && t.tags.trim()) {
+            const tag = t.tags.trim();
+            if (!tagSet.has(tag)) tagSet.set(tag, true);
+        }
+    }
+    return [...tagSet.keys()];
+}
+
+function openTagSuggest(inputEl, listId) {
+    // 取消待关闭计时
+    if (_tagSuggestCloseTimer[listId]) {
+        clearTimeout(_tagSuggestCloseTimer[listId]);
+        delete _tagSuggestCloseTimer[listId];
+    }
+    const ul = document.getElementById(listId);
+    if (!ul) return;
+
+    // 构建列表
+    ul.innerHTML = '';
+    const tags = getRecentTags();
+    if (tags.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'ts-empty';
+        li.textContent = '暂无历史标签';
+        ul.appendChild(li);
+    } else {
+        tags.forEach(tag => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = '#';
+            a.textContent = tag;
+            a.addEventListener('mousedown', e => {
+                e.preventDefault(); // 阻止 blur 触发
+                inputEl.value = tag;
+                // 同步分录数据（split card）
+                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                ul.classList.remove('open');
+            });
+            li.appendChild(a);
+            ul.appendChild(li);
+        });
+    }
+    ul.classList.add('open');
+}
+
+function scheduleCloseTagSuggest(listId) {
+    _tagSuggestCloseTimer[listId] = setTimeout(() => {
+        const ul = document.getElementById(listId);
+        if (ul) ul.classList.remove('open');
+        delete _tagSuggestCloseTimer[listId];
+    }, 200);
 }
 
 window.addEventListener('load', () => {
