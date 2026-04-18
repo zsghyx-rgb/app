@@ -820,7 +820,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.2</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.8</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -971,44 +971,50 @@ select.compact-form-control { height: 2.1rem; }
             </div>
 
             <!-- 筛选栏 -->
-            <div class="card mb-3 border-0 shadow-sm" style="background-color: var(--bs-tertiary-bg);">
+                <div class="card mb-3 border-0 shadow-sm" style="background-color: var(--bs-tertiary-bg);">
                     <div class="card-body py-2">
+                        <!-- 主筛选行（单行不换行） -->
                         <div class="filter-bar-row">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="clearTransactionFilters()" title="清除所有筛选">
+                            <button class="btn btn-sm btn-outline-secondary flex-shrink-0" onclick="clearTransactionFilters()" title="清除所有筛选">
                                 <i class="bi bi-x-circle"></i>
                             </button>
-                            <div style="width: 150px;">
+                            <div style="width: 150px;" class="flex-shrink-0">
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                                     <input type="text" class="form-control" id="trans-search-input" placeholder="搜索..." oninput="handleSearchInput()">
                                 </div>
                             </div>
-                            <div>
+                            <div class="flex-shrink-0">
                                 <button class="btn btn-sm btn-outline-secondary" id="trans-user-filter-btn" onclick="cycleUserFilter()" title="点击切换用户筛选">
                                     <i class="bi bi-person"></i> <span id="trans-user-filter-text">所有用户</span>
                                 </button>
                             </div>
-                            <div>
+                            <div class="flex-shrink-0">
                                 <button class="btn btn-sm btn-primary" id="transfer-mode-toggle" onclick="toggleDisplayMode()" title="点击切换显示模式">
                                     <i class="bi bi-eye" id="transfer-mode-icon"></i>
                                     <span id="transfer-mode-text">收支+转账</span>
                                 </button>
                             </div>
-                            <div style="width: 120px;">
-                                <input type="date" class="form-control form-control-sm" id="filter-start-date" onchange="applyTransactionFilter()">
-                            </div>
-                            <div style="width: 120px;">
-                                <input type="date" class="form-control form-control-sm" id="filter-end-date" onchange="applyTransactionFilter()">
-                            </div>
-                            <div id="quick-date-filter-group">
+                            <!-- 快速日期筛选 -->
+                            <div id="quick-date-filter-group" class="flex-shrink-0">
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="quickDateFilter('30days')">近30天</button>
-                                    <button class="btn btn-outline-secondary" onclick="quickDateFilter('month')">本月</button>
-                                    <button class="btn btn-outline-secondary" onclick="quickDateFilter('lastmonth')">上月</button>
-                                    <button class="btn btn-outline-secondary" onclick="quickDateFilter('year')">本年</button>
-                                    <button class="btn btn-outline-secondary" onclick="quickDateFilter('all')">全部</button>
+                                    <button class="btn btn-outline-secondary" data-range="30days"   onclick="quickDateFilter('30days')">近30天</button>
+                                    <button class="btn btn-outline-secondary" data-range="month"    onclick="quickDateFilter('month')">本月</button>
+                                    <button class="btn btn-outline-secondary" data-range="lastmonth"onclick="quickDateFilter('lastmonth')">上月</button>
+                                    <button class="btn btn-outline-secondary" data-range="year"     onclick="quickDateFilter('year')">本年</button>
+                                    <button class="btn btn-outline-secondary" data-range="all"      onclick="quickDateFilter('all')">全部</button>
                                 </div>
                             </div>
+                            <!-- 自定义日期折叠按钮 -->
+                            <button class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                                    id="trans-custom-toggle" onclick="toggleTransCustomDate()" title="自定义日期范围">
+                                <i class="bi bi-calendar3"></i> 自定义
+                            </button>
+                        </div>
+                        <!-- 自定义日期面板（默认折叠） -->
+                        <div id="trans-custom-date-panel" class="d-flex gap-2 mt-2" style="display:none!important;">
+                            <input type="date" class="form-control form-control-sm" id="filter-start-date" onchange="applyTransactionFilter()" style="width:140px;">
+                            <input type="date" class="form-control form-control-sm" id="filter-end-date"   onchange="applyTransactionFilter()" style="width:140px;">
                         </div>
                     </div>
                 </div>
@@ -1081,34 +1087,52 @@ select.compact-form-control { height: 2.1rem; }
 
         <div id="view-stats" class="view-section">
             <div class="page-sticky-header pt-1">
+                <!-- 行1：标题 + 消费类型 + 货币切换 -->
                 <div class="d-flex align-items-center mb-2 gap-2">
                     <h4 class="mb-0 flex-shrink-0">数据分析</h4>
-                    <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="openSpendingAnalysis()">
+                    <button class="btn btn-sm btn-outline-secondary ms-auto flex-shrink-0" onclick="openSpendingAnalysis()">
                         <i class="bi bi-pie-chart-fill"></i> 消费类型
                     </button>
                     <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1;min-width:0;">
-                        <div class="btn-group flex-nowrap" id="stats-currency-btns" style="white-space:nowrap;">
-                            <!-- dynamically rendered based on account currencies -->
+                        <div class="btn-group flex-nowrap" id="stats-currency-btns" style="white-space:nowrap;"></div>
+                    </div>
+                </div>
+                <!-- 行2：月份导航 + 快速范围 + 自定义按钮（单行，横向滚动） -->
+                <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;" id="stats-filter-row">
+                <div class="d-flex align-items-center gap-2 flex-nowrap" style="white-space:nowrap;min-width:max-content;">
+                    <!-- 月份导航 -->
+                    <div class="d-flex align-items-center flex-shrink-0" id="stats-month-nav">
+                        <button class="btn btn-sm btn-outline-secondary px-2" id="stats-prev-month-btn"
+                                onclick="navigateStatsMonth(-1)" title="上月">&#8249;</button>
+                        <button class="btn btn-sm btn-outline-secondary px-2 mx-1"
+                                id="stats-month-label" onclick="navigateStatsMonth(0)"
+                                title="点击回到本月" style="min-width:96px;font-weight:500;"></button>
+                        <button class="btn btn-sm btn-outline-secondary px-2" id="stats-next-month-btn"
+                                onclick="navigateStatsMonth(1)" title="下月">&#8250;</button>
+                    </div>
+                    <!-- 快速范围按钮 -->
+                    <div id="quick-stats-filter-group-1" class="flex-shrink-0">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" data-range="30days"  onclick="quickStatsDateFilter('30days')">近30天</button>
+                            <button class="btn btn-outline-secondary" data-range="year"    onclick="quickStatsDateFilter('year')">本年</button>
+                            <button class="btn btn-outline-secondary" data-range="3months" onclick="quickStatsDateFilter('3months')">3个月</button>
+                            <button class="btn btn-outline-secondary" data-range="6months" onclick="quickStatsDateFilter('6months')">6个月</button>
+                            <button class="btn btn-outline-secondary" data-range="12months"onclick="quickStatsDateFilter('12months')">12个月</button>
+                            <button class="btn btn-outline-secondary" data-range="all"     onclick="quickStatsDateFilter('all')">全部</button>
                         </div>
                     </div>
+                    <!-- 自定义日期切换按钮 -->
+                    <button class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                            id="stats-custom-toggle" onclick="toggleStatsCustomDate()" title="自定义日期范围">
+                        <i class="bi bi-calendar3"></i> 自定义
+                    </button>
                 </div>
-                <div class="filter-bar-row">
-                <div style="width: 120px;">
-                    <input type="date" class="form-control form-control-sm" id="stats-start-date" onchange="applyStatsFilter()">
                 </div>
-                <div style="width: 120px;">
-                    <input type="date" class="form-control form-control-sm" id="stats-end-date" onchange="applyStatsFilter()">
+                <!-- 自定义日期面板（默认折叠） -->
+                <div id="stats-custom-date-panel" class="d-flex gap-2 mt-2" style="display:none!important;">
+                    <input type="date" class="form-control form-control-sm" id="stats-start-date" onchange="applyStatsFilter()" style="width:130px;">
+                    <input type="date" class="form-control form-control-sm" id="stats-end-date"   onchange="applyStatsFilter()" style="width:130px;">
                 </div>
-                <div id="quick-stats-filter-group-1">
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('30days')">近30天</button>
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('month')">本月</button>
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('lastmonth')">上月</button>
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('year')">本年</button>
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('all')">全部</button>
-                    </div>
-                </div>
-            </div>
             </div>
 
             <div class="alert alert-light border shadow-sm mb-4 clickable-amount" onclick="toggleAmountVisibility()">
@@ -1136,15 +1160,7 @@ select.compact-form-control { height: 2.1rem; }
                         </div>
                     </div>
                 </div>
-                <div id="quick-stats-filter-group-2">
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('3months')">3个月</button>
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('6months')">6个月</button>
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('12months')">12个月</button>
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('24months')">24个月</button>
-                        <button class="btn btn-outline-secondary" onclick="quickStatsDateFilter('all')">全部</button>
-                    </div>
-                </div>
+
                 <div class="col-md-6">
                     <div class="card shadow-sm chart-card">
                         <div class="card-body">
@@ -1849,6 +1865,10 @@ let historyPrevFilters = null;    // 历史模式进入前的日期筛选状态
 
 let chartInstances = {};
 let currentStatsFilter = { startDate: '', endDate: '', currency: 'RMB', user: 'all' };
+// 月导航状态（'month' = 单月模式，'range' = 快速范围/自定义模式）
+let statsNavYear  = new Date().getFullYear();
+let statsNavMonth = new Date().getMonth(); // 0-indexed
+let statsNavMode  = 'month';
 let currentSortField = 'date';
 let currentSortDirection = 'desc';
 let amountsHidden = false;
@@ -2716,10 +2736,13 @@ async function loadHistoryYear(year) {
 
         // 进入历史模式前保存当前日期筛选，供退出时还原
         historyPrevFilters = {
-            transStart: $('filter-start-date')?.value || '',
-            transEnd:   $('filter-end-date')?.value   || '',
-            statsStart: $('stats-start-date')?.value  || '',
-            statsEnd:   $('stats-end-date')?.value    || '',
+            transStart:    $('filter-start-date')?.value || '',
+            transEnd:      $('filter-end-date')?.value   || '',
+            statsStart:    $('stats-start-date')?.value  || '',
+            statsEnd:      $('stats-end-date')?.value    || '',
+            statsNavMode,
+            statsNavYear,
+            statsNavMonth,
         };
 
         historyMode = true;
@@ -2741,7 +2764,7 @@ async function loadHistoryYear(year) {
         const banner = $('history-mode-banner');
         if (banner) { banner.classList.remove('d-none'); $('history-year-label').textContent = year; }
         // 隐藏快速日期筛选按钮组
-        ['quick-date-filter-group', 'quick-stats-filter-group-1', 'quick-stats-filter-group-2']
+        ['quick-date-filter-group', 'trans-custom-toggle', 'quick-stats-filter-group-1', 'stats-month-nav', 'stats-custom-toggle']
             .forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
         // 隐藏账户导航按钮
         const navAccounts = $('nav-btn-accounts');
@@ -2790,7 +2813,12 @@ function exitHistoryMode() {
         if (fed) fed.value = historyPrevFilters.transEnd;
         if (ssd) { ssd.value = historyPrevFilters.statsStart; currentStatsFilter.startDate = historyPrevFilters.statsStart; }
         if (sed) { sed.value = historyPrevFilters.statsEnd;   currentStatsFilter.endDate   = historyPrevFilters.statsEnd; }
+        // 退出历史模式后恢复月导航状态
+        statsNavMode  = historyPrevFilters.statsNavMode || 'month';
+        statsNavYear  = historyPrevFilters.statsNavYear  || new Date().getFullYear();
+        statsNavMonth = historyPrevFilters.statsNavMonth != null ? historyPrevFilters.statsNavMonth : new Date().getMonth();
         historyPrevFilters = null;
+        updateStatsNavUI();
         applyTransactionFilter();
     }
 
@@ -2798,7 +2826,7 @@ function exitHistoryMode() {
     const navAccounts = $('nav-btn-accounts');
     if (navAccounts) navAccounts.style.display = '';
     // 恢复快速日期筛选按钮组
-    ['quick-date-filter-group', 'quick-stats-filter-group-1', 'quick-stats-filter-group-2']
+    ['quick-date-filter-group', 'trans-custom-toggle', 'quick-stats-filter-group-1', 'stats-month-nav', 'stats-custom-toggle']
         .forEach(id => { const el = $(id); if (el) el.style.display = ''; });
     filterUserData();
     renderAllTransactions();
@@ -2833,10 +2861,20 @@ function initAppUI() {
     $('filter-end-date').value = endStr;
 
     if ($('stats-start-date')) {
-        $('stats-start-date').value = startStr;
-        $('stats-end-date').value = endStr;
-        currentStatsFilter.startDate = startStr;
-        currentStatsFilter.endDate = endStr;
+        // 默认显示当前月份
+        const now = new Date();
+        statsNavYear  = now.getFullYear();
+        statsNavMonth = now.getMonth();
+        statsNavMode  = 'month';
+        const mStart = new Date(statsNavYear, statsNavMonth, 1);
+        const mEnd   = new Date(statsNavYear, statsNavMonth + 1, 0);
+        const mStartStr = formatLocal(mStart);
+        const mEndStr   = formatLocal(mEnd);
+        $('stats-start-date').value = mStartStr;
+        $('stats-end-date').value   = mEndStr;
+        currentStatsFilter.startDate = mStartStr;
+        currentStatsFilter.endDate   = mEndStr;
+        updateStatsNavUI();
     }
 
     const today = new Date();
@@ -3084,6 +3122,26 @@ function mergeData(local, remote) {
 }
 
 /**
+ * 统计远端相比本地新增了多少条记录（交易 + 账户）
+ */
+function countNewItemsFromRemote(local, remote) {
+    let count = 0;
+    const allUsers = new Set([
+        ...Object.keys(local.allUserData || {}),
+        ...Object.keys((remote && remote.allUserData) || {})
+    ]);
+    allUsers.forEach(u => {
+        const localU = (local.allUserData || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
+        const remoteU = ((remote && remote.allUserData) || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
+        const localTxIds  = new Set((localU.transactions || []).map(t => String(t.id)));
+        const localAccIds = new Set((localU.accounts    || []).map(a => String(a.id)));
+        (remoteU.transactions || []).forEach(t => { if (!localTxIds.has(String(t.id)))  count++; });
+        (remoteU.accounts    || []).forEach(a => { if (!localAccIds.has(String(a.id))) count++; });
+    });
+    return count;
+}
+
+/**
  * 将当前数据同步到 Google Drive (data.enc)
  * 推送前先拉取远端最新，合并后再推送，避免覆盖其他设备的修改
  * @param {boolean} manual - 手动触发时显示更明显的提示
@@ -3106,6 +3164,7 @@ async function syncToDrive(manual = false, forcePush = false) {
 
     try {
         let finalData = inMemoryLoadedData;
+        let pulledNewCount = 0; // 本次从云端拉取到的新增条数
 
         if (!forcePush) {
             // ── 步骤 1：核对版本号 ──
@@ -3142,6 +3201,7 @@ async function syncToDrive(manual = false, forcePush = false) {
 
                 // ── 步骤 2b：合并 ──
                 if (remoteData) {
+                    pulledNewCount = countNewItemsFromRemote(inMemoryLoadedData, remoteData);
                     finalData = mergeData(inMemoryLoadedData, remoteData);
                     inMemoryLoadedData = finalData;
                     accounts = []; transactions = []; plannedTransactions = [];
@@ -3185,7 +3245,10 @@ async function syncToDrive(manual = false, forcePush = false) {
             } catch(_) {}
             window._driveRawContent = content;
             try { localStorage.setItem('APP_raw_cache', content); } catch(_) {}
-            showToast('已同步', 'success');
+            // 只在云端确实有新数据时才提示
+            if (pulledNewCount > 0) {
+                showToast(`已同步 ${pulledNewCount} 条新数据`, 'success');
+            }
         } else {
             throw new Error('GAS 返回：' + text);
         }
@@ -3304,8 +3367,7 @@ async function backgroundSyncAfterLogin() {
         } catch (_) { return; } // 无网络，静默放弃
 
         if (remoteVersion === '0' || remoteVersion === localVersion) {
-            // 版本一致，无需更新
-            showToast('数据已是最新版本', 'success', 2000);
+            // 版本一致，无需更新，静默不提示
             return;
         }
 
@@ -3329,6 +3391,7 @@ async function backgroundSyncAfterLogin() {
         }
 
         // 合并数据
+        const newCount = countNewItemsFromRemote(inMemoryLoadedData, remoteData);
         const merged = mergeData(inMemoryLoadedData, remoteData);
         if (remoteVersion !== '0') localStorage.setItem('APP_drive_version', remoteVersion);
         try { localStorage.setItem('APP_raw_cache', raw); } catch(_) {}
@@ -3339,7 +3402,9 @@ async function backgroundSyncAfterLogin() {
             // 用户正在填表单：只更新内存，弹提示，不刷UI
             inMemoryLoadedData = merged;
             saveUserData();
-            showToast('后台已同步新数据，关闭表单后自动刷新', 'info', 4000);
+            if (newCount > 0) {
+                showToast(`后台已同步 ${newCount} 条新数据，关闭表单后自动刷新`, 'info', 4000);
+            }
             window._pendingUIRefresh = true;
         } else {
             // 用户没在填表单：合并后刷新列表
@@ -3348,7 +3413,9 @@ async function backgroundSyncAfterLogin() {
             filterUserData();
             renderAllTransactions();
             renderAccounts();
-            showToast('已同步最新数据', 'success', 3000);
+            if (newCount > 0) {
+                showToast(`已同步 ${newCount} 条新数据`, 'success', 3000);
+            }
         }
     } catch(e) {
         // 后台同步失败，静默忽略，不打扰用户
@@ -4048,7 +4115,7 @@ function switchTransTab(tab, skipReset) {
     const mode = $('edit-trans-mode').value;
     if (mode === 'add') {
         const titleMap = { expense: '新增支出', income: '新增收入', transfer: '新增转账' };
-        $('editTransactionModalTitle').textContent = titleMap[tab] || '新增交易';
+        $('editTransactionModalTitle').textContent = _userTitle(titleMap[tab] || '新增交易');
     }
 
     // 切换时同步日期：把当前可见表单的日期复制到另一个
@@ -4107,11 +4174,16 @@ function switchTransTab(tab, skipReset) {
     }
 }
 
+// 弹窗标题加用户名
+function _userTitle(base) {
+    return currentUserName ? `${base} · ${currentUserName}` : base;
+}
+
 function _initNewTransModal(mode, title) {
     const today = new Date().toISOString().split('T')[0];
     $('edit-trans-id').value = '';
     $('edit-trans-mode').value = mode;
-    $('editTransactionModalTitle').textContent = title;
+    $('editTransactionModalTitle').textContent = _userTitle(title);
     $('edit-trans-submit-btn').textContent = '保存';
     $('edit-trans-delete-btn').style.setProperty('display','none','important');
     // 两个表单的日期同步初始化
@@ -4145,7 +4217,7 @@ function openNewTransFromDetail() {
 function openNewTransferFromDetail() {
     openedFromDetail = true;
     const today = new Date().toISOString().split('T')[0];
-    $('editTransactionModalTitle').textContent = '新增转账';
+    $('editTransactionModalTitle').textContent = _userTitle('新增转账');
     $('edit-transfer-id').value = '';
     $('edit-transfer-mode').value = 'add';
     $('edit-transfer-submit-btn').textContent = '保存';
@@ -5080,7 +5152,29 @@ function clearTransactionFilters() {
     currentUserFilterValue = 'all';
     updateUserFilterBtn();
     displayedTransactionCount = 100;
+    // 清除快速按钮高亮、关闭自定义面板
+    $$('#quick-date-filter-group button').forEach(b => b.classList.remove('active'));
+    const panel = $('trans-custom-date-panel');
+    if (panel) panel.style.setProperty('display', 'none', 'important');
+    const toggle = $('trans-custom-toggle');
+    if (toggle) toggle.classList.remove('active');
     applyTransactionFilter();
+}
+
+function toggleTransCustomDate() {
+    const panel  = $('trans-custom-date-panel');
+    const toggle = $('trans-custom-toggle');
+    if (!panel) return;
+    const isHidden = panel.style.cssText.includes('none');
+    if (isHidden) {
+        panel.style.setProperty('display', 'flex', 'important');
+        toggle.classList.add('active');
+        // 展开时清除快速按钮高亮
+        $$('#quick-date-filter-group button').forEach(b => b.classList.remove('active'));
+    } else {
+        panel.style.setProperty('display', 'none', 'important');
+        toggle.classList.remove('active');
+    }
 }
 
 function handleSearchInput() {
@@ -5106,15 +5200,23 @@ function applyTransactionFilter() {
 }
 
 function quickDateFilter(p) {
-    if (historyMode) return; // 历史模式下快捷日期按钮无效
+    if (historyMode) return;
     const today = new Date();
     let start = '', end = '';
-    if (p === '30days') { start = new Date(today); start.setDate(start.getDate() - 30); end = today; }
-    else if (p === 'month') { start = new Date(today.getFullYear(), today.getMonth(), 1); end = new Date(today.getFullYear(), today.getMonth() + 1, 0); }
-    else if (p === 'lastmonth') { start = new Date(today.getFullYear(), today.getMonth() - 1, 1); end = new Date(today.getFullYear(), today.getMonth(), 0); }
-    else if (p === 'year') { start = new Date(today.getFullYear(), 0, 1); end = new Date(today.getFullYear(), 11, 31); }
+    if      (p === '30days')   { start = new Date(today); start.setDate(start.getDate() - 30); end = today; }
+    else if (p === 'month')    { start = new Date(today.getFullYear(), today.getMonth(), 1); end = new Date(today.getFullYear(), today.getMonth() + 1, 0); }
+    else if (p === 'lastmonth'){ start = new Date(today.getFullYear(), today.getMonth() - 1, 1); end = new Date(today.getFullYear(), today.getMonth(), 0); }
+    else if (p === 'year')     { start = new Date(today.getFullYear(), 0, 1); end = new Date(today.getFullYear(), 11, 31); }
     $('filter-start-date').value = start ? formatLocal(start) : '';
-    $('filter-end-date').value = end ? formatLocal(end) : '';
+    $('filter-end-date').value   = end   ? formatLocal(end)   : '';
+    // 高亮当前按钮
+    $$('#quick-date-filter-group button').forEach(b =>
+        b.classList.toggle('active', b.dataset.range === p));
+    // 关闭自定义面板
+    const panel = $('trans-custom-date-panel');
+    if (panel) panel.style.setProperty('display', 'none', 'important');
+    const toggle = $('trans-custom-toggle');
+    if (toggle) toggle.classList.remove('active');
     displayedTransactionCount = 100;
     applyTransactionFilter();
 }
@@ -5766,6 +5868,81 @@ const myTrans = transactions.filter(t =>
     }
 }
 
+// ── 月份导航 ──────────────────────────────────────────────────
+function navigateStatsMonth(delta) {
+    if (historyMode) return;
+    const now = new Date();
+    if (delta === 0) {
+        // 点击中间标签：回到本月
+        statsNavYear  = now.getFullYear();
+        statsNavMonth = now.getMonth();
+    } else {
+        statsNavMonth += delta;
+        if (statsNavMonth > 11) { statsNavMonth = 0; statsNavYear++; }
+        if (statsNavMonth < 0)  { statsNavMonth = 11; statsNavYear--; }
+        // 不允许超过当前月
+        if (statsNavYear > now.getFullYear() ||
+            (statsNavYear === now.getFullYear() && statsNavMonth > now.getMonth())) {
+            statsNavYear  = now.getFullYear();
+            statsNavMonth = now.getMonth();
+        }
+    }
+    statsNavMode = 'month';
+    // 关闭自定义面板
+    const panel = $('stats-custom-date-panel');
+    if (panel) panel.style.setProperty('display', 'none', 'important');
+    const toggle = $('stats-custom-toggle');
+    if (toggle) toggle.classList.remove('active');
+    // 计算该月首末日
+    const start = new Date(statsNavYear, statsNavMonth, 1);
+    const end   = new Date(statsNavYear, statsNavMonth + 1, 0);
+    const startStr = formatLocal(start);
+    const endStr   = formatLocal(end);
+    $('stats-start-date').value = startStr;
+    $('stats-end-date').value   = endStr;
+    currentStatsFilter.startDate = startStr;
+    currentStatsFilter.endDate   = endStr;
+    // 取消快速按钮 active 状态
+    $$('#quick-stats-filter-group-1 button').forEach(b => b.classList.remove('active'));
+    updateStatsNavUI();
+    renderStats();
+}
+
+function updateStatsNavUI() {
+    const label   = $('stats-month-label');
+    const nextBtn = $('stats-next-month-btn');
+    if (!label) return;
+    const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    if (statsNavMode === 'month') {
+        label.textContent = `${statsNavYear}年${monthNames[statsNavMonth]}`;
+        label.title = '点击回到本月';
+        label.classList.remove('text-muted');
+    } else {
+        label.textContent = '—';
+        label.title = '';
+        label.classList.add('text-muted');
+    }
+    // 当月时禁用"下月"按钮
+    const now = new Date();
+    const atCurrentMonth = statsNavYear === now.getFullYear() && statsNavMonth === now.getMonth();
+    if (nextBtn) nextBtn.disabled = (statsNavMode === 'month' && atCurrentMonth);
+}
+
+function toggleStatsCustomDate() {
+    const panel  = $('stats-custom-date-panel');
+    const toggle = $('stats-custom-toggle');
+    if (!panel) return;
+    const isHidden = panel.style.getPropertyValue('display') === 'none' || panel.style.cssText.includes('none');
+    if (isHidden) {
+        panel.style.setProperty('display', 'flex', 'important');
+        toggle.classList.add('active');
+    } else {
+        panel.style.setProperty('display', 'none', 'important');
+        toggle.classList.remove('active');
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
 function applyStatsFilter() {
     // 历史模式：强制将日期限制在该年范围内
     if (historyMode && historyYear) {
@@ -5777,26 +5954,40 @@ function applyStatsFilter() {
         if (sed && (!sed.value || sed.value > yEnd   || sed.value < yStart)) sed.value = yEnd;
     }
     currentStatsFilter.startDate = $('stats-start-date').value;
-    currentStatsFilter.endDate = $('stats-end-date').value;
+    currentStatsFilter.endDate   = $('stats-end-date').value;
+    // 切换到自定义模式
+    statsNavMode = 'range';
+    $$('#quick-stats-filter-group-1 button').forEach(b => b.classList.remove('active'));
+    updateStatsNavUI();
     renderStats();
 }
 
 function quickStatsDateFilter(p) {
-    if (historyMode) return; // 历史模式下快捷日期按钮无效
+    if (historyMode) return;
     const today = new Date();
     let start = '', end = '';
-    if (p === '30days') { start = new Date(today); start.setDate(today.getDate() - 30); end = today; }
-    else if (p === 'month') { start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; }
-    else if (p === 'lastmonth') { start = new Date(today.getFullYear(), today.getMonth() - 1, 1); end = new Date(today.getFullYear(), today.getMonth(), 0); }
-    else if (p === '3months') { start = new Date(today); start.setMonth(start.getMonth() - 3); end = today; }
-    else if (p === '6months') { start = new Date(today); start.setMonth(start.getMonth() - 6); end = today; }
-    else if (p === '12months') { start = new Date(today); start.setMonth(start.getMonth() - 12); end = today; }
-    else if (p === '24months') { start = new Date(today); start.setMonth(start.getMonth() - 24); end = today; }
-    else if (p === 'year') { start = new Date(today.getFullYear(), 0, 1); end = new Date(today.getFullYear(), 11, 31); }
-    else if (p === 'all') { start = ''; end = ''; }
+    if      (p === '30days')  { start = new Date(today); start.setDate(today.getDate() - 30); end = today; }
+    else if (p === '3months') { start = new Date(today); start.setMonth(today.getMonth() - 3); end = today; }
+    else if (p === '6months') { start = new Date(today); start.setMonth(today.getMonth() - 6); end = today; }
+    else if (p === '12months'){ start = new Date(today); start.setMonth(today.getMonth() - 12); end = today; }
+    else if (p === '24months'){ start = new Date(today); start.setMonth(today.getMonth() - 24); end = today; }
+    else if (p === 'year')    { start = new Date(today.getFullYear(), 0, 1); end = new Date(today.getFullYear(), 11, 31); }
+    else if (p === 'all')     { start = ''; end = ''; }
     $('stats-start-date').value = start ? formatLocal(start) : '';
-    $('stats-end-date').value = end ? formatLocal(end) : '';
-    applyStatsFilter();
+    $('stats-end-date').value   = end   ? formatLocal(end)   : '';
+    currentStatsFilter.startDate = $('stats-start-date').value;
+    currentStatsFilter.endDate   = $('stats-end-date').value;
+    // 高亮当前按钮，切换到范围模式
+    $$('#quick-stats-filter-group-1 button').forEach(b =>
+        b.classList.toggle('active', b.dataset.range === p));
+    statsNavMode = 'range';
+    // 关闭自定义面板
+    const panel = $('stats-custom-date-panel');
+    if (panel) panel.style.setProperty('display', 'none', 'important');
+    const toggle = $('stats-custom-toggle');
+    if (toggle) toggle.classList.remove('active');
+    updateStatsNavUI();
+    renderStats();
 }
 
 function switchStatsCurrency(c, el) {
@@ -5815,6 +6006,7 @@ function switchAssetAggregation(type, el) {
 
 function renderStats() {
     renderStatsCurrencyButtons();
+    updateStatsNavUI();
     const start = currentStatsFilter.startDate;
     const end = currentStatsFilter.endDate;
 
@@ -6562,6 +6754,7 @@ function generateTransactionFromPlan(plan, targetDate) {
         fromPlannedId: plan.id, updatedAt: Date.now()
     });
     plan.lastGenerated = targetDate;
+    plan.updatedAt = Date.now();
     saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
     displayedTransactionCount = 100; renderAllTransactions(); renderAccounts(); renderPlannedTransactions();
 }
