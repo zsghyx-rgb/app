@@ -486,7 +486,6 @@ select.compact-form-control { height: 2.1rem; }
     flex-shrink: 0;
 }
 .fab-btn:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
-.fab-btn-transfer { background: #fd7e14; color: #fff; }
 .fab-btn-add      { background: #0d6efd; color: #fff; }
 
 
@@ -820,7 +819,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.8</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.9</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -877,10 +876,7 @@ select.compact-form-control { height: 2.1rem; }
 
         <!-- 手机端悬浮操作按钮 (仅交易页显示) -->
         <div id="mobile-fab-group" class="d-none d-md-none">
-            <button class="fab-btn fab-btn-transfer" onclick="openNewTransfer()" title="新增转账">
-                <i class="bi bi-arrow-left-right"></i>
-            </button>
-            <button class="fab-btn fab-btn-add" onclick="openNewTransaction()" title="新增收支">
+            <button class="fab-btn fab-btn-add" onclick="openNewTransaction()" title="新增交易">
                 <i class="bi bi-plus-lg"></i>
             </button>
         </div>
@@ -3245,9 +3241,20 @@ async function syncToDrive(manual = false, forcePush = false) {
             } catch(_) {}
             window._driveRawContent = content;
             try { localStorage.setItem('APP_raw_cache', content); } catch(_) {}
-            // 只在云端确实有新数据时才提示
+            // 同步成功：有新数据时提示条数，无新数据时静默关闭 syncing toast
             if (pulledNewCount > 0) {
                 showToast(`已同步 ${pulledNewCount} 条新数据`, 'success');
+            } else {
+                // 触发正常的 toast 结束流程（恢复未保存提示或隐藏）
+                const el = $('app-toast');
+                if (el) {
+                    clearTimeout(_toastTimer);
+                    if (hasUnsavedChanges) {
+                        showUnsavedToast();
+                    } else {
+                        el.classList.remove('show');
+                    }
+                }
             }
         } else {
             throw new Error('GAS 返回：' + text);
@@ -4183,6 +4190,9 @@ function _initNewTransModal(mode, title) {
     const today = new Date().toISOString().split('T')[0];
     $('edit-trans-id').value = '';
     $('edit-trans-mode').value = mode;
+    // 同步重置转账表单状态，防止切 tab 后误走编辑分支
+    $('edit-transfer-id').value = '';
+    $('edit-transfer-mode').value = mode;
     $('editTransactionModalTitle').textContent = _userTitle(title);
     $('edit-trans-submit-btn').textContent = '保存';
     $('edit-trans-delete-btn').style.setProperty('display','none','important');
