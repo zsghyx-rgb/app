@@ -772,6 +772,13 @@ select.compact-form-control { height: 2.1rem; }
                 <button id="offline-mode-btn" class="btn btn-sm btn-warning" onclick="toggleOfflineMode()" style="font-size:0.72rem; padding:0.2rem 0.6rem;"><i class="bi bi-wifi-off"></i> 离线模式</button>
             </div>
 
+            <!-- 详细提示 -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small text-muted">同步通知</span>
+                <button id="verbose-toast-btn" onclick="toggleVerboseToast()"
+                        class="btn btn-sm" style="font-size:0.72rem; padding:0.2rem 0.6rem;"></button>
+            </div>
+
             <!-- 新建数据文件 -->
             <div class="d-flex align-items-center justify-content-between">
                 <span class="small text-muted">初始化</span>
@@ -819,7 +826,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.9</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.2.0</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1828,6 +1835,8 @@ const DEFAULT_RATES = { 'EUR_RMB': 7.8, 'USD_RMB': 7.2, 'HKD_RMB': 0.92, 'JPY_RM
 
 // GAS_URL 不再硬编码，从 localStorage 读取，首次使用时在登录界面填写
 let GAS_URL = localStorage.getItem('APP_gas_url') || '';
+// 详细同步通知开关（默认关闭，减少打扰）
+let verboseToast = localStorage.getItem('APP_verbose_toast') === 'true';
 let GAS_TOKEN = localStorage.getItem('APP_gas_token') || '';
 const CURRENCY_SYMBOLS = { 'RMB': '¥', 'EUR': '€', 'USD': '$', 'HKD': 'HK$', 'JPY': '¥', 'GBP': '£' };
 
@@ -1954,6 +1963,29 @@ function initLoginSettingsUI() {
     initGasUrlUI();
     initGasTokenUI();
     initDeviceNameUI();
+    renderVerboseToastBtn();
+}
+
+function renderVerboseToastBtn() {
+    const btn = $('verbose-toast-btn');
+    if (!btn) return;
+    if (verboseToast) {
+        btn.className = 'btn btn-sm btn-success';
+        btn.style.fontSize = '0.72rem';
+        btn.style.padding = '0.2rem 0.6rem';
+        btn.innerHTML = '<i class="bi bi-bell-fill"></i> 详细提示：开';
+    } else {
+        btn.className = 'btn btn-sm btn-outline-secondary';
+        btn.style.fontSize = '0.72rem';
+        btn.style.padding = '0.2rem 0.6rem';
+        btn.innerHTML = '<i class="bi bi-bell-slash"></i> 详细提示：关';
+    }
+}
+
+function toggleVerboseToast() {
+    verboseToast = !verboseToast;
+    localStorage.setItem('APP_verbose_toast', verboseToast ? 'true' : 'false');
+    renderVerboseToastBtn();
 }
 
 function initGasUrlUI() {
@@ -3241,11 +3273,13 @@ async function syncToDrive(manual = false, forcePush = false) {
             } catch(_) {}
             window._driveRawContent = content;
             try { localStorage.setItem('APP_raw_cache', content); } catch(_) {}
-            // 同步成功：有新数据时提示条数，无新数据时静默关闭 syncing toast
+            // 同步成功：有新数据时提示条数；无新数据时详细模式提示「已同步」，否则静默关闭
             if (pulledNewCount > 0) {
                 showToast(`已同步 ${pulledNewCount} 条新数据`, 'success');
+            } else if (verboseToast) {
+                showToast('已同步', 'success');
             } else {
-                // 触发正常的 toast 结束流程（恢复未保存提示或隐藏）
+                // 静默：触发正常 toast 结束流程
                 const el = $('app-toast');
                 if (el) {
                     clearTimeout(_toastTimer);
@@ -3287,7 +3321,7 @@ async function loadFromDrive() {
             categories = parsed.categories || DEFAULT_CATEGORIES;
             exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
             $('password-section').style.display = 'none';
-            showToast('已加载本地缓存', 'info', 3000);
+            if (verboseToast) showToast('已加载本地缓存', 'info', 3000);
             onDataLoaded();
         } catch(_) {
             // 加密缓存：立即让用户输密码，完全不等网络
@@ -3340,7 +3374,7 @@ async function loadFromDrive() {
             categories = parsed.categories || DEFAULT_CATEGORIES;
             exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
             $('password-section').style.display = 'none';
-            showToast('已从 Drive 加载，自动选择用户4', 'success', 3000);
+            if (verboseToast) showToast('已从 Drive 加载数据', 'success', 3000);
             onDataLoaded();
             return;
         } catch(_) {}
@@ -3374,7 +3408,8 @@ async function backgroundSyncAfterLogin() {
         } catch (_) { return; } // 无网络，静默放弃
 
         if (remoteVersion === '0' || remoteVersion === localVersion) {
-            // 版本一致，无需更新，静默不提示
+            // 版本一致，无需更新
+            if (verboseToast) showToast('数据已是最新', 'success', 2000);
             return;
         }
 
@@ -3411,6 +3446,8 @@ async function backgroundSyncAfterLogin() {
             saveUserData();
             if (newCount > 0) {
                 showToast(`后台已同步 ${newCount} 条新数据，关闭表单后自动刷新`, 'info', 4000);
+            } else if (verboseToast) {
+                showToast('后台已同步', 'info', 2000);
             }
             window._pendingUIRefresh = true;
         } else {
@@ -3422,6 +3459,8 @@ async function backgroundSyncAfterLogin() {
             renderAccounts();
             if (newCount > 0) {
                 showToast(`已同步 ${newCount} 条新数据`, 'success', 3000);
+            } else if (verboseToast) {
+                showToast('已同步', 'success', 2000);
             }
         }
     } catch(e) {
