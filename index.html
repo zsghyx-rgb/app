@@ -766,23 +766,28 @@ select.compact-form-control { height: 2.1rem; }
 
             <hr class="my-2">
 
-            <!-- 离线模式 -->
+            <!-- 数据来源（离线/在线切换） -->
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="small text-muted">数据来源</span>
-                <button id="offline-mode-btn" class="btn btn-sm btn-warning" onclick="toggleOfflineMode()" style="font-size:0.72rem; padding:0.2rem 0.6rem;"><i class="bi bi-wifi-off"></i> 离线模式</button>
+                <button id="offline-mode-btn" class="btn btn-sm btn-warning" onclick="toggleOfflineMode()"
+                        style="font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;">
+                    <i class="bi bi-wifi-off"></i> 离线模式
+                </button>
             </div>
 
-            <!-- 详细提示 -->
+            <!-- 同步通知 -->
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="small text-muted">同步通知</span>
                 <button id="verbose-toast-btn" onclick="toggleVerboseToast()"
-                        class="btn btn-sm" style="font-size:0.72rem; padding:0.2rem 0.6rem;"></button>
+                        class="btn btn-sm btn-outline-secondary"
+                        style="font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;"></button>
             </div>
 
-            <!-- 新建数据文件 -->
+            <!-- 初始化 -->
             <div class="d-flex align-items-center justify-content-between">
                 <span class="small text-muted">初始化</span>
-                <button class="btn btn-outline-success btn-sm" onclick="createNewDataFile()">
+                <button class="btn btn-sm btn-outline-success" onclick="createNewDataFile()"
+                        style="font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;">
                     <i class="bi bi-file-earmark-plus"></i> 新建数据文件
                 </button>
             </div>
@@ -826,7 +831,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.2.0</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.0.0</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1971,15 +1976,12 @@ function renderVerboseToastBtn() {
     if (!btn) return;
     if (verboseToast) {
         btn.className = 'btn btn-sm btn-success';
-        btn.style.fontSize = '0.72rem';
-        btn.style.padding = '0.2rem 0.6rem';
         btn.innerHTML = '<i class="bi bi-bell-fill"></i> 详细提示：开';
     } else {
         btn.className = 'btn btn-sm btn-outline-secondary';
-        btn.style.fontSize = '0.72rem';
-        btn.style.padding = '0.2rem 0.6rem';
         btn.innerHTML = '<i class="bi bi-bell-slash"></i> 详细提示：关';
     }
+    btn.style.cssText = 'font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;';
 }
 
 function toggleVerboseToast() {
@@ -2130,14 +2132,24 @@ function toggleOfflineMode() {
     if (!offlineMode && GAS_URL) {
         loadFromDrive();
     } else if (offlineMode) {
-        // 切换到离线模式：清空 Drive 数据，强制手动选文件
+        // 切换到离线模式：清除所有网络缓存，防止下次误用旧云端数据
+        localStorage.removeItem('APP_raw_cache');
+        localStorage.removeItem('APP_drive_version');
+        // 同时清除所有本地草稿
+        const draftKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('APP_local_draft_')) draftKeys.push(k);
+        }
+        draftKeys.forEach(k => localStorage.removeItem(k));
+        // 清空内存数据，强制手动选文件
         inMemoryLoadedData = null;
         userPassword = ''; dataUsers = [];
         accounts = []; transactions = []; plannedTransactions = [];
         userAccounts = []; userTransactions = []; userPlannedTransactions = [];
         $('user-section').style.display = 'none';
         $('password-section').style.display = 'none';
-        showToast('离线模式：已清空在线数据，请手动选择本地文件', 'warning', 0);
+        showToast('已切换离线模式，本地缓存已清除，请手动选择文件', 'warning', 4000);
     }
 }
 
