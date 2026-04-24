@@ -777,7 +777,7 @@ select.compact-form-control { height: 2.1rem; }
 
             <!-- 同步通知 -->
             <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="small text-muted">同步通知</span>
+                <span class="small text-muted">操作反馈</span>
                 <button id="verbose-toast-btn" onclick="toggleVerboseToast()"
                         class="btn btn-sm btn-outline-secondary"
                         style="font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;"></button>
@@ -831,7 +831,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.0.0</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.0.1</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2097,7 +2097,7 @@ function saveDeviceName() {
     $('device-name-input').value = val;
     const hint = $('device-name-hint');
     if (hint) hint.textContent = `已保存：${val}`;
-    showToast(`设备昵称已保存：${val}`, 'success', 2000);
+    if (verboseToast) showToast(`设备昵称已保存：${val}`, 'success', 2000);
 }
 
 
@@ -2169,7 +2169,7 @@ function switchUser() {
     if (inMemoryLoadedData) {
         window._suppressAutoLogin = true;  // 手动切换时不自动选用户
         onDataLoaded();
-        showToast('数据已就绪，请选择用户0', 'success', 3000);
+        if (verboseToast) showToast('数据已就绪，请选择用户', 'success', 3000);
     }
 }
 
@@ -2190,7 +2190,7 @@ function onFileSelected() {
     const file = $('data-import-file').files[0];
     if (!file) return;
 
-    showToast(`已选择：${file.name}`, 'info', 2000);
+    if (verboseToast) showToast(`已选择：${file.name}`, 'info', 2000);
     const usernameHint = $('login-username-hint');
     if (usernameHint) usernameHint.value = file.name;
     $('password-error').classList.add('d-none');
@@ -2251,7 +2251,7 @@ function decryptAndLoadData() {
             categories = data.categories || DEFAULT_CATEGORIES;
             exchangeRates = data.exchangeRates || DEFAULT_RATES;
             $('password-error').classList.add('d-none');
-            showToast('Drive 数据解密成功，自动选择用户1', 'success', 3000);
+            if (verboseToast) showToast('Drive 数据解密成功，请选择用户', 'success', 3000);
             window._driveMode = false;
             window._driveRawContent = null;
             onDataLoaded();
@@ -2327,7 +2327,7 @@ function onDataLoaded() {
         }
     });
 
-    showToast('数据加载成功，自动选择用户2', 'success', 3000);
+    if (verboseToast) showToast('数据加载成功，请选择用户', 'success', 3000);
     $('user-section').style.display = 'block';
 
     // 渲染用户按钮
@@ -2387,7 +2387,7 @@ function createNewDataFile() {
     userPassword = pwd;
     dataUsers = users;
 
-    showToast('新数据文件已创建，请选择用户3', 'success', 3000);
+    if (verboseToast) showToast('新数据文件已创建，请选择用户', 'success', 3000);
     $('password-section').style.display = 'none';
     onDataLoaded();
 }
@@ -2679,7 +2679,7 @@ async function archiveYear(year) {
         }
 
         filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions(); renderArchiveManagementUI();
-        showToast(`${year} 年数据存档成功`, 'success');
+        if (verboseToast) showToast(`${year} 年数据存档成功`, 'success');
     } catch (err) {
         showToast(`存档失败：${err.message}`, 'error');
     }
@@ -2743,7 +2743,7 @@ async function unarchiveYear(year) {
         } catch(e) { console.warn('[unarchiveYear] 删除归档文件失败（非致命）:', e); }
 
         filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions(); renderArchiveManagementUI();
-        showToast(`${year} 年数据解档成功`, 'success');
+        if (verboseToast) showToast(`${year} 年数据解档成功`, 'success');
     } catch (err) {
         showToast(`解档失败：${err.message}`, 'error');
     }
@@ -2819,7 +2819,7 @@ async function loadHistoryYear(year) {
         if (fab) fab.classList.add('d-none');
 
         renderAllTransactions(); renderStats();
-        showToast(`已加载 ${year} 年存档（只读）`, 'success');
+        if (verboseToast) showToast(`已加载 ${year} 年存档（只读）`, 'success');
     } catch (err) {
         historyMode = false; historyYear = null;
         showToast(`加载失败：${err.message}`, 'error');
@@ -2872,7 +2872,7 @@ function exitHistoryMode() {
     renderAllTransactions();
     renderAccounts();
     renderStats();
-    showToast('已退出历史模式', 'info');
+    if (verboseToast) showToast('已退出历史模式', 'info');
 }
 
 /**
@@ -3515,7 +3515,7 @@ function exportEncData() {
     a.click();
 
     clearUnsavedFlag();
-    showToast('加密文件已导出', 'success');
+    if (verboseToast) showToast('加密文件已导出', 'success');
 }
 
 function exportJsonData() {
@@ -3527,7 +3527,7 @@ function exportJsonData() {
     a.download = `ledger_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     clearUnsavedFlag();
-    showToast('JSON已导出', 'success');
+    if (verboseToast) showToast('JSON已导出', 'success');
 }
 
 function exportTransactionCsv() {
@@ -3849,7 +3849,7 @@ function deleteAccount(id) {
             renderAccounts();
             updateSelectOptions();
             triggerAutoSave();
-            showToast('账户已删除', 'success');
+            if (verboseToast) showToast('账户已删除', 'success');
         }
     }
 }
@@ -3907,7 +3907,7 @@ $('account-form').addEventListener('submit', (e) => {
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData(); renderAccounts();
         bootstrap.Modal.getInstance($('accountModal')).hide();
         e.target.reset();
-        showToast('账户已添加', 'success');
+        if (verboseToast) showToast('账户已添加', 'success');
     } else {
         const id = parseInt($('acc-id').value);
         const acc = accounts.find(a => a.id === id);
@@ -3932,7 +3932,7 @@ $('account-form').addEventListener('submit', (e) => {
             saveUserData(); triggerAutoSave(); loadAllData(); filterUserData(); renderAccounts();
             displayedTransactionCount = 100; renderAllTransactions();
             bootstrap.Modal.getInstance($('accountModal')).hide();
-            showToast('账户已更新', 'success');
+            if (verboseToast) showToast('账户已更新', 'success');
             if (currentDetailAccountId === id) refreshDetailContent(id);
         }
     }
@@ -5096,7 +5096,7 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
         const hintEl = $('edit-trans-desc-hint');
         if (hintEl) hintEl.style.display = 'none';
         resetAttachmentUI();
-        showToast('已添加', 'success', 1500);
+        if (verboseToast) showToast('已添加', 'success', 1500);
     } else {
         const id = parseFloat($('edit-trans-id').value);
         const t = transactions.find(x => x.id === id);
@@ -5155,7 +5155,7 @@ $('edit-transfer-form').addEventListener('submit', (e) => {
         $('edit-transfer-amount-out').value = '';
         $('edit-transfer-amount-in').value = '';
         $('edit-transfer-desc').value = '';
-        showToast('已添加', 'success', 1500);
+        if (verboseToast) showToast('已添加', 'success', 1500);
     } else {
         const id = parseFloat($('edit-transfer-id').value);
         const tOut = transactions.find(x => x.id === id);
@@ -5694,7 +5694,7 @@ window.addEventListener('load', () => {
             filterUserData();
             renderAllTransactions();
             renderAccounts();
-            showToast('已刷新最新数据', 'success', 2500);
+            if (verboseToast) showToast('已刷新最新数据', 'success', 2500);
         }
     });
     updateTransferModeButton();
@@ -5758,7 +5758,7 @@ async function handleAttachmentSelected(input) {
             currentIds.push(storedId);
             $('edit-trans-attachment-id').value = currentIds.join(',');
             renderAttachmentThumbs(currentIds);
-            showToast(`已上传（${fileSizeKB}KB）`, 'success', 3000);
+            if (verboseToast) showToast(`已上传（${fileSizeKB}KB）`, 'success', 3000);
         } else {
             showToast('上传失败：' + (result.error || '未知错误'), 'error');
         }
@@ -6432,7 +6432,7 @@ function changeDataPassword() {
     triggerAutoSave();
     bootstrap.Modal.getInstance($('changePwdModal')).hide();
     initPasswordHint();
-    showToast('密码已更新，请导出加密文件保存', 'success');
+    if (verboseToast) showToast('密码已更新，请导出加密文件保存', 'success');
 }
 
 function initPasswordHint() {
@@ -6512,7 +6512,7 @@ function setExchangeRate(from, to, rate) {
     exchangeRates[key] = parseFloat(rate);
     saveUserData(); triggerAutoSave();
     renderExchangeRateSettings();
-    showToast('汇率已更新', 'success');
+    if (verboseToast) showToast('汇率已更新', 'success');
 }
 
 function renderCategorySettings() {
@@ -6573,7 +6573,7 @@ function removeCategory(type, cat) {
     if (plannedTransactions) plannedTransactions.forEach(p => { if (p.type === type && p.category === cat) p.category = '未分类'; });
     saveUserData(); triggerAutoSave(); renderCategorySettings();
     displayedTransactionCount = 100; renderAllTransactions(); renderStats();
-    showToast(`分类 "${cat}" 已删除`, 'success');
+    if (verboseToast) showToast(`分类 "${cat}" 已删除`, 'success');
 }
 
 function editCategoryName(type, oldName) {
@@ -6588,7 +6588,7 @@ function editCategoryName(type, oldName) {
     if (plannedTransactions) plannedTransactions.forEach(p => { if (p.type === type && p.category === oldName) p.category = trimmedName; });
     saveUserData(); triggerAutoSave(); renderCategorySettings();
     displayedTransactionCount = 100; renderAllTransactions(); renderStats();
-    showToast(`分类已重命名: "${oldName}" → "${trimmedName}"`, 'success');
+    if (verboseToast) showToast(`分类已重命名: "${oldName}" → "${trimmedName}"`, 'success');
 }
 
 let resizingColumn = null, startX = 0, startWidth = 0;
@@ -6748,7 +6748,7 @@ $('planned-form').addEventListener('submit', (e) => {
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData(); renderPlannedTransactions();
         bootstrap.Modal.getInstance($('plannedModal')).hide();
         e.target.reset();
-        showToast('计划已创建', 'success');
+        if (verboseToast) showToast('计划已创建', 'success');
     } else {
         const id = parseInt($('planned-id').value);
         const plan = plannedTransactions.find(p => p.id === id);
@@ -6767,7 +6767,7 @@ $('planned-form').addEventListener('submit', (e) => {
             plan.updatedAt = Date.now();
             saveUserData(); triggerAutoSave(); loadAllData(); filterUserData(); renderPlannedTransactions();
             bootstrap.Modal.getInstance($('plannedModal')).hide();
-            showToast('计划已更新', 'success');
+            if (verboseToast) showToast('计划已更新', 'success');
         }
     }
 });
@@ -6778,7 +6778,7 @@ function deletePlanned(id) {
     if (index > -1 && plannedTransactions[index].ownerName === currentUserName) {
         plannedTransactions.splice(index, 1);
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData(); renderPlannedTransactions();
-        showToast('计划已删除', 'success');
+        if (verboseToast) showToast('计划已删除', 'success');
     }
 }
 
@@ -6886,7 +6886,7 @@ function addUserFromSettings(e) {
     saveUserData(); triggerAutoSave();
     input.value = '';
     renderUserManagement();
-    showToast(`已添加用户 "${name}"`, 'success');
+    if (verboseToast) showToast(`已添加用户 "${name}"`, 'success');
 }
 
 function renameUser(oldName) {
@@ -6912,7 +6912,7 @@ function renameUser(oldName) {
     }
     saveUserData(); triggerAutoSave();
     renderUserManagement();
-    showToast(`已重命名为 "${trimmed}"`, 'success');
+    if (verboseToast) showToast(`已重命名为 "${trimmed}"`, 'success');
 }
 
 function removeUser(name) {
@@ -6924,7 +6924,7 @@ function removeUser(name) {
     delete inMemoryLoadedData.allUserData[name];
     saveUserData(); triggerAutoSave();
     renderUserManagement();
-    showToast(`已删除用户 "${name}"`, 'success');
+    if (verboseToast) showToast(`已删除用户 "${name}"`, 'success');
 }
 
 // ── 标签建议下拉（点击/聚焦触发） ──
