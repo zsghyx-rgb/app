@@ -831,7 +831,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.0.1</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.0.2</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -3288,19 +3288,8 @@ async function syncToDrive(manual = false, forcePush = false) {
             // 同步成功：有新数据时提示条数；无新数据时详细模式提示「已同步」，否则静默关闭
             if (pulledNewCount > 0) {
                 showToast(`已同步 ${pulledNewCount} 条新数据`, 'success');
-            } else if (verboseToast) {
-                showToast('已同步', 'success');
             } else {
-                // 静默：触发正常 toast 结束流程
-                const el = $('app-toast');
-                if (el) {
-                    clearTimeout(_toastTimer);
-                    if (hasUnsavedChanges) {
-                        showUnsavedToast();
-                    } else {
-                        el.classList.remove('show');
-                    }
-                }
+                showToast('已同步', 'success');
             }
         } else {
             throw new Error('GAS 返回：' + text);
@@ -3338,7 +3327,7 @@ async function loadFromDrive() {
         } catch(_) {
             // 加密缓存：立即让用户输密码，完全不等网络
             window._driveMode = true;
-            showToast('请输入密码', 'info', 0);
+            showToast('请输入密码', 'info', 3000);
             $('user-section').style.display = 'none';
             $('user-buttons').innerHTML = '';
             $('password-error').classList.add('d-none');
@@ -3453,17 +3442,15 @@ async function backgroundSyncAfterLogin() {
         const isFormOpen = $('add-transaction-section') && $('add-transaction-section').classList.contains('show');
 
         if (isFormOpen) {
-            // 用户正在填表单：只更新内存，弹提示，不刷UI
             inMemoryLoadedData = merged;
             saveUserData();
             if (newCount > 0) {
                 showToast(`后台已同步 ${newCount} 条新数据，关闭表单后自动刷新`, 'info', 4000);
-            } else if (verboseToast) {
+            } else {
                 showToast('后台已同步', 'info', 2000);
             }
             window._pendingUIRefresh = true;
         } else {
-            // 用户没在填表单：合并后刷新列表
             inMemoryLoadedData = merged;
             loadAllData();
             filterUserData();
@@ -3471,7 +3458,7 @@ async function backgroundSyncAfterLogin() {
             renderAccounts();
             if (newCount > 0) {
                 showToast(`已同步 ${newCount} 条新数据`, 'success', 3000);
-            } else if (verboseToast) {
+            } else {
                 showToast('已同步', 'success', 2000);
             }
         }
