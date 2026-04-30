@@ -1451,21 +1451,6 @@ select.compact-form-control { height: 2.1rem; }
 
                 <div class="col-12 col-md-6">
                     <div class="card shadow-sm h-100">
-                        <div class="card-header bg-transparent fw-bold">
-                            <i class="bi bi-clock-history"></i> 云端备份浏览
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted small mb-2">查看 Drive 历史备份，与当前数据对比差异，或从备份恢复。</p>
-                            <button class="btn btn-outline-secondary btn-sm w-100 mb-2" onclick="loadBackupList()">
-                                <i class="bi bi-arrow-clockwise"></i> 读取备份列表
-                            </button>
-                            <div id="backup-list-container" class="mt-1" style="max-height:220px;overflow-y:auto;font-size:0.85rem;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <div class="card shadow-sm h-100">
                         <div class="card-header bg-transparent fw-bold">汇率配置 (对人民币)</div>
                         <div class="card-body">
                             <div id="exchange-rate-inputs"></div>
@@ -1584,41 +1569,90 @@ select.compact-form-control { height: 2.1rem; }
 
                     <div class="mb-2">
                         <button class="btn btn-outline-secondary btn-sm me-2" onclick="toggleAdvancedExportSection()">
-                            <i class="bi bi-file-earmark-code" id="adv-export-toggle-icon"></i>
-                            <span id="adv-export-toggle-text">显示高级导出</span>
+                            <i class="bi bi-gear" id="adv-export-toggle-icon"></i>
+                            <span id="adv-export-toggle-text">显示高级设置</span>
                         </button>
-
                     </div>
 
-                    <div class="card shadow-sm mb-3" id="adv-export-card" style="display: none;">
-                        <div class="card-header bg-transparent fw-bold">
-                            <i class="bi bi-file-earmark-code"></i> 高级导出 / 导入
-                        </div>
-                        <div class="card-body">
-                            <div class="d-grid gap-2">
-                                <div class="btn-group">
-                                    <button class="btn btn-success" onclick="exportJsonData()">
-                                        <i class="bi bi-download"></i> 导出 JSON
-                                    </button>
-                                    <button class="btn btn-info text-white" onclick="exportTransactionCsv()">
-                                        <i class="bi bi-file-earmark-spreadsheet"></i> 导出交易CSV
-                                    </button>
-                                    <button class="btn btn-info text-white" onclick="exportTransferCsv()">
-                                        <i class="bi bi-file-earmark-spreadsheet"></i> 导出转账CSV
-                                    </button>
-                                </div>
-                                <div class="btn-group">
-                                    <button class="btn btn-primary" onclick="$('transaction-csv-input').click()">
-                                        <i class="bi bi-file-earmark-arrow-up"></i> 导入交易CSV
-                                    </button>
-                                    <button class="btn btn-primary" onclick="$('transfer-csv-input').click()">
-                                        <i class="bi bi-file-earmark-arrow-up"></i> 导入转账CSV
-                                    </button>
-                                </div>
-                                <input type="file" id="transaction-csv-input" class="d-none" accept=".csv" onchange="importTransactionCsv()">
-                                <input type="file" id="transfer-csv-input" class="d-none" accept=".csv" onchange="importTransferCsv()">
+                    <div id="adv-export-card" style="display: none;">
+
+                        <!-- 云端备份浏览 -->
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-header bg-transparent fw-bold">
+                                <i class="bi bi-clock-history"></i> 云端备份浏览
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small mb-2">查看 Drive 历史备份，与当前数据对比差异，或从备份恢复。</p>
+                                <button class="btn btn-outline-secondary btn-sm w-100 mb-2" onclick="loadBackupList()">
+                                    <i class="bi bi-arrow-clockwise"></i> 读取备份列表
+                                </button>
+                                <div id="backup-list-container" class="mt-1" style="max-height:220px;overflow-y:auto;font-size:0.85rem;"></div>
                             </div>
                         </div>
+
+                        <!-- 查看访问日志 -->
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-header bg-transparent fw-bold">
+                                <i class="bi bi-journal-text"></i> 访问日志
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small mb-2">查看云端 access_log.txt 的访问记录，支持日期筛选和分页。</p>
+                                <!-- 筛选行 -->
+                                <div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <label class="text-muted small mb-0" style="white-space:nowrap;">从</label>
+                                        <input type="date" id="log-date-from" class="form-control form-control-sm" style="width:140px;">
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <label class="text-muted small mb-0" style="white-space:nowrap;">到</label>
+                                        <input type="date" id="log-date-to" class="form-control form-control-sm" style="width:140px;">
+                                    </div>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="loadAccessLog()">
+                                        <i class="bi bi-arrow-clockwise"></i> 读取日志
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="clearLogFilter()">
+                                        <i class="bi bi-x-circle"></i> 清除筛选
+                                    </button>
+                                </div>
+                                <!-- 日志列表 -->
+                                <div id="log-list-container" style="font-size:0.82rem;"></div>
+                                <!-- 分页 -->
+                                <div id="log-pagination" class="d-flex align-items-center justify-content-between mt-2" style="display:none!important;"></div>
+                            </div>
+                        </div>
+
+                        <!-- 高级导出 / 导入 -->
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-header bg-transparent fw-bold">
+                                <i class="bi bi-file-earmark-code"></i> 高级导出 / 导入
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <div class="btn-group">
+                                        <button class="btn btn-success" onclick="exportJsonData()">
+                                            <i class="bi bi-download"></i> 导出 JSON
+                                        </button>
+                                        <button class="btn btn-info text-white" onclick="exportTransactionCsv()">
+                                            <i class="bi bi-file-earmark-spreadsheet"></i> 导出交易CSV
+                                        </button>
+                                        <button class="btn btn-info text-white" onclick="exportTransferCsv()">
+                                            <i class="bi bi-file-earmark-spreadsheet"></i> 导出转账CSV
+                                        </button>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-primary" onclick="$('transaction-csv-input').click()">
+                                            <i class="bi bi-file-earmark-arrow-up"></i> 导入交易CSV
+                                        </button>
+                                        <button class="btn btn-primary" onclick="$('transfer-csv-input').click()">
+                                            <i class="bi bi-file-earmark-arrow-up"></i> 导入转账CSV
+                                        </button>
+                                    </div>
+                                    <input type="file" id="transaction-csv-input" class="d-none" accept=".csv" onchange="importTransactionCsv()">
+                                    <input type="file" id="transfer-csv-input" class="d-none" accept=".csv" onchange="importTransferCsv()">
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -7636,12 +7670,12 @@ function toggleAdvancedExportSection() {
     const toggleIcon = $('adv-export-toggle-icon');
     if (card.style.display === 'none') {
         card.style.display = 'block';
-        toggleText.textContent = '隐藏高级导出';
-        toggleIcon.className = 'bi bi-file-earmark-code-fill';
+        toggleText.textContent = '隐藏高级设置';
+        toggleIcon.className = 'bi bi-gear-fill';
     } else {
         card.style.display = 'none';
-        toggleText.textContent = '显示高级导出';
-        toggleIcon.className = 'bi bi-file-earmark-code';
+        toggleText.textContent = '显示高级设置';
+        toggleIcon.className = 'bi bi-gear';
     }
 }
 
@@ -7785,6 +7819,123 @@ function scheduleCloseTagSuggest(listId) {
 window.addEventListener('load', () => {
     updateTransferModeButton();
 });
+
+// ── 访问日志查看 ──────────────────────────────────────────────
+const LOG_PAGE_SIZE = 50;
+let _logAllLines = [];
+let _logCurrentPage = 1;
+
+async function loadAccessLog() {
+    const container = $('log-list-container');
+    const pager     = $('log-pagination');
+    if (!GAS_URL) {
+        container.innerHTML = '<span class="text-danger small">未配置 GAS URL，无法读取日志。</span>';
+        return;
+    }
+    container.innerHTML = '<span class="text-muted small"><i class="bi bi-hourglass-split"></i> 读取中…</span>';
+    pager.style.display = 'none';
+    try {
+        const resp = await fetch(gasRequestUrl({ file: 'access_log.txt' }));
+        const raw  = (await resp.text()).trim();
+        if (!raw) {
+            container.innerHTML = '<span class="text-muted small">日志文件为空。</span>';
+            return;
+        }
+        // 最新记录排最前
+        const allLines = raw.split('\n').filter(l => l.trim()).reverse();
+        _logAllLines   = applyLogFilter(allLines);
+        _logCurrentPage = 1;
+        renderLogPage();
+    } catch (e) {
+        container.innerHTML = `<span class="text-danger small">读取失败：${e.message}</span>`;
+    }
+}
+
+function applyLogFilter(lines) {
+    const from = $('log-date-from').value;
+    const to   = $('log-date-to').value;
+    if (!from && !to) return lines;
+    return lines.filter(line => {
+        const datePart = line.substring(0, 10);
+        if (from && datePart < from) return false;
+        if (to   && datePart > to)   return false;
+        return true;
+    });
+}
+
+function renderLogPage() {
+    const container = $('log-list-container');
+    const pager     = $('log-pagination');
+    const total     = _logAllLines.length;
+    if (total === 0) {
+        container.innerHTML = '<span class="text-muted small">没有匹配的日志记录。</span>';
+        pager.style.display = 'none';
+        return;
+    }
+    const totalPages = Math.ceil(total / LOG_PAGE_SIZE);
+    if (_logCurrentPage < 1) _logCurrentPage = 1;
+    if (_logCurrentPage > totalPages) _logCurrentPage = totalPages;
+    const start = (_logCurrentPage - 1) * LOG_PAGE_SIZE;
+    const end   = Math.min(start + LOG_PAGE_SIZE, total);
+    const slice = _logAllLines.slice(start, end);
+
+    let html = `<div style="overflow-x:auto;"><table class="table table-sm table-hover mb-0" style="font-size:0.8rem;min-width:460px;">
+        <thead><tr>
+            <th style="white-space:nowrap;width:150px;">时间</th>
+            <th style="white-space:nowrap;width:110px;">设备</th>
+            <th>操作</th>
+        </tr></thead><tbody>`;
+    slice.forEach(line => {
+        const parts  = line.split(' | ');
+        const time   = parts[0] || '';
+        const device = parts[1] || '';
+        const action = parts.slice(2).join(' | ') || '';
+        html += `<tr>
+            <td class="text-muted" style="white-space:nowrap;">${_escHtml(time)}</td>
+            <td style="white-space:nowrap;">${_escHtml(device)}</td>
+            <td style="word-break:break-all;">${_escHtml(action)}</td>
+        </tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    if (totalPages <= 1) {
+        pager.style.display = 'none';
+    } else {
+        pager.style.display = 'flex';
+        pager.innerHTML = `
+            <span class="text-muted small">共 ${total} 条 · 第 ${_logCurrentPage} / ${totalPages} 页</span>
+            <div class="d-flex gap-1">
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="logGoPage(1)" ${_logCurrentPage===1?'disabled':''}>
+                    <i class="bi bi-chevron-double-left"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="logGoPage(${_logCurrentPage-1})" ${_logCurrentPage===1?'disabled':''}>
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="logGoPage(${_logCurrentPage+1})" ${_logCurrentPage===totalPages?'disabled':''}>
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="logGoPage(${totalPages})" ${_logCurrentPage===totalPages?'disabled':''}>
+                    <i class="bi bi-chevron-double-right"></i>
+                </button>
+            </div>`;
+    }
+}
+
+function logGoPage(p) { _logCurrentPage = p; renderLogPage(); }
+
+function clearLogFilter() {
+    $('log-date-from').value = '';
+    $('log-date-to').value   = '';
+    $('log-list-container').innerHTML = '';
+    $('log-pagination').style.display = 'none';
+    _logAllLines = [];
+    _logCurrentPage = 1;
+}
+
+function _escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 </script>
 <!-- PWA Service Worker 注册 -->
