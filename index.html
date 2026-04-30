@@ -1596,28 +1596,10 @@ select.compact-form-control { height: 2.1rem; }
                                 <i class="bi bi-journal-text"></i> 访问日志
                             </div>
                             <div class="card-body">
-                                <p class="text-muted small mb-2">查看云端 access_log.txt 的访问记录，支持日期筛选和分页。</p>
-                                <!-- 筛选行 -->
-                                <div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
-                                    <div class="d-flex align-items-center gap-1">
-                                        <label class="text-muted small mb-0" style="white-space:nowrap;">从</label>
-                                        <input type="date" id="log-date-from" class="form-control form-control-sm" style="width:140px;">
-                                    </div>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <label class="text-muted small mb-0" style="white-space:nowrap;">到</label>
-                                        <input type="date" id="log-date-to" class="form-control form-control-sm" style="width:140px;">
-                                    </div>
-                                    <button class="btn btn-outline-secondary btn-sm" onclick="loadAccessLog()">
-                                        <i class="bi bi-arrow-clockwise"></i> 读取日志
-                                    </button>
-                                    <button class="btn btn-outline-secondary btn-sm" onclick="clearLogFilter()">
-                                        <i class="bi bi-x-circle"></i> 清除筛选
-                                    </button>
-                                </div>
-                                <!-- 日志列表 -->
-                                <div id="log-list-container" style="font-size:0.82rem;"></div>
-                                <!-- 分页 -->
-                                <div id="log-pagination" class="d-flex align-items-center justify-content-between mt-2" style="display:none!important;"></div>
+                                <p class="text-muted small mb-2">查看云端 access_log.txt 的访问记录，支持分页浏览。</p>
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="loadAccessLog()">
+                                    <i class="bi bi-journal-text"></i> 打开访问日志
+                                </button>
                             </div>
                         </div>
 
@@ -7820,30 +7802,47 @@ window.addEventListener('load', () => {
     updateTransferModeButton();
 });
 
-// ── 访问日志查看 ──────────────────────────────────────────────
+// ── 访问日志抽屉 ──────────────────────────────────────────────
 const LOG_PAGE_SIZE = 50;
 let _logAllLines = [];
 let _logCurrentPage = 1;
 
+function openLogDrawer() {
+    const backdrop = $('log-drawer-backdrop');
+    const drawer   = $('log-drawer');
+    backdrop.style.opacity      = '1';
+    backdrop.style.pointerEvents = 'auto';
+    drawer.style.transform      = 'translateY(0)';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLogDrawer() {
+    const backdrop = $('log-drawer-backdrop');
+    const drawer   = $('log-drawer');
+    backdrop.style.opacity      = '0';
+    backdrop.style.pointerEvents = 'none';
+    drawer.style.transform      = 'translateY(100%)';
+    document.body.style.overflow = '';
+}
+
 async function loadAccessLog() {
+    openLogDrawer();
     const container = $('log-list-container');
     const pager     = $('log-pagination');
+    container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-hourglass-split"></i> 读取中…</div>';
+    pager.style.display = 'none';
     if (!GAS_URL) {
         container.innerHTML = '<span class="text-danger small">未配置 GAS URL，无法读取日志。</span>';
         return;
     }
-    container.innerHTML = '<span class="text-muted small"><i class="bi bi-hourglass-split"></i> 读取中…</span>';
-    pager.style.display = 'none';
     try {
         const resp = await fetch(gasRequestUrl({ file: 'access_log.txt' }));
         const raw  = (await resp.text()).trim();
         if (!raw) {
-            container.innerHTML = '<span class="text-muted small">日志文件为空。</span>';
+            container.innerHTML = '<div class="text-muted small text-center py-4">日志文件为空。</div>';
             return;
         }
-        // 最新记录排最前
-        const allLines = raw.split('\n').filter(l => l.trim()).reverse();
-        _logAllLines   = applyLogFilter(allLines);
+        _logAllLines    = raw.split('\n').filter(l => l.trim()).reverse();
         _logCurrentPage = 1;
         renderLogPage();
     } catch (e) {
@@ -7851,16 +7850,29 @@ async function loadAccessLog() {
     }
 }
 
-function applyLogFilter(lines) {
-    const from = $('log-date-from').value;
-    const to   = $('log-date-to').value;
-    if (!from && !to) return lines;
-    return lines.filter(line => {
-        const datePart = line.substring(0, 10);
-        if (from && datePart < from) return false;
-        if (to   && datePart > to)   return false;
-        return true;
-    });
+async function refreshLogDrawer() {
+    // 重新拉取，保持抽屉开着
+    const container = $('log-list-container');
+    const pager     = $('log-pagination');
+    container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-hourglass-split"></i> 读取中…</div>';
+    pager.style.display = 'none';
+    if (!GAS_URL) {
+        container.innerHTML = '<span class="text-danger small">未配置 GAS URL，无法读取日志。</span>';
+        return;
+    }
+    try {
+        const resp = await fetch(gasRequestUrl({ file: 'access_log.txt' }));
+        const raw  = (await resp.text()).trim();
+        if (!raw) {
+            container.innerHTML = '<div class="text-muted small text-center py-4">日志文件为空。</div>';
+            return;
+        }
+        _logAllLines    = raw.split('\n').filter(l => l.trim()).reverse();
+        _logCurrentPage = 1;
+        renderLogPage();
+    } catch (e) {
+        container.innerHTML = `<span class="text-danger small">读取失败：${e.message}</span>`;
+    }
 }
 
 function renderLogPage() {
@@ -7868,7 +7880,7 @@ function renderLogPage() {
     const pager     = $('log-pagination');
     const total     = _logAllLines.length;
     if (total === 0) {
-        container.innerHTML = '<span class="text-muted small">没有匹配的日志记录。</span>';
+        container.innerHTML = '<div class="text-muted small text-center py-4">没有日志记录。</div>';
         pager.style.display = 'none';
         return;
     }
@@ -7876,12 +7888,11 @@ function renderLogPage() {
     if (_logCurrentPage < 1) _logCurrentPage = 1;
     if (_logCurrentPage > totalPages) _logCurrentPage = totalPages;
     const start = (_logCurrentPage - 1) * LOG_PAGE_SIZE;
-    const end   = Math.min(start + LOG_PAGE_SIZE, total);
-    const slice = _logAllLines.slice(start, end);
+    const slice = _logAllLines.slice(start, Math.min(start + LOG_PAGE_SIZE, total));
 
-    let html = `<div style="overflow-x:auto;"><table class="table table-sm table-hover mb-0" style="font-size:0.8rem;min-width:460px;">
+    let html = `<div style="overflow-x:auto;"><table class="table table-sm table-hover mb-0" style="font-size:0.8rem;min-width:420px;">
         <thead><tr>
-            <th style="white-space:nowrap;width:150px;">时间</th>
+            <th style="white-space:nowrap;width:148px;">时间</th>
             <th style="white-space:nowrap;width:110px;">设备</th>
             <th>操作</th>
         </tr></thead><tbody>`;
@@ -7898,6 +7909,8 @@ function renderLogPage() {
     });
     html += '</tbody></table></div>';
     container.innerHTML = html;
+    // 滚回顶部
+    container.scrollTop = 0;
 
     if (totalPages <= 1) {
         pager.style.display = 'none';
@@ -7924,18 +7937,10 @@ function renderLogPage() {
 
 function logGoPage(p) { _logCurrentPage = p; renderLogPage(); }
 
-function clearLogFilter() {
-    $('log-date-from').value = '';
-    $('log-date-to').value   = '';
-    $('log-list-container').innerHTML = '';
-    $('log-pagination').style.display = 'none';
-    _logAllLines = [];
-    _logCurrentPage = 1;
-}
-
 function _escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
 
 </script>
 <!-- PWA Service Worker 注册 -->
@@ -7977,6 +7982,26 @@ window.addEventListener('online', () => {
         </button>
     </div>
     <div id="chart-drawer-body"></div>
+</div>
+
+<!-- 日志抽屉 -->
+<div id="log-drawer-backdrop" onclick="closeLogDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1060;opacity:0;pointer-events:none;transition:opacity .25s;"></div>
+<div id="log-drawer" style="position:fixed;left:0;right:0;bottom:0;z-index:1061;background:var(--bs-body-bg);border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,0.2);max-height:85vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);">
+    <!-- 抽屉顶栏 -->
+    <div style="display:flex;align-items:center;gap:8px;padding:14px 16px 10px;border-bottom:1px solid var(--bs-border-color);flex-shrink:0;">
+        <i class="bi bi-journal-text" style="font-size:1.1rem;color:var(--bs-primary);"></i>
+        <span style="font-weight:600;font-size:1rem;flex:1;">访问日志</span>
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="refreshLogDrawer()" title="重新读取">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeLogDrawer()">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <!-- 日志内容（可滚动） -->
+    <div id="log-list-container" style="overflow-y:auto;flex:1;padding:12px 16px;font-size:0.82rem;"></div>
+    <!-- 分页栏（固定在底部） -->
+    <div id="log-pagination" style="display:none;flex-shrink:0;padding:10px 16px;border-top:1px solid var(--bs-border-color);background:var(--bs-body-bg);border-radius:0 0 0 0;align-items:center;justify-content:space-between;gap:8px;"></div>
 </div>
 
 </body></html>
