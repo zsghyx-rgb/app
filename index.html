@@ -705,7 +705,38 @@ select.compact-form-control { height: 2.1rem; }
 
 
 
-/* ── 交易页收起式筛选面板 ── */
+/* ── 智能提醒 Tab 按钮 ── */
+.insight-tab-btn {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 6px 14px 8px; font-size: 0.88rem; color: var(--bs-secondary-color);
+    cursor: pointer; transition: color .15s, border-color .15s;
+}
+.insight-tab-btn.active {
+    color: var(--bs-primary); border-bottom-color: var(--bs-primary); font-weight: 600;
+}
+/* 智能提醒内容卡片 */
+.insight-card {
+    background: var(--bs-tertiary-bg);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+}
+.insight-card-title {
+    font-size: 0.8rem; font-weight: 600; color: var(--bs-secondary-color);
+    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px;
+}
+.insight-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border-bottom: 1px solid var(--bs-border-color);
+    font-size: 0.85rem;
+}
+.insight-row:last-child { border-bottom: none; }
+.insight-badge-up   { color: #e74c3c; font-size: 0.78rem; }
+.insight-badge-down { color: #27ae60; font-size: 0.78rem; }
+.insight-badge-neu  { color: var(--bs-secondary-color); font-size: 0.78rem; }
+.insight-today-plan {
+    background: #fff3cd; border-radius: 8px; padding: 8px 12px;
+    font-size: 0.85rem; margin-bottom: 8px; border-left: 3px solid #f5a623;
+}
+.dark-theme .insight-today-plan { background: #3d3112; }
 #trans-filter-panel {
     overflow: hidden;
     max-height: 0;
@@ -713,15 +744,9 @@ select.compact-form-control { height: 2.1rem; }
     padding: 0 0;
 }
 #trans-filter-panel.open {
-    max-height: 240px;
+    max-height: 340px;
     padding: 8px 0 4px;
 }
-#trans-search-panel {
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height .2s ease;
-}
-#trans-search-panel.open { max-height: 56px; }
 
 /* ── 统计页收起式筛选面板 ── */
 #stats-filter-panel {
@@ -959,7 +984,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.0</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.2</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1098,31 +1123,22 @@ select.compact-form-control { height: 2.1rem; }
                 <!-- 标题行：标题 + 搜索 + 筛选 + 新增 -->
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <h4 class="mb-0 flex-grow-1">交易管理</h4>
-                    <button class="btn btn-sm btn-outline-secondary" id="trans-search-btn" onclick="toggleTransSearch()" title="搜索">
-                        <i class="bi bi-search"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" id="trans-filter-btn" onclick="toggleTransFilter()" title="筛选">
+                    <button class="btn btn-sm btn-outline-secondary" id="trans-filter-btn" onclick="toggleTransFilter()" title="搜索与筛选">
                         <i class="bi bi-sliders"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-warning d-none d-md-inline-flex" onclick="openNewTransfer()" title="新增转账">
-                        <i class="bi bi-arrow-left-right"></i>
                     </button>
                     <button class="btn btn-sm btn-primary d-none d-md-inline-flex" onclick="openNewTransaction()" title="新增交易">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>
 
-                <!-- 搜索展开行 -->
-                <div id="trans-search-panel">
-                    <div class="input-group input-group-sm mb-1">
+                <!-- 合并面板：搜索 + 日期 + 用户筛选 -->
+                <div id="trans-filter-panel">
+                    <!-- 搜索行 -->
+                    <div class="input-group input-group-sm mb-2">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" class="form-control" id="trans-search-input" placeholder="搜索类别、备注、标签..." oninput="handleSearchInput()" autocomplete="off">
                         <button class="btn btn-outline-secondary" onclick="clearSearchInput()"><i class="bi bi-x"></i></button>
                     </div>
-                </div>
-
-                <!-- 筛选展开面板（分行显示） -->
-                <div id="trans-filter-panel">
                     <!-- 第一行：日期（单行横向滚动） -->
                     <div class="d-flex align-items-center gap-2 mb-2 flex-nowrap" style="overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
                         <span class="text-muted small flex-shrink-0" style="width:36px;">日期</span>
@@ -1241,6 +1257,10 @@ select.compact-form-control { height: 2.1rem; }
                     <span class="flex-grow-1"></span>
                     <button class="btn btn-sm btn-outline-secondary flex-shrink-0" id="stats-filter-btn" onclick="toggleStatsFilter()" title="筛选">
                         <i class="bi bi-sliders"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary flex-shrink-0" id="insight-manual-btn" onclick="openInsightDrawer(true)" title="智能提醒" style="position:relative;">
+                        <i class="bi bi-lightbulb"></i>
+                        <span id="insight-badge" style="display:none;position:absolute;top:2px;right:2px;width:7px;height:7px;background:#f04;border-radius:50%;"></span>
                     </button>
                 </div>
                 <!-- 筛选展开面板（三行） -->
@@ -2951,7 +2971,7 @@ async function loadHistoryYear(year) {
         const banner = $('history-mode-banner');
         if (banner) { banner.classList.remove('d-none'); $('history-year-label').textContent = year; }
         // 隐藏快速日期筛选按钮组
-        ['quick-date-filter-group', 'trans-custom-toggle', 'trans-filter-btn', 'trans-search-btn',
+        ['quick-date-filter-group', 'trans-custom-toggle', 'trans-filter-btn',
          'quick-stats-filter-group-1', 'stats-month-nav', 'stats-custom-toggle', 'stats-filter-btn']
             .forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
         // 隐藏账户导航按钮
@@ -3014,7 +3034,7 @@ function exitHistoryMode() {
     const navAccounts = $('nav-btn-accounts');
     if (navAccounts) navAccounts.style.display = '';
     // 恢复快速日期筛选按钮组
-    ['quick-date-filter-group', 'trans-custom-toggle', 'trans-filter-btn', 'trans-search-btn',
+    ['quick-date-filter-group', 'trans-custom-toggle', 'trans-filter-btn',
      'quick-stats-filter-group-1', 'stats-month-nav', 'stats-custom-toggle', 'stats-filter-btn']
         .forEach(id => { const el = $(id); if (el) el.style.display = ''; });
     filterUserData();
@@ -3039,15 +3059,8 @@ function initAppUI() {
     currentUserFilterValue = currentUserName;
     updateUserFilterBtn();
 
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 30);
-
-    const startStr = formatLocal(start);
-    const endStr = formatLocal(end);
-
-    $('filter-start-date').value = startStr;
-    $('filter-end-date').value = endStr;
+    $('filter-start-date').value = '';
+    $('filter-end-date').value = '';
 
     if ($('stats-start-date')) {
         // 默认显示当前月份
@@ -6110,28 +6123,13 @@ const myTrans = transactions.filter(t =>
 }
 
 // ── 交易页搜索/筛选面板收起展开 ────────────────────────────
-function toggleTransSearch() {
-    const panel = $('trans-search-panel');
-    const btn   = $('trans-search-btn');
-    const isOpen = panel.classList.toggle('open');
-    btn.classList.toggle('active', isOpen);
-    if (isOpen) {
-        setTimeout(() => $('trans-search-input')?.focus(), 50);
-        // 关闭筛选面板
-        $('trans-filter-panel').classList.remove('open');
-        $('trans-filter-btn').classList.remove('active');
-    }
-}
-
 function toggleTransFilter() {
     const panel = $('trans-filter-panel');
     const btn   = $('trans-filter-btn');
     const isOpen = panel.classList.toggle('open');
     btn.classList.toggle('active', isOpen);
     if (isOpen) {
-        // 关闭搜索面板
-        $('trans-search-panel').classList.remove('open');
-        $('trans-search-btn').classList.remove('active');
+        setTimeout(() => $('trans-search-input')?.focus(), 50);
     }
 }
 
@@ -6375,7 +6373,9 @@ function showChartDrawer(title, txList) {
             const acc = accounts.find(a => a.id == t.accountId);
             if (acc) total += convertAmt(Math.abs(t.amount), acc.currency);
         });
-        summaryEl.textContent = `共 ${txList.length} 笔  合计 ${formatAmount(total)}`;
+        const currency = currentStatsFilter.currency || 'RMB';
+        const symbol = CURRENCY_SYMBOLS[currency] || '';
+        summaryEl.textContent = `共 ${txList.length} 笔  合计 ${symbol}${formatAmount(total)}`;
 
         // 按日期倒序，过滤转账收入侧
         const sorted = [...txList]
@@ -7141,7 +7141,7 @@ function switchTab(t, el) {
     // 历史模式下始终隐藏新增悬浮按钮
     if (fab) fab.classList.toggle('d-none', t !== 'transactions' || historyMode);
 
-    if (t === 'stats') renderStats();
+    if (t === 'stats') { renderStats(); maybeShowInsight(); }
     if (t === 'planned') renderPlannedTransactions();
     if (t === 'settings') { renderExchangeRateSettings(); initPasswordHint(); renderUserManagement(); renderArchiveManagementUI(); }
 }
@@ -7802,7 +7802,351 @@ window.addEventListener('load', () => {
     updateTransferModeButton();
 });
 
-// ── 访问日志抽屉 ──────────────────────────────────────────────
+// ── 智能洞察 ──────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// 智能提醒抽屉（新版：月报 + 日报 合并卡片）
+// ══════════════════════════════════════════════════════
+
+let _insightCurrentTab = 'monthly';
+
+/* ─── localStorage 控制 ─── */
+function _insightMonthKey() { return `insight_month_${currentUserName}_${_yyyyMM(new Date())}`; }
+function _insightDayKey()   { return `insight_day_${_ymd(new Date())}`; }
+function _yyyyMM(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function _ymd(d)    { return d.toISOString().split('T')[0]; }
+function _monthlyShown()  { try { return !!localStorage.getItem(_insightMonthKey()); } catch(_){return false;} }
+function _dailyShown()    { try { return !!localStorage.getItem(_insightDayKey());   } catch(_){return false;} }
+function _markMonthlyShown() { try { localStorage.setItem(_insightMonthKey(), '1'); } catch(_){} }
+function _markDailyShown()   { try { localStorage.setItem(_insightDayKey(), '1');   } catch(_){} }
+
+/* ─── 切换到统计页时自动触发 ─── */
+function maybeShowInsight() {
+    if (historyMode) return;
+    if (!transactions || transactions.length === 0) return;
+    const monthNew = !_monthlyShown();
+    const dayNew   = !_dailyShown();
+    _updateInsightBadge(monthNew || dayNew);
+    if (!monthNew && !dayNew) return;
+    _insightCurrentTab = monthNew ? 'monthly' : 'daily';
+    // 延迟 400ms，等页面渲染完再弹
+    setTimeout(() => openInsightDrawer(false), 400);
+}
+
+function _updateInsightBadge(show) {
+    const b = $('insight-badge');
+    if (b) b.style.display = show ? 'block' : 'none';
+}
+
+/* ─── 打开 / 关闭 ─── */
+function openInsightDrawer(manual = false) {
+    if (!manual) {
+        _insightCurrentTab = !_monthlyShown() ? 'monthly' : 'daily';
+    }
+    _syncInsightTabUI();
+    _renderInsightTab(_insightCurrentTab);
+
+    const backdrop = $('insight-drawer-backdrop');
+    const drawer   = $('insight-drawer');
+    backdrop.style.opacity       = '1';
+    backdrop.style.pointerEvents = 'auto';
+    drawer.style.transform       = 'translateY(0)';
+    document.body.style.overflow = 'hidden';
+
+    if (_insightCurrentTab === 'monthly') _markMonthlyShown();
+    else _markDailyShown();
+    _updateInsightBadge(!_monthlyShown() || !_dailyShown());
+}
+
+function closeInsightDrawer() {
+    $('insight-drawer-backdrop').style.opacity       = '0';
+    $('insight-drawer-backdrop').style.pointerEvents = 'none';
+    $('insight-drawer').style.transform              = 'translateY(100%)';
+    document.body.style.overflow = '';
+}
+
+function switchInsightTab(tab) {
+    _insightCurrentTab = tab;
+    _syncInsightTabUI();
+    _renderInsightTab(tab);
+    if (tab === 'monthly') _markMonthlyShown();
+    else _markDailyShown();
+    _updateInsightBadge(!_monthlyShown() || !_dailyShown());
+}
+
+function _syncInsightTabUI() {
+    ['monthly','daily'].forEach(t => {
+        const btn = $(`insight-tab-${t}`);
+        if (btn) btn.classList.toggle('active', t === _insightCurrentTab);
+    });
+}
+
+/* ─── 数据工具 ─── */
+function _txMonth(tx)  { return tx.date ? tx.date.substring(0,7) : ''; }
+
+function _monthExpenses(yyyyMM) {
+    return transactions.filter(tx =>
+        tx.type === 'expense' && _txMonth(tx) === yyyyMM && !tx.isTransfer && !tx._isBaseline
+    );
+}
+
+function _sumByCategory(txList) {
+    const map = {};
+    txList.forEach(tx => {
+        const acc = accounts.find(a => a.id === tx.accountId);
+        const cur = acc ? acc.currency : 'RMB';
+        const rmb = toRmb(Math.abs(tx.amount), cur);
+        const cat = tx.category || '未分类';
+        map[cat] = (map[cat] || 0) + rmb;
+    });
+    return map;
+}
+
+function _sumRmb(txList) {
+    return txList.reduce((s, tx) => {
+        const acc = accounts.find(a => a.id === tx.accountId);
+        const cur = acc ? acc.currency : 'RMB';
+        return s + toRmb(Math.abs(tx.amount), cur);
+    }, 0);
+}
+
+function _fmtRmb(n) { return '¥' + n.toFixed(2); }
+
+function _pctStr(cur, prev) {
+    if (prev === 0 && cur === 0) return { text: '持平', cls: 'insight-badge-neu' };
+    if (prev === 0) return { text: '+∞%', cls: 'insight-badge-up' };
+    const pct  = (cur - prev) / prev * 100;
+    const sign = pct > 0 ? '+' : '';
+    const cls  = pct > 5 ? 'insight-badge-up' : pct < -5 ? 'insight-badge-down' : 'insight-badge-neu';
+    return { text: `${sign}${pct.toFixed(1)}%`, cls };
+}
+
+function _recentFullMonths(n) {
+    const now = new Date();
+    const months = [];
+    for (let i = 1; i <= n; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push(_yyyyMM(d));
+    }
+    return months;
+}
+
+/* ─── 月度总结渲染 ─── */
+function _renderMonthly() {
+    const now       = new Date();
+    const lastMonth = _yyyyMM(new Date(now.getFullYear(), now.getMonth()-1, 1));
+    const prevMonth = _yyyyMM(new Date(now.getFullYear(), now.getMonth()-2, 1));
+    const lastTxs   = _monthExpenses(lastMonth);
+    const prevTxs   = _monthExpenses(prevMonth);
+
+    if (lastTxs.length === 0) {
+        return `<div class="text-muted text-center py-5" style="font-size:0.9rem;">
+            上月暂无支出记录，无法生成月度总结。<br>
+            <span style="font-size:0.8rem;">有完整一个月的数据后将自动生成。</span>
+        </div>`;
+    }
+
+    const lastTotal = _sumRmb(lastTxs);
+    const prevTotal = _sumRmb(prevTxs);
+    const totalPct  = _pctStr(lastTotal, prevTotal);
+    const lastCats  = _sumByCategory(lastTxs);
+    const prevCats  = _sumByCategory(prevTxs);
+    const sortedCats = Object.entries(lastCats).sort((a,b) => b[1]-a[1]);
+
+    // 是否历史新高
+    let highlightMsg = '';
+    if (sortedCats.length > 0) {
+        const topCat = sortedCats[0][0];
+        const topAmt = sortedCats[0][1];
+        const hist = _recentFullMonths(4).slice(1).map(m => {
+            return (_sumByCategory(_monthExpenses(m)))[topCat] || 0;
+        });
+        if (hist.some(v => v > 0) && hist.every(v => topAmt > v)) {
+            highlightMsg = `📌 「${topCat}」上月支出 ${_fmtRmb(topAmt)}，为近 4 个月最高。`;
+        }
+    }
+
+    // 历史月均（最近3个完整月，不含上月）
+    const histMonths = _recentFullMonths(4).slice(1);
+    const histVals   = histMonths.map(m => _sumRmb(_monthExpenses(m))).filter(v => v > 0);
+    const histAvg    = histVals.length ? histVals.reduce((a,b)=>a+b,0)/histVals.length : 0;
+
+    let html = '';
+
+    // 总览卡
+    html += `<div class="insight-card">
+        <div class="insight-card-title">📊 上月总支出（${lastMonth}）</div>
+        <div class="insight-row">
+            <span>总支出</span>
+            <span><b>${_fmtRmb(lastTotal)}</b>&nbsp;<span class="${totalPct.cls}">${totalPct.text} vs 前月</span></span>
+        </div>`;
+    if (histAvg > 0) {
+        const avgPct = _pctStr(lastTotal, histAvg);
+        html += `<div class="insight-row">
+            <span class="text-muted">近3月均值</span>
+            <span>${_fmtRmb(histAvg)}&nbsp;<span class="${avgPct.cls}">${avgPct.text}</span></span>
+        </div>`;
+    }
+    html += `<div class="insight-row">
+        <span class="text-muted">交易笔数</span><span>${lastTxs.length} 笔</span>
+    </div></div>`;
+
+    // 亮点提示
+    if (highlightMsg) {
+        html += `<div class="insight-today-plan">${highlightMsg}</div>`;
+    }
+
+    // 类别对比卡
+    html += `<div class="insight-card">
+        <div class="insight-card-title">📂 类别明细（对比 ${prevMonth}）</div>`;
+    sortedCats.slice(0, 8).forEach(([cat, amt]) => {
+        const prev = prevCats[cat] || 0;
+        const pct  = _pctStr(amt, prev);
+        html += `<div class="insight-row">
+            <span>${cat}</span>
+            <span><b>${_fmtRmb(amt)}</b>&nbsp;<span class="${pct.cls}">${pct.text}</span>
+            &nbsp;<span class="text-muted" style="font-size:0.75rem;">${prev>0?'前月'+_fmtRmb(prev):'前月无'}</span></span>
+        </div>`;
+    });
+    html += `</div>`;
+
+    html += `<div class="text-muted text-center" style="font-size:0.75rem;padding-bottom:4px;">
+        本月首次查看 · 下月初自动刷新
+    </div>`;
+    return html;
+}
+
+/* ─── 本月动态渲染 ─── */
+function _renderDaily() {
+    const now       = new Date();
+    const curMonth  = _yyyyMM(now);
+    const prevMonth = _yyyyMM(new Date(now.getFullYear(), now.getMonth()-1, 1));
+    const todayStr  = _ymd(now);
+    const todayDay  = now.getDate();
+
+    const curTxs  = _monthExpenses(curMonth);
+    const prevTxs = _monthExpenses(prevMonth);
+
+    // 上月同期：只取日期 <= todayDay 的记录
+    const prevSame = prevTxs.filter(tx => {
+        const d = parseInt((tx.date||'').split('-')[2]||'0');
+        return d <= todayDay;
+    });
+
+    const curTotal  = _sumRmb(curTxs);
+    const prevTotal = _sumRmb(prevSame);
+    const totalPct  = _pctStr(curTotal, prevTotal);
+    const curCats   = _sumByCategory(curTxs);
+    const prevCats  = _sumByCategory(prevSame);
+
+    let html = '';
+
+    // 今日计划交易
+    const todayPlans = plannedTransactions.filter(p => {
+        if (p.dayOfMonth !== todayDay) return false;
+        if (p.endDate   && p.endDate   < todayStr) return false;
+        if (p.startDate && p.startDate > todayStr) return false;
+        return true;
+    });
+
+    // 7天内即将到期的计划（不含今天）
+    const soonPlans = plannedTransactions.filter(p => {
+        const d = p.dayOfMonth;
+        if (d <= todayDay || d > todayDay + 7) return false;
+        if (p.endDate   && p.endDate   < todayStr) return false;
+        if (p.startDate && p.startDate > todayStr) return false;
+        return true;
+    }).sort((a,b) => a.dayOfMonth - b.dayOfMonth);
+
+    // 今日计划
+    if (todayPlans.length > 0) {
+        todayPlans.forEach(p => {
+            const acc = accounts.find(a => a.id === p.accountId);
+            const sym = acc ? (CURRENCY_SYMBOLS[acc.currency] || '¥') : '¥';
+            html += `<div class="insight-today-plan">
+                <b>📅 今日计划 · ${p.name}</b><br>
+                <span class="text-muted" style="font-size:0.82rem;">${p.category} · ${p.type==='expense'?'支出':'收入'} ${sym}${p.amount.toFixed(2)}</span>
+            </div>`;
+        });
+    }
+
+    // 本月至今
+    html += `<div class="insight-card">
+        <div class="insight-card-title">📈 本月至今支出（与上月同期对比）</div>
+        <div class="insight-row">
+            <span>本月支出</span>
+            <span><b>${_fmtRmb(curTotal)}</b>&nbsp;<span class="${totalPct.cls}">${totalPct.text}</span></span>
+        </div>
+        <div class="insight-row">
+            <span class="text-muted">上月同期（1~${todayDay}日）</span>
+            <span>${_fmtRmb(prevTotal)}</span>
+        </div>
+        <div class="insight-row">
+            <span class="text-muted">本月笔数</span><span>${curTxs.length} 笔</span>
+        </div>
+    </div>`;
+
+    // 类别同期对比
+    const catRows = [...new Set([...Object.keys(curCats),...Object.keys(prevCats)])]
+        .map(cat => ({ cat, cur: curCats[cat]||0, prev: prevCats[cat]||0 }))
+        .filter(r => r.cur > 0)
+        .sort((a,b) => b.cur - a.cur);
+
+    if (catRows.length > 0) {
+        html += `<div class="insight-card">
+            <div class="insight-card-title">📂 类别同期对比</div>`;
+        catRows.slice(0, 8).forEach(({ cat, cur, prev }) => {
+            const pct = _pctStr(cur, prev);
+            html += `<div class="insight-row">
+                <span>${cat}</span>
+                <span><b>${_fmtRmb(cur)}</b>&nbsp;<span class="${pct.cls}">${pct.text}</span>
+                &nbsp;<span class="text-muted" style="font-size:0.75rem;">${prev>0?'上月同期'+_fmtRmb(prev):'上月同期无'}</span></span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    // 7天内计划
+    if (soonPlans.length > 0) {
+        html += `<div class="insight-card">
+            <div class="insight-card-title">⏳ 7天内计划支出</div>`;
+        soonPlans.forEach(p => {
+            const acc = accounts.find(a => a.id === p.accountId);
+            const sym = acc ? (CURRENCY_SYMBOLS[acc.currency]||'¥') : '¥';
+            const left = p.dayOfMonth - todayDay;
+            html += `<div class="insight-row">
+                <span><b>${p.dayOfMonth}日</b> · ${p.name}
+                    <span class="text-muted" style="font-size:0.75rem;"> ${p.category}</span>
+                </span>
+                <span><b>${sym}${p.amount.toFixed(2)}</b>
+                    <span class="text-muted" style="font-size:0.75rem;"> 还有${left}天</span>
+                </span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    if (curTxs.length === 0 && todayPlans.length === 0 && soonPlans.length === 0) {
+        html += `<div class="text-muted text-center py-4">本月暂无支出记录。</div>`;
+    }
+
+    html += `<div class="text-muted text-center" style="font-size:0.75rem;padding-bottom:4px;">
+        数据截至 ${todayStr} · 明天自动刷新
+    </div>`;
+    return html;
+}
+
+/* ─── 渲染对应 Tab ─── */
+function _renderInsightTab(tab) {
+    const el = $('insight-content');
+    if (!el) return;
+    el.innerHTML = tab === 'monthly' ? _renderMonthly() : _renderDaily();
+    el.scrollTop = 0;
+}
+
+
+
+
+
 const LOG_PAGE_SIZE = 50;
 let _logAllLines = [];
 let _logCurrentPage = 1;
@@ -7984,7 +8328,38 @@ window.addEventListener('online', () => {
     <div id="chart-drawer-body"></div>
 </div>
 
-<!-- 日志抽屉 -->
+
+<!-- 智能提醒抽屉 -->
+<div id="insight-drawer-backdrop" onclick="closeInsightDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1060;opacity:0;pointer-events:none;transition:opacity .25s;"></div>
+<div id="insight-drawer" style="position:fixed;left:0;right:0;bottom:0;z-index:1061;background:var(--bs-body-bg);border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,0.2);max-height:88vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);">
+
+    <!-- 顶栏 -->
+    <div style="display:flex;align-items:center;gap:8px;padding:14px 16px 0;flex-shrink:0;">
+        <i class="bi bi-lightbulb-fill" style="font-size:1.1rem;color:#f5a623;"></i>
+        <span style="font-weight:600;font-size:1rem;flex:1;">智能提醒</span>
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeInsightDrawer()"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <!-- Tab 栏 -->
+    <div style="display:flex;gap:0;padding:10px 16px 0;flex-shrink:0;border-bottom:1px solid var(--bs-border-color);">
+        <button id="insight-tab-monthly" class="insight-tab-btn active" onclick="switchInsightTab('monthly')">
+            <i class="bi bi-calendar-check"></i> 月度总结
+        </button>
+        <button id="insight-tab-daily" class="insight-tab-btn" onclick="switchInsightTab('daily')">
+            <i class="bi bi-bar-chart-steps"></i> 本月动态
+        </button>
+    </div>
+
+    <!-- 内容区 -->
+    <div id="insight-content" style="overflow-y:auto;flex:1;padding:16px;font-size:0.88rem;"></div>
+
+    <!-- 底部关闭 -->
+    <div style="flex-shrink:0;padding:10px 16px 12px;text-align:center;border-top:1px solid var(--bs-border-color);">
+        <button class="btn btn-sm btn-outline-secondary w-100" onclick="closeInsightDrawer()">关闭</button>
+    </div>
+</div>
+
+</body></html>
 <div id="log-drawer-backdrop" onclick="closeLogDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1060;opacity:0;pointer-events:none;transition:opacity .25s;"></div>
 <div id="log-drawer" style="position:fixed;left:0;right:0;bottom:0;z-index:1061;background:var(--bs-body-bg);border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,0.2);max-height:85vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);">
     <!-- 抽屉顶栏 -->
