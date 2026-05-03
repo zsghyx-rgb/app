@@ -984,7 +984,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.3</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.4</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -7903,7 +7903,7 @@ function _cvt(amt, accCurrency) {
 function _sumByCategory(txList) {
     const map = {};
     txList.forEach(tx => {
-        const acc = accounts.find(a => a.id === tx.accountId);
+        const acc = accounts.find(a => a.id == tx.accountId);
         const cur = acc ? acc.currency : 'RMB';
         const val = _cvt(tx.amount, cur);
         const cat = tx.category || '未分类';
@@ -7914,7 +7914,7 @@ function _sumByCategory(txList) {
 
 function _sumCvt(txList) {
     return txList.reduce((s, tx) => {
-        const acc = accounts.find(a => a.id === tx.accountId);
+        const acc = accounts.find(a => a.id == tx.accountId);
         const cur = acc ? acc.currency : 'RMB';
         return s + _cvt(tx.amount, cur);
     }, 0);
@@ -8175,7 +8175,7 @@ function _renderDaily() {
     // 今日计划
     if (todayPlans.length > 0) {
         todayPlans.forEach(p => {
-            const acc = accounts.find(a => a.id === p.accountId);
+            const acc = accounts.find(a => a.id == p.accountId);
             const sym = acc ? (CURRENCY_SYMBOLS[acc.currency] || '¥') : '¥';
             html += `<div class="insight-today-plan">
                 <b>📅 今日计划 · ${p.name}</b><br>
@@ -8225,7 +8225,7 @@ function _renderDaily() {
         html += `<div class="insight-card">
             <div class="insight-card-title">⏳ 7天内计划支出</div>`;
         soonPlans.forEach(p => {
-            const acc = accounts.find(a => a.id === p.accountId);
+            const acc = accounts.find(a => a.id == p.accountId);
             const sym = acc ? (CURRENCY_SYMBOLS[acc.currency]||'¥') : '¥';
             const left = p.dayOfMonth - todayDay;
             html += `<div class="insight-row">
