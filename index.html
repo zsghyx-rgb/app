@@ -984,7 +984,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.2</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.3</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -7889,27 +7889,42 @@ function _monthExpenses(yyyyMM) {
     );
 }
 
+function _monthIncome(yyyyMM) {
+    return transactions.filter(tx =>
+        tx.type === 'income' && _txMonth(tx) === yyyyMM && !tx.isTransfer && !tx._isBaseline
+    );
+}
+
+// 统一换算到 currentStatsFilter.currency
+function _cvt(amt, accCurrency) {
+    return convertAmt(Math.abs(amt), accCurrency);
+}
+
 function _sumByCategory(txList) {
     const map = {};
     txList.forEach(tx => {
         const acc = accounts.find(a => a.id === tx.accountId);
         const cur = acc ? acc.currency : 'RMB';
-        const rmb = toRmb(Math.abs(tx.amount), cur);
+        const val = _cvt(tx.amount, cur);
         const cat = tx.category || '未分类';
-        map[cat] = (map[cat] || 0) + rmb;
+        map[cat] = (map[cat] || 0) + val;
     });
     return map;
 }
 
-function _sumRmb(txList) {
+function _sumCvt(txList) {
     return txList.reduce((s, tx) => {
         const acc = accounts.find(a => a.id === tx.accountId);
         const cur = acc ? acc.currency : 'RMB';
-        return s + toRmb(Math.abs(tx.amount), cur);
+        return s + _cvt(tx.amount, cur);
     }, 0);
 }
 
-function _fmtRmb(n) { return '¥' + n.toFixed(2); }
+// 货币符号 + 格式化
+function _fmtC(n) {
+    const sym = CURRENCY_SYMBOLS[currentStatsFilter.currency] || currentStatsFilter.currency;
+    return sym + n.toFixed(2);
+}
 
 function _pctStr(cur, prev) {
     if (prev === 0 && cur === 0) return { text: '持平', cls: 'insight-badge-neu' };
@@ -7935,83 +7950,183 @@ function _renderMonthly() {
     const now       = new Date();
     const lastMonth = _yyyyMM(new Date(now.getFullYear(), now.getMonth()-1, 1));
     const prevMonth = _yyyyMM(new Date(now.getFullYear(), now.getMonth()-2, 1));
-    const lastTxs   = _monthExpenses(lastMonth);
-    const prevTxs   = _monthExpenses(prevMonth);
+    const lastExp   = _monthExpenses(lastMonth);
+    const prevExp   = _monthExpenses(prevMonth);
+    const lastInc   = _monthIncome(lastMonth);
+    const prevInc   = _monthIncome(prevMonth);
 
-    if (lastTxs.length === 0) {
+    if (lastExp.length === 0 && lastInc.length === 0) {
         return `<div class="text-muted text-center py-5" style="font-size:0.9rem;">
-            上月暂无支出记录，无法生成月度总结。<br>
+            上月暂无记录，无法生成月度总结。<br>
             <span style="font-size:0.8rem;">有完整一个月的数据后将自动生成。</span>
         </div>`;
     }
 
-    const lastTotal = _sumRmb(lastTxs);
-    const prevTotal = _sumRmb(prevTxs);
-    const totalPct  = _pctStr(lastTotal, prevTotal);
-    const lastCats  = _sumByCategory(lastTxs);
-    const prevCats  = _sumByCategory(prevTxs);
-    const sortedCats = Object.entries(lastCats).sort((a,b) => b[1]-a[1]);
+    const lastExpTotal = _sumCvt(lastExp);
+    const prevExpTotal = _sumCvt(prevExp);
+    const lastIncTotal = _sumCvt(lastInc);
+    const prevIncTotal = _sumCvt(prevInc);
+    const netLast      = lastIncTotal - lastExpTotal;
+    const expPct       = _pctStr(lastExpTotal, prevExpTotal);
+    const incPct       = _pctStr(lastIncTotal, prevIncTotal);
+    const lastCats     = _sumByCategory(lastExp);
+    const prevCats     = _sumByCategory(prevExp);
+    const lastIncCats  = _sumByCategory(lastInc);
+    const prevIncCats  = _sumByCategory(prevInc);
+    const sortedCats   = Object.entries(lastCats).sort((a,b) => b[1]-a[1]);
 
-    // 是否历史新高
+    // 历史新高检测
     let highlightMsg = '';
     if (sortedCats.length > 0) {
         const topCat = sortedCats[0][0];
         const topAmt = sortedCats[0][1];
-        const hist = _recentFullMonths(4).slice(1).map(m => {
-            return (_sumByCategory(_monthExpenses(m)))[topCat] || 0;
-        });
+        const hist = _recentFullMonths(4).slice(1).map(m =>
+            (_sumByCategory(_monthExpenses(m)))[topCat] || 0
+        );
         if (hist.some(v => v > 0) && hist.every(v => topAmt > v)) {
-            highlightMsg = `📌 「${topCat}」上月支出 ${_fmtRmb(topAmt)}，为近 4 个月最高。`;
+            highlightMsg = `📌 「${topCat}」上月支出 ${_fmtC(topAmt)}，为近 4 个月最高。`;
         }
     }
 
-    // 历史月均（最近3个完整月，不含上月）
-    const histMonths = _recentFullMonths(4).slice(1);
-    const histVals   = histMonths.map(m => _sumRmb(_monthExpenses(m))).filter(v => v > 0);
-    const histAvg    = histVals.length ? histVals.reduce((a,b)=>a+b,0)/histVals.length : 0;
+    // 历史月均（最近3个完整月）
+    const histVals = _recentFullMonths(4).slice(1).map(m => _sumCvt(_monthExpenses(m))).filter(v => v > 0);
+    const histAvg  = histVals.length ? histVals.reduce((a,b)=>a+b,0)/histVals.length : 0;
 
     let html = '';
 
-    // 总览卡
+    // ── 收支总览卡 ──
     html += `<div class="insight-card">
-        <div class="insight-card-title">📊 上月总支出（${lastMonth}）</div>
+        <div class="insight-card-title">📊 上月收支总览（${lastMonth}）</div>
+        <div class="insight-row">
+            <span>总收入</span>
+            <span><b>${_fmtC(lastIncTotal)}</b>&nbsp;<span class="${incPct.cls}">${incPct.text} vs 前月</span></span>
+        </div>
         <div class="insight-row">
             <span>总支出</span>
-            <span><b>${_fmtRmb(lastTotal)}</b>&nbsp;<span class="${totalPct.cls}">${totalPct.text} vs 前月</span></span>
+            <span><b>${_fmtC(lastExpTotal)}</b>&nbsp;<span class="${expPct.cls}">${expPct.text} vs 前月</span></span>
+        </div>
+        <div class="insight-row">
+            <span>收支${netLast >= 0 ? '结余' : '超支'}</span>
+            <span style="font-weight:600;color:${netLast >= 0 ? '#27ae60' : '#e74c3c'};">
+                ${netLast >= 0 ? '+' : ''}${_fmtC(netLast)}
+            </span>
         </div>`;
     if (histAvg > 0) {
-        const avgPct = _pctStr(lastTotal, histAvg);
+        const avgPct = _pctStr(lastExpTotal, histAvg);
         html += `<div class="insight-row">
-            <span class="text-muted">近3月均值</span>
-            <span>${_fmtRmb(histAvg)}&nbsp;<span class="${avgPct.cls}">${avgPct.text}</span></span>
+            <span class="text-muted">支出近3月均值</span>
+            <span>${_fmtC(histAvg)}&nbsp;<span class="${avgPct.cls}">${avgPct.text}</span></span>
         </div>`;
     }
-    html += `<div class="insight-row">
-        <span class="text-muted">交易笔数</span><span>${lastTxs.length} 笔</span>
-    </div></div>`;
+    html += `</div>`;
 
     // 亮点提示
     if (highlightMsg) {
         html += `<div class="insight-today-plan">${highlightMsg}</div>`;
     }
 
-    // 类别对比卡
-    html += `<div class="insight-card">
-        <div class="insight-card-title">📂 类别明细（对比 ${prevMonth}）</div>`;
-    sortedCats.slice(0, 8).forEach(([cat, amt]) => {
-        const prev = prevCats[cat] || 0;
-        const pct  = _pctStr(amt, prev);
-        html += `<div class="insight-row">
-            <span>${cat}</span>
-            <span><b>${_fmtRmb(amt)}</b>&nbsp;<span class="${pct.cls}">${pct.text}</span>
-            &nbsp;<span class="text-muted" style="font-size:0.75rem;">${prev>0?'前月'+_fmtRmb(prev):'前月无'}</span></span>
-        </div>`;
-    });
-    html += `</div>`;
+    // ── 支出类别对比卡 ──
+    if (sortedCats.length > 0) {
+        html += `<div class="insight-card">
+            <div class="insight-card-title">📂 支出类别明细（对比 ${prevMonth}）</div>`;
+        sortedCats.slice(0, 8).forEach(([cat, amt]) => {
+            const prev = prevCats[cat] || 0;
+            const pct  = _pctStr(amt, prev);
+            html += `<div class="insight-row">
+                <span>${cat}</span>
+                <span><b>${_fmtC(amt)}</b>&nbsp;<span class="${pct.cls}">${pct.text}</span>
+                &nbsp;<span class="text-muted" style="font-size:0.75rem;">${prev>0?'前月'+_fmtC(prev):'前月无'}</span></span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    // ── 收入类别对比卡 ──
+    const sortedIncCats = Object.entries(lastIncCats).sort((a,b) => b[1]-a[1]);
+    if (sortedIncCats.length > 0) {
+        html += `<div class="insight-card">
+            <div class="insight-card-title">💰 收入来源明细（对比 ${prevMonth}）</div>`;
+        sortedIncCats.slice(0, 6).forEach(([cat, amt]) => {
+            const prev = prevIncCats[cat] || 0;
+            const pct  = _pctStr(amt, prev);
+            html += `<div class="insight-row">
+                <span>${cat}</span>
+                <span><b>${_fmtC(amt)}</b>&nbsp;<span class="${pct.cls}">${pct.text}</span>
+                &nbsp;<span class="text-muted" style="font-size:0.75rem;">${prev>0?'前月'+_fmtC(prev):'前月无'}</span></span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    // ── 今年各月支出走势 ──
+    html += _renderYearlyTrend();
 
     html += `<div class="text-muted text-center" style="font-size:0.75rem;padding-bottom:4px;">
         本月首次查看 · 下月初自动刷新
     </div>`;
+    return html;
+}
+
+/* ─── 今年各月支出走势 ─── */
+function _renderYearlyTrend() {
+    const now     = new Date();
+    const year    = now.getFullYear();
+    const curM    = now.getMonth(); // 0-indexed，本月不完整
+    const months  = [];
+    for (let m = 0; m < curM; m++) {
+        months.push({ label: `${m+1}月`, key: `${year}-${String(m+1).padStart(2,'0')}` });
+    }
+    if (months.length === 0) return '';
+
+    const vals   = months.map(m => _sumCvt(_monthExpenses(m.key)));
+    const maxVal = Math.max(...vals, 0.01);
+    const maxIdx = vals.indexOf(Math.max(...vals));
+
+    let html = `<div class="insight-card">
+        <div class="insight-card-title">📅 ${year} 年各月支出走势（折算 ${currentStatsFilter.currency}）</div>
+        <div style="display:flex;align-items:flex-end;gap:5px;height:80px;margin-bottom:6px;">`;
+
+    vals.forEach((v, i) => {
+        const pct    = maxVal > 0 ? (v / maxVal * 100) : 0;
+        const isMax  = i === maxIdx && v > 0;
+        const barClr = isMax ? '#e74c3c' : 'var(--bs-primary)';
+        html += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <div style="width:100%;background:${barClr};border-radius:3px 3px 0 0;height:${Math.max(pct*0.72,2)}px;opacity:0.85;"></div>
+        </div>`;
+    });
+
+    html += `</div>
+        <div style="display:flex;gap:5px;">`;
+    vals.forEach((v, i) => {
+        const isMax = i === maxIdx && v > 0;
+        html += `<div style="flex:1;text-align:center;font-size:0.68rem;color:${isMax?'#e74c3c':'var(--bs-secondary-color)'};">
+            ${months[i].label}
+        </div>`;
+    });
+    html += `</div>`;
+
+    if (maxIdx >= 0 && vals[maxIdx] > 0) {
+        html += `<div class="insight-row" style="margin-top:8px;">
+            <span class="text-muted">支出最高月</span>
+            <span><b>${months[maxIdx].label}</b>
+                <span class="insight-badge-up" style="margin-left:4px;">${_fmtC(vals[maxIdx])}</span>
+            </span>
+        </div>`;
+    }
+
+    // 今年累计
+    const yearTotal = vals.reduce((a,b)=>a+b,0);
+    if (yearTotal > 0) {
+        const monthAvg = yearTotal / months.length;
+        html += `<div class="insight-row">
+            <span class="text-muted">今年累计支出</span>
+            <span><b>${_fmtC(yearTotal)}</b>
+                <span class="text-muted" style="font-size:0.75rem;"> 月均 ${_fmtC(monthAvg)}</span>
+            </span>
+        </div>`;
+    }
+
+    html += `</div>`;
     return html;
 }
 
@@ -8032,8 +8147,8 @@ function _renderDaily() {
         return d <= todayDay;
     });
 
-    const curTotal  = _sumRmb(curTxs);
-    const prevTotal = _sumRmb(prevSame);
+    const curTotal  = _sumCvt(curTxs);
+    const prevTotal = _sumCvt(prevSame);
     const totalPct  = _pctStr(curTotal, prevTotal);
     const curCats   = _sumByCategory(curTxs);
     const prevCats  = _sumByCategory(prevSame);
@@ -8074,11 +8189,11 @@ function _renderDaily() {
         <div class="insight-card-title">📈 本月至今支出（与上月同期对比）</div>
         <div class="insight-row">
             <span>本月支出</span>
-            <span><b>${_fmtRmb(curTotal)}</b>&nbsp;<span class="${totalPct.cls}">${totalPct.text}</span></span>
+            <span><b>${_fmtC(curTotal)}</b>&nbsp;<span class="${totalPct.cls}">${totalPct.text}</span></span>
         </div>
         <div class="insight-row">
             <span class="text-muted">上月同期（1~${todayDay}日）</span>
-            <span>${_fmtRmb(prevTotal)}</span>
+            <span>${_fmtC(prevTotal)}</span>
         </div>
         <div class="insight-row">
             <span class="text-muted">本月笔数</span><span>${curTxs.length} 笔</span>
@@ -8098,8 +8213,8 @@ function _renderDaily() {
             const pct = _pctStr(cur, prev);
             html += `<div class="insight-row">
                 <span>${cat}</span>
-                <span><b>${_fmtRmb(cur)}</b>&nbsp;<span class="${pct.cls}">${pct.text}</span>
-                &nbsp;<span class="text-muted" style="font-size:0.75rem;">${prev>0?'上月同期'+_fmtRmb(prev):'上月同期无'}</span></span>
+                <span><b>${_fmtC(cur)}</b>&nbsp;<span class="${pct.cls}">${pct.text}</span>
+                &nbsp;<span class="text-muted" style="font-size:0.75rem;">${prev>0?'上月同期'+_fmtC(prev):'上月同期无'}</span></span>
             </div>`;
         });
         html += `</div>`;
