@@ -8181,7 +8181,7 @@ function _renderAnomalies() {
             if (amt > threshold && amt > mean * 1.3) {
                 anomalies.push({
                     cat, amt, type: 'spike',
-                    desc: `历史均值 ${_fmtC(mean)}，上月超出 +${((amt/mean-1)*100).toFixed(0)}%`
+                    desc: `历史均值 ${_fmtC(mean)}`
                 });
             }
         }
