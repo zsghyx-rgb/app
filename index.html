@@ -8192,7 +8192,7 @@ function _renderAnomalies() {
     anomalies.sort((a, b) => b.amt - a.amt);
 
     let html = `<div class="insight-card" style="border-left:3px solid #e74c3c;">
-        <div class="insight-card-title" style="color:#e74c3c;">⚠️ 异常消费提醒</div>`;
+        <div class="insight-card-title" style="color:#e74c3c;">消费提醒</div>`;
 
     anomalies.slice(0, 5).forEach(({ cat, amt, type, desc }) => {
         const icon = type === 'new' ? '🆕' : '🔺';
