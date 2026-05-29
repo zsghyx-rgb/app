@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔</title>
+    <title>记一笔 v2.1.8</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -533,6 +533,14 @@ select.compact-form-control { height: 2.1rem; }
     .modal-body { overflow-y: auto; flex: 1; max-height: calc(90vh - 120px); }
     .modal-body form { display: flex; flex-direction: column; }
 
+    /* 编辑/新增交易弹窗：覆盖通用 modal 的 90vh 限制，与新增窗口保持一致（弹性高度，最高 90dvh） */
+    #editTransactionModal .modal-content {
+        max-height: 90dvh !important;
+    }
+    #editTransactionModal .modal-body {
+        max-height: none !important;
+    }
+
 }
 
 @media (min-width: 769px) {
@@ -645,13 +653,13 @@ select.compact-form-control { height: 2.1rem; }
         margin: 0 !important;
         width: 100vw !important;
         max-width: 100vw !important;
-        max-height: 100dvh !important;
+        max-height: 90dvh !important;
         border-radius: 0;
     }
     #editTransactionModal .modal-content {
         border-radius: 0 !important;
         border: none !important;
-        max-height: 100dvh !important;
+        max-height: 90dvh !important;
     }
 }
 /* 桌面端：正常宽度居中，高度自适应最大90vh */
@@ -984,7 +992,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.6</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.8</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1083,10 +1091,23 @@ select.compact-form-control { height: 2.1rem; }
                     </div>
                 </div>
                 <div id="ad-action-btns" class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleAdSearch()" id="ad-search-btn" title="搜索"><i class="bi bi-search"></i></button>
                     <button class="btn btn-sm btn-outline-danger" onclick="deleteAccountFromDetail()" title="删除账户"><i class="bi bi-trash"></i></button>
                     <button class="btn btn-sm btn-outline-warning" onclick="openNewTransferFromDetail()" title="新增转账"><i class="bi bi-arrow-left-right"></i></button>
                     <button class="btn btn-sm btn-outline-success" onclick="openNewTransFromDetail()" title="新增收支"><i class="bi bi-plus-lg"></i></button>
                     <button class="btn btn-sm btn-outline-primary" onclick="editAccountFromDetail()" title="编辑账户"><i class="bi bi-pencil"></i></button>
+                </div>
+            </div>
+
+            <!-- 账户详情搜索栏 -->
+            <div id="ad-search-panel" style="display:none;padding:8px 0 4px;">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="ad-search-input"
+                           placeholder="搜索类别、备注、标签、金额、转入/转出账户…"
+                           oninput="refreshDetailContent(currentDetailAccountId)"
+                           autocomplete="off">
+                    <button class="btn btn-outline-secondary" onclick="clearAdSearch()"><i class="bi bi-x"></i></button>
                 </div>
             </div>
 
@@ -2038,7 +2059,7 @@ let historyTransactions = [];     // 历史模式专属交易数组（不与 tra
 let historyPrevFilters = null;    // 历史模式进入前的日期筛选状态
 
 let chartInstances = {};
-let currentStatsFilter = { startDate: '', endDate: '', currency: 'RMB', user: 'all' };
+let currentStatsFilter = { startDate: '', endDate: '', currency: localStorage.getItem('APP_stats_currency') || 'RMB', user: localStorage.getItem('APP_stats_user') || 'all' };
 // 月导航状态（'month' = 单月模式，'range' = 快速范围/自定义模式）
 let statsNavYear  = new Date().getFullYear();
 let statsNavMonth = new Date().getMonth(); // 0-indexed
@@ -2049,8 +2070,8 @@ let amountsHidden = false;
 let searchDebounceTimer = null;
 let displayedTransactionCount = 100;
 let currentAssetAggregation = 'month';
-let transactionDisplayMode = 'all';
-let currentUserFilterValue = 'all';
+let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
+let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
 const $ = id => document.getElementById(id);
 const $$ = selector => document.querySelectorAll(selector);
@@ -3055,9 +3076,22 @@ function logout() {
 function initAppUI() {
     renderAccounts();
 
-    // 默认只显示当前用户的流水
-    currentUserFilterValue = currentUserName;
+    // 恢复交易页用户筛选（已保存的值需校验是否仍有效；否则默认当前用户）
+    const savedTransUser = localStorage.getItem('APP_trans_user_filter');
+    const validUsers = ['all', ...dataUsers];
+    currentUserFilterValue = (savedTransUser && validUsers.includes(savedTransUser))
+        ? savedTransUser
+        : currentUserName;
     updateUserFilterBtn();
+
+    // 恢复收支/转账显示模式
+    const savedMode = localStorage.getItem('APP_trans_display_mode');
+    if (savedMode && ['all', 'transactions', 'transfers'].includes(savedMode)) {
+        transactionDisplayMode = savedMode;
+    } else {
+        transactionDisplayMode = 'all';
+    }
+    updateTransferModeButton();
 
     $('filter-start-date').value = '';
     $('filter-end-date').value = '';
@@ -3077,6 +3111,18 @@ function initAppUI() {
         currentStatsFilter.startDate = mStartStr;
         currentStatsFilter.endDate   = mEndStr;
         updateStatsNavUI();
+    }
+
+    // 恢复统计页货币（renderStatsCurrencyButtons 内部会校验账户是否有效）
+    const savedCurrency = localStorage.getItem('APP_stats_currency');
+    if (savedCurrency) currentStatsFilter.currency = savedCurrency;
+
+    // 恢复统计页用户筛选
+    const savedStatsUser = localStorage.getItem('APP_stats_user');
+    if (savedStatsUser && validUsers.includes(savedStatsUser)) {
+        currentStatsFilter.user = savedStatsUser;
+    } else {
+        currentStatsFilter.user = 'all';
     }
 
     const today = new Date();
@@ -4189,7 +4235,39 @@ function renderDetailContent(id) {
         return { tOut, tIn };
     };
 
-    if (acctTrans.length === 0) {
+    // 搜索过滤
+    const adSearchRaw = ($('ad-search-input')?.value || '').trim().toLowerCase();
+    const filteredTrans = adSearchRaw ? acctTrans.filter(t => {
+        // 类别
+        const cats = t.items && t.items.length > 1
+            ? t.items.map(it => it.category || '').join(' ')
+            : (t.category || '');
+        if (cats.toLowerCase().includes(adSearchRaw)) return true;
+        // 备注
+        const descs = t.items && t.items.length > 1
+            ? t.items.map(it => it.desc || '').join(' ')
+            : (t.desc || '');
+        if (descs.toLowerCase().includes(adSearchRaw)) return true;
+        // 标签
+        const tags = t.items && t.items.length > 1
+            ? t.items.map(it => it.tags || '').join(' ')
+            : (t.tags || '');
+        if (tags.toLowerCase().includes(adSearchRaw)) return true;
+        // 金额（匹配数字字符串）
+        const amtStr = formatAmount(Math.abs(t.amount), acc.currency);
+        if (amtStr.includes(adSearchRaw)) return true;
+        // 转入/转出账户名
+        if (t.isTransfer) {
+            const { tOut, tIn } = resolveTransfer(t);
+            const fromAcc = tOut ? accounts.find(a => a.id == tOut.accountId) : null;
+            const toAcc   = tIn  ? accounts.find(a => a.id == tIn.accountId)  : null;
+            if (fromAcc && getAccountDisplayName(fromAcc).toLowerCase().includes(adSearchRaw)) return true;
+            if (toAcc   && getAccountDisplayName(toAcc).toLowerCase().includes(adSearchRaw))   return true;
+        }
+        return false;
+    }) : acctTrans;
+
+    if (filteredTrans.length === 0) {
         if (mobileContainer) mobileContainer.innerHTML = '';
         if (desktopTbody) desktopTbody.innerHTML = '';
         if (empty) empty.classList.remove('d-none');
@@ -4200,7 +4278,7 @@ function renderDetailContent(id) {
     // ---- 手机卡片列表 ----
     if (mobileContainer) {
         mobileContainer.innerHTML = '';
-        acctTrans.forEach(t => {
+        filteredTrans.forEach(t => {
             const isTransfer = t.isTransfer;
             let canEdit = t.ownerName === currentUserName && !t._isArchived;
             let titleHtml = '', subLine = t.date;
@@ -4268,7 +4346,7 @@ function renderDetailContent(id) {
     // ---- 桌面表格 ----
     if (desktopTbody) {
         desktopTbody.innerHTML = '';
-        acctTrans.forEach(t => {
+        filteredTrans.forEach(t => {
             const isTransfer = t.isTransfer;
             let canEdit = t.ownerName === currentUserName && !t._isArchived;
 
@@ -4340,6 +4418,13 @@ function renderDetailContent(id) {
 }
 
 function openAccountDetailTab(id) {
+    // 切换账户时重置搜索状态
+    const panel = $('ad-search-panel');
+    const input = $('ad-search-input');
+    const btn   = $('ad-search-btn');
+    if (panel) panel.style.display = 'none';
+    if (input) input.value = '';
+    if (btn)   btn.classList.remove('active');
     renderDetailContent(id);
     switchTab('account-detail', null);
     $('view-account-detail').scrollTop = 0;
@@ -4356,6 +4441,26 @@ function openAccountDetail(id) { openAccountDetailTab(id); }
 
 function editAccountFromDetail() {
     openEditAccount(currentDetailAccountId);
+}
+
+function toggleAdSearch() {
+    const panel = $('ad-search-panel');
+    const btn   = $('ad-search-btn');
+    if (!panel) return;
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    btn.classList.toggle('active', isHidden);
+    if (isHidden) {
+        setTimeout(() => $('ad-search-input')?.focus(), 50);
+    } else {
+        const input = $('ad-search-input');
+        if (input) { input.value = ''; refreshDetailContent(currentDetailAccountId); }
+    }
+}
+
+function clearAdSearch() {
+    const input = $('ad-search-input');
+    if (input) { input.value = ''; refreshDetailContent(currentDetailAccountId); input.focus(); }
 }
 
 function deleteAccountFromDetail() {
@@ -5395,6 +5500,7 @@ function cycleUserFilter() {
     const options = ['all', ...dataUsers];
     const idx = options.indexOf(currentUserFilterValue);
     currentUserFilterValue = options[(idx + 1) % options.length];
+    localStorage.setItem('APP_trans_user_filter', currentUserFilterValue);
     updateUserFilterBtn();
     applyTransactionFilter();
 }
@@ -5488,6 +5594,7 @@ function sortTransactions(field) {
 function toggleDisplayMode() {
     const modes = ['all', 'transactions', 'transfers'];
     transactionDisplayMode = modes[(modes.indexOf(transactionDisplayMode) + 1) % modes.length];
+    localStorage.setItem('APP_trans_display_mode', transactionDisplayMode);
     updateTransferModeButton();
     displayedTransactionCount = 100;
     renderAllTransactions();
@@ -6286,11 +6393,13 @@ function switchStatsCurrency(c, el) {
     $$('#stats-currency-btns button').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
     currentStatsFilter.currency = c;
+    localStorage.setItem('APP_stats_currency', c);
     renderStats();
 }
 
 function switchStatsUser(u) {
     currentStatsFilter.user = u;
+    localStorage.setItem('APP_stats_user', u);
     // 更新用户按钮高亮
     $$('#stats-user-btns button').forEach(b =>
         b.classList.toggle('active', b.dataset.user === u));
