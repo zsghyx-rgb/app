@@ -860,6 +860,72 @@ select.compact-form-control { height: 2.1rem; }
 }
 #expenseCategoryChart, #tagStatsChart, #categoryTrendChart,
 #totalExpenseTrendChart, #monthlyTrendChart { cursor: pointer; }
+
+/* ── 自定义账户下拉组件 ── */
+.acc-select-wrapper {
+    position: relative;
+}
+.acc-select-trigger {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236c757d' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 12px;
+    padding-right: 1.6rem !important;
+}
+.acc-select-trigger.open {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13,110,253,.25);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.acc-select-dropdown {
+    display: none;
+    position: absolute;
+    left: 0; right: 0;
+    top: 100%;
+    z-index: 1055;
+    background: var(--bs-body-bg);
+    border: 1px solid #86b7fe;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-height: 220px;
+    overflow-y: auto;
+}
+.acc-select-dropdown.open { display: block; }
+.acc-select-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0.65rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1.3;
+    gap: 0.5rem;
+}
+.acc-select-option:hover { background: var(--bs-tertiary-bg); }
+.acc-select-option.selected { background: rgba(13,110,253,0.1); }
+.acc-select-option .acc-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.acc-select-option .acc-bal {
+    font-size: 0.72rem;
+    color: var(--bs-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 </style>
 </head>
 <body>
@@ -1849,7 +1915,7 @@ select.compact-form-control { height: 2.1rem; }
                         </div>
                         <div style="flex:1;min-width:0;">
                             <label class="compact-form-label">账户</label>
-                            <select class="form-select compact-form-control" id="edit-trans-account" required=""></select>
+                            <div class="acc-select-wrapper" id="wrap-edit-trans-account"><select class="form-select compact-form-control" id="edit-trans-account" required="" style="display:none;"></select><div class="acc-select-trigger compact-form-control form-select" id="trigger-edit-trans-account"></div><div class="acc-select-dropdown" id="dropdown-edit-trans-account"></div></div>
                         </div>
                         <!-- 拆分切换按钮：普通模式=剪刀，拆分模式=加号添加行 -->
                         <div id="split-btn-wrap" style="flex-shrink:0;align-self:flex-end;">
@@ -1951,7 +2017,7 @@ select.compact-form-control { height: 2.1rem; }
                     <div class="row g-2 mb-2">
                         <div class="col-6">
                             <label class="compact-form-label">转出账户</label>
-                            <select class="form-select compact-form-control" id="edit-transfer-from" onchange="handleEditTransferAmountChange()" required=""></select>
+                            <div class="acc-select-wrapper" id="wrap-edit-transfer-from"><select class="form-select compact-form-control" id="edit-transfer-from" onchange="handleEditTransferAmountChange()" required="" style="display:none;"></select><div class="acc-select-trigger compact-form-control form-select" id="trigger-edit-transfer-from"></div><div class="acc-select-dropdown" id="dropdown-edit-transfer-from"></div></div>
                         </div>
                         <div class="col-6">
                             <label class="compact-form-label">转出金额</label>
@@ -1961,7 +2027,7 @@ select.compact-form-control { height: 2.1rem; }
                     <div class="row g-2 mb-2">
                         <div class="col-6">
                             <label class="compact-form-label">转入账户</label>
-                            <select class="form-select compact-form-control" id="edit-transfer-to" onchange="handleEditTransferAmountChange()" required=""></select>
+                            <div class="acc-select-wrapper" id="wrap-edit-transfer-to"><select class="form-select compact-form-control" id="edit-transfer-to" onchange="handleEditTransferAmountChange()" required="" style="display:none;"></select><div class="acc-select-trigger compact-form-control form-select" id="trigger-edit-transfer-to"></div><div class="acc-select-dropdown" id="dropdown-edit-transfer-to"></div></div>
                         </div>
                         <div class="col-6">
                             <label class="compact-form-label">转入金额</label>
@@ -4576,7 +4642,7 @@ function openNewTransFromDetail() {
     _initNewTransModal('add', '新增交易');
     switchTransTab(prefs.type || 'expense', true);
     const accSelect = $('edit-trans-account');
-    if (accSelect) accSelect.value = currentDetailAccountId;
+    if (accSelect) { accSelect.value = currentDetailAccountId; accSelectSync('edit-trans-account'); }
     const catSelect = $('edit-trans-category');
     if (catSelect && prefs.category) {
         const opt = [...catSelect.options].find(o => o.value === prefs.category);
@@ -4628,18 +4694,23 @@ function fillTransferSelects(fromValue, toValue) {
     fromSelect.innerHTML = '';
     // 转出：只有自己的账户，按手动排序
     sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName)).forEach(a => {
-        fromSelect.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]}) · ${calculateBalance(a.id).toFixed(2)}`, a.id));
+        const name = `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`;
+        const opt = new Option(name, a.id);
+        opt.setAttribute('data-name', name);
+        opt.setAttribute('data-bal', calculateBalance(a.id).toFixed(2));
+        fromSelect.add(opt);
     });
     toSelect.innerHTML = '';
     // 转入：自己的账户（排序）+ 其他用户账户
     const sortedMine = sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName));
     const others = accounts.filter(a => a.ownerName !== currentUserName);
     [...sortedMine, ...others].forEach(a => {
+        const name = `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`;
+        const opt = new Option(name, a.id);
+        opt.setAttribute('data-name', name);
         const isMine = a.ownerName === currentUserName;
-        const label = isMine
-            ? `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]}) · ${calculateBalance(a.id).toFixed(2)}`
-            : `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`;
-        toSelect.add(new Option(label, a.id));
+        if (isMine) opt.setAttribute('data-bal', calculateBalance(a.id).toFixed(2));
+        toSelect.add(opt);
     });
     if (fromValue) fromSelect.value = fromValue;
     else if (fromSelect.options.length > 0) fromSelect.selectedIndex = 0;
@@ -4650,6 +4721,8 @@ function fillTransferSelects(fromValue, toValue) {
         if (other) toSelect.value = other.id;
         else if (toSelect.options.length > 1) toSelect.selectedIndex = 1;
     }
+    accSelectSync('edit-transfer-from');
+    accSelectSync('edit-transfer-to');
 }
 
 function openNewTransfer() {
@@ -4748,7 +4821,7 @@ function openEditTransaction(id) {
     $('edit-trans-delete-btn').style.display = 'none';
     if (!readOnly) $('edit-trans-delete-btn').style.removeProperty('display');
     $('edit-trans-date').value = t.date;
-    $('edit-trans-account').value = t.accountId;
+    $('edit-trans-account').value = t.accountId; accSelectSync('edit-trans-account');
     $('edit-trans-tags').value = t.tags || '';
     $('edit-trans-desc').value = t.desc || '';
     setSpendingType(t.spendingType || '');
@@ -5384,7 +5457,7 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
         displayedTransactionCount = 100; renderAllTransactions(); renderAccounts();
         // renderAccounts()->updateSelectOptions() resets dropdowns, manually restore
-        $('edit-trans-account').value = accountId;
+        $('edit-trans-account').value = accountId; accSelectSync('edit-trans-account');
         const catEl = $('edit-trans-category');
         if (catEl && !itemsData) {
             const opt = [...catEl.options].find(o => o.value === category);
@@ -7212,21 +7285,22 @@ function updateSelectOptions() {
     const plannedType = $('planned-type')?.value || 'expense';
     fill('planned-category', plannedType === 'expense' ? categories.expense : categories.income);
 
-    const accFill = (id, includeOthers) => {
+    const accFill = (id, includeOthers, showBal) => {
         const el = $(id);
         if (!el) return;
         el.innerHTML = '';
         const myAccs = sortedUserAccounts(userAccounts);
         const accsToShow = includeOthers ? [...myAccs, ...accounts.filter(a => a.ownerName !== currentUserName)] : myAccs;
         accsToShow.forEach(a => {
-            const isMine = a.ownerName === currentUserName;
-            const label = isMine
-                ? `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency] || a.currency}) · ${calculateBalance(a.id).toFixed(2)}`
-                : `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency] || a.currency})`;
-            el.add(new Option(label, a.id));
+            const name = `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency] || a.currency})`;
+            const opt = new Option(name, a.id);
+            opt.setAttribute('data-name', name);
+            if (showBal) opt.setAttribute('data-bal', calculateBalance(a.id).toFixed(2));
+            el.add(opt);
         });
+        if (showBal) accSelectSync(id);
     };
-    accFill('edit-trans-account', false); accFill('planned-account', false);
+    accFill('edit-trans-account', false, true); accFill('planned-account', false, false);
 
     updateUserFilterBtn();
 }
@@ -8773,6 +8847,85 @@ function renderLogPage() {
 }
 
 function logGoPage(p) { _logCurrentPage = p; renderLogPage(); }
+
+
+// ── 自定义账户下拉组件 ──
+const ACC_SELECT_IDS = ['edit-trans-account', 'edit-transfer-from', 'edit-transfer-to'];
+
+function accSelectSync(selectId) {
+    const sel = $(selectId);
+    const trigger = $('trigger-' + selectId);
+    if (!sel || !trigger) return;
+    const opt = sel.options[sel.selectedIndex];
+    // 触发器只显示纯账户名（无余额），取 data-name 属性
+    trigger.textContent = opt ? (opt.getAttribute('data-name') || opt.text) : '';
+}
+
+function accSelectBuild(selectId) {
+    const sel = $(selectId);
+    const dropdown = $('dropdown-' + selectId);
+    if (!sel || !dropdown) return;
+    dropdown.innerHTML = '';
+    Array.from(sel.options).forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.className = 'acc-select-option' + (i === sel.selectedIndex ? ' selected' : '');
+        div.dataset.index = i;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'acc-name';
+        nameSpan.textContent = opt.getAttribute('data-name') || opt.text;
+
+        div.appendChild(nameSpan);
+
+        const bal = opt.getAttribute('data-bal');
+        if (bal !== null) {
+            const balSpan = document.createElement('span');
+            balSpan.className = 'acc-bal';
+            balSpan.textContent = bal;
+            div.appendChild(balSpan);
+        }
+
+        div.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            sel.selectedIndex = i;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            accSelectClose(selectId);
+            accSelectSync(selectId);
+        });
+        dropdown.appendChild(div);
+    });
+}
+
+function accSelectOpen(selectId) {
+    // 先关闭其他
+    ACC_SELECT_IDS.forEach(id => { if (id !== selectId) accSelectClose(id); });
+    accSelectBuild(selectId);
+    $('trigger-' + selectId)?.classList.add('open');
+    $('dropdown-' + selectId)?.classList.add('open');
+}
+
+function accSelectClose(selectId) {
+    $('trigger-' + selectId)?.classList.remove('open');
+    $('dropdown-' + selectId)?.classList.remove('open');
+}
+
+function accSelectInit() {
+    ACC_SELECT_IDS.forEach(id => {
+        const trigger = $('trigger-' + id);
+        if (!trigger) return;
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = $('dropdown-' + id)?.classList.contains('open');
+            if (isOpen) accSelectClose(id); else accSelectOpen(id);
+        });
+    });
+    document.addEventListener('click', () => {
+        ACC_SELECT_IDS.forEach(id => accSelectClose(id));
+    });
+}
+
+// 页面加载后初始化
+document.addEventListener('DOMContentLoaded', accSelectInit);
 
 function _escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
