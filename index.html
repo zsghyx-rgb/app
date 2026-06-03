@@ -888,16 +888,14 @@ select.compact-form-control { height: 2.1rem; }
 }
 .acc-select-dropdown {
     display: none;
-    position: absolute;
-    left: 0; right: 0;
-    top: 100%;
-    z-index: 1055;
+    position: fixed;
+    z-index: 9999;
     background: var(--bs-body-bg);
     border: 1px solid #86b7fe;
     border-top: none;
     border-radius: 0 0 6px 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-height: 220px;
+    max-height: 300px;
     overflow-y: auto;
 }
 .acc-select-dropdown.open { display: block; }
@@ -8900,13 +8898,34 @@ function accSelectOpen(selectId) {
     // 先关闭其他
     ACC_SELECT_IDS.forEach(id => { if (id !== selectId) accSelectClose(id); });
     accSelectBuild(selectId);
-    $('trigger-' + selectId)?.classList.add('open');
-    $('dropdown-' + selectId)?.classList.add('open');
+    const trigger = $('trigger-' + selectId);
+    const dropdown = $('dropdown-' + selectId);
+    if (!trigger || !dropdown) return;
+    trigger.classList.add('open');
+    dropdown.classList.add('open');
+    // fixed 定位：对齐触发器底部，宽度与触发器相同
+    const rect = trigger.getBoundingClientRect();
+    dropdown.style.left = rect.left + 'px';
+    dropdown.style.width = rect.width + 'px';
+    dropdown.style.top = (rect.bottom) + 'px';
 }
 
 function accSelectClose(selectId) {
     $('trigger-' + selectId)?.classList.remove('open');
     $('dropdown-' + selectId)?.classList.remove('open');
+}
+
+function accSelectRepositionAll() {
+    ACC_SELECT_IDS.forEach(id => {
+        const dropdown = $('dropdown-' + id);
+        if (!dropdown || !dropdown.classList.contains('open')) return;
+        const trigger = $('trigger-' + id);
+        if (!trigger) return;
+        const rect = trigger.getBoundingClientRect();
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+        dropdown.style.top = rect.bottom + 'px';
+    });
 }
 
 function accSelectInit() {
@@ -8922,6 +8941,9 @@ function accSelectInit() {
     document.addEventListener('click', () => {
         ACC_SELECT_IDS.forEach(id => accSelectClose(id));
     });
+    // modal 滚动时同步下拉位置
+    const modalBody = document.querySelector('#editTransactionModal .modal-body');
+    if (modalBody) modalBody.addEventListener('scroll', accSelectRepositionAll, { passive: true });
 }
 
 // 页面加载后初始化
