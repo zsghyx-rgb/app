@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.1.8</title>
+    <title>记一笔 v2.1.9</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -992,7 +992,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.8</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.9</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -4628,14 +4628,18 @@ function fillTransferSelects(fromValue, toValue) {
     fromSelect.innerHTML = '';
     // 转出：只有自己的账户，按手动排序
     sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName)).forEach(a => {
-        fromSelect.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`, a.id));
+        fromSelect.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]}) · ${calculateBalance(a.id).toFixed(2)}`, a.id));
     });
     toSelect.innerHTML = '';
     // 转入：自己的账户（排序）+ 其他用户账户
     const sortedMine = sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName));
     const others = accounts.filter(a => a.ownerName !== currentUserName);
     [...sortedMine, ...others].forEach(a => {
-        toSelect.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`, a.id));
+        const isMine = a.ownerName === currentUserName;
+        const label = isMine
+            ? `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]}) · ${calculateBalance(a.id).toFixed(2)}`
+            : `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`;
+        toSelect.add(new Option(label, a.id));
     });
     if (fromValue) fromSelect.value = fromValue;
     else if (fromSelect.options.length > 0) fromSelect.selectedIndex = 0;
@@ -7215,7 +7219,11 @@ function updateSelectOptions() {
         const myAccs = sortedUserAccounts(userAccounts);
         const accsToShow = includeOthers ? [...myAccs, ...accounts.filter(a => a.ownerName !== currentUserName)] : myAccs;
         accsToShow.forEach(a => {
-            el.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency] || a.currency})`, a.id));
+            const isMine = a.ownerName === currentUserName;
+            const label = isMine
+                ? `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency] || a.currency}) · ${calculateBalance(a.id).toFixed(2)}`
+                : `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency] || a.currency})`;
+            el.add(new Option(label, a.id));
         });
     };
     accFill('edit-trans-account', false); accFill('planned-account', false);
