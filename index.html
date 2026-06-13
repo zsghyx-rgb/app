@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.1.9</title>
+    <title>记一笔 v2.1.10</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1056,7 +1056,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.9</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.10</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2665,6 +2665,11 @@ function loginWithUser(name) {
 
     loadAllData();
     filterUserData();
+    // 记录本次登录时已知的交易ID快照（用于标注新同步数据）
+    try {
+        const knownIds = transactions.map(t => t.id);
+        sessionStorage.setItem('knownTxnIds_' + name, JSON.stringify(knownIds));
+    } catch(_) {}
     initAppUI();
 
     // 初始 tab = 交易页，显示悬浮按钮
@@ -4356,7 +4361,7 @@ function renderDetailContent(id) {
                 const toAcc   = tIn  ? accounts.find(a => a.id == tIn.accountId)  : null;
                 const fromName = fromAcc ? getAccountDisplayName(fromAcc) : '?';
                 const toName   = toAcc   ? getAccountDisplayName(toAcc)   : '?';
-                titleHtml = `<span style="font-size:0.83rem;font-weight:600;">${fromName}<span style="color:var(--bs-primary);margin:0 2px;">→</span>${toName}</span>`;
+                titleHtml = `<span style="font-size:0.83rem;font-weight:600;">${fromName}<span style="color:var(--bs-primary);margin:0 2px;">→</span>${toName}${isNewTxn(t) ? NEW_BADGE : ''}</span>`;
                 const cleanDesc = tOut ? (tOut.desc || '') : (t.desc || '');
                 if (cleanDesc) subLine += ' · ' + cleanDesc;
             } else {
@@ -4468,8 +4473,8 @@ function renderDetailContent(id) {
             tr.innerHTML = `
                 <td>${t.date}</td>
                 <td><div class="${typeColorClass}">${typeText}</div></td>
-                <td>${categoryDisplay}</td>
-                <td>${accountOutDisplay}</td>
+                <td>${categoryDisplay}${!isTransfer && isNewTxn(t) ? NEW_BADGE : ''}</td>
+                <td>${accountOutDisplay}${isTransfer && isNewTxn(t) ? NEW_BADGE : ''}</td>
                 <td><div class="fw-bold ${amtColorClass}">${displayAmt}</div></td>
                 <td>${toAccDisplay}</td>
                 <td>${peerAmtDisplay}</td>
@@ -5347,7 +5352,7 @@ function renderSaDetailList() {
         card.style.cursor = 'pointer';
         card.innerHTML = `
             <div class="card-line-1">
-                <span class="category-text">${t.category || ''}${stBadge}${isExpanded ? '' : ''}${tagsHtml}</span>
+                <span class="category-text">${t.category || ''}${stBadge}${isExpanded ? '' : ''}${tagsHtml}${isNewTxn(t) ? NEW_BADGE : ''}</span>
                 <div class="amount-expense fw-bold">${sym}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
             </div>
             <div class="card-line-2">
@@ -5732,6 +5737,16 @@ function initMobileSwipeGestures(card, transactionId) {
         else openEditTransaction(transactionId);
     });
 }
+
+function isNewTxn(t) {
+    try {
+        const raw = sessionStorage.getItem('knownTxnIds_' + currentUserName);
+        if (!raw) return false;
+        const known = JSON.parse(raw);
+        return !known.includes(t.id);
+    } catch(_) { return false; }
+}
+const NEW_BADGE = '<em style="font-size:0.68rem;color:#fd7e14;font-style:italic;margin-left:4px;">新数据</em>';
 function renderAllTransactions() {
     const tbody = $('transaction-table-body');
     tbody.innerHTML = '';
@@ -5796,8 +5811,8 @@ function renderAllTransactions() {
         tr.innerHTML = `
             <td>${t.date}</td>
             <td><div class="text-start ps-2 ${typeColorClass}">${typeText}</div></td>
-            <td>${t.isTransfer ? '' : (t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || ''))}</td>
-            <td><small>${getAccountDisplayName(acc)}</small></td>
+            <td>${t.isTransfer ? '' : (t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || ''))}${!t.isTransfer && isNewTxn(t) ? NEW_BADGE : ''}</td>
+            <td><small>${getAccountDisplayName(acc)}</small>${t.isTransfer && isNewTxn(t) ? NEW_BADGE : ''}</td>
             <td><div class="fw-bold ${t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success')}">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div></td>
             <td>${toAccountDisplay}</td>
             <td>${amountInDisplay}</td>
@@ -5834,7 +5849,7 @@ function renderAllTransactions() {
                 const isCrossCurrency = acc.currency !== accTo.currency;
  card.innerHTML = `
     <div class="card-line-1">
-        <div class="fw-bold flex-grow-1" style="font-size:0.85rem;">${accDisplayName} <i class="bi bi-arrow-right-short text-primary"></i> ${getAccountDisplayName(accTo)}</div>
+        <div class="fw-bold flex-grow-1" style="font-size:0.85rem;">${accDisplayName} <i class="bi bi-arrow-right-short text-primary"></i> ${getAccountDisplayName(accTo)}${isNewTxn(t) ? NEW_BADGE : ''}</div>
         <div class="amount-transfer fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
     </div>
     <div class="card-line-2 d-flex justify-content-between align-items-center">
@@ -5871,7 +5886,7 @@ function renderAllTransactions() {
 
                 card.innerHTML = `
                     <div class="card-line-1">
-                        <span class="category-text">${catDisplay}${tagsHtml}${attachIconHtml}</span>
+                        <span class="category-text">${catDisplay}${tagsHtml}${attachIconHtml}${isNewTxn(t) ? NEW_BADGE : ''}</span>
                         <div class="${amountClass} fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
                     </div>
                     <div class="card-line-2">
