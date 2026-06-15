@@ -2016,6 +2016,10 @@ select.compact-form-control { height: 2.1rem; }
                         <input type="hidden" id="edit-trans-attachment-id" value="">
                     </div>
 
+                    <div id="txn-update-info" style="display:none;" class="mt-3 p-2 rounded" style="background:var(--bs-tertiary-bg);">
+                        <div class="small fw-bold mb-1" style="color:#0d6efd;"><i class="bi bi-clock-history"></i> 本次同步更新内容</div>
+                        <div id="txn-update-info-body" class="small" style="color:var(--bs-secondary);line-height:1.8;"></div>
+                    </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100 mt-2" id="edit-trans-submit-btn">保存</button>
                     <button type="button" class="btn btn-outline-danger btn-sm w-100 mt-2" id="edit-trans-delete-btn" onclick="deleteCurrentTransaction()" style="display:none!important;">删除交易</button>
                 </form>
@@ -4670,6 +4674,7 @@ function _initNewTransModal(mode, title) {
     resetAttachmentUI();
     resetSpendingType();
     $('trans-tab-bar').style.display = '';
+    const _ui = $('txn-update-info'); if (_ui) _ui.style.display = 'none';
 }
 
 function openNewTransFromDetail() {
@@ -4885,6 +4890,20 @@ function openEditTransaction(id) {
         if (el.id === 'edit-trans-submit-btn' || el.id === 'edit-trans-delete-btn') return;
         el.disabled = readOnly;
     });
+    // 显示"已更新"内容详情
+    const updateInfoEl = $('txn-update-info');
+    const updateBodyEl = $('txn-update-info-body');
+    if (updateInfoEl && updateBodyEl) {
+        const tip = buildUpdateTooltip(t);
+        if (tip) {
+            updateBodyEl.innerHTML = tip.split('&#10;').map(line =>
+                `<div>• ${line}</div>`
+            ).join('');
+            updateInfoEl.style.display = '';
+        } else {
+            updateInfoEl.style.display = 'none';
+        }
+    }
     new bootstrap.Modal($('editTransactionModal')).show();
 }
 
@@ -5781,7 +5800,8 @@ function detectDeletedTxns() {
         const raw = sessionStorage.getItem('knownTxnMap_' + currentUserName);
         if (!raw) return;
         const knownMap = JSON.parse(raw);
-        const currentIds = new Set(transactions.map(t => String(t.id)));
+        // 用当前用户的交易列表对比（userTransactions 已过滤当前用户）
+        const currentIds = new Set(userTransactions.map(t => String(t.id)));
         _deletedTxnSnaps = [];
         Object.entries(knownMap).forEach(([id, snap]) => {
             if (!currentIds.has(id) && !snap.isTransfer) {
@@ -5829,8 +5849,7 @@ function getTxnBadge(t) {
         const snap = getKnownTxnSnap(t.id);
         if (!snap) return NEW_BADGE;
         if ((t.updatedAt ?? 0) > (snap.updatedAt ?? 0)) {
-            const tip = buildUpdateTooltip(t);
-            return `<em style="font-size:0.68rem;color:#0d6efd;font-style:italic;margin-left:4px;cursor:default;" title="${tip}">已更新</em>`;
+            return `<em class="txn-updated-badge" style="font-size:0.68rem;color:#0d6efd;font-style:italic;margin-left:4px;" data-txn-id="${t.id}">已更新</em>`;
         }
     } catch(_) {}
     return '';
