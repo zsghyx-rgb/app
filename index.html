@@ -2665,10 +2665,11 @@ function loginWithUser(name) {
 
     loadAllData();
     filterUserData();
-    // 记录本次登录时已知的交易ID快照（用于标注新同步数据）
+    // 记录本次登录时已知的交易快照（ID + updatedAt，用于标注新同步/修改数据）
     try {
-        const knownIds = transactions.map(t => t.id);
-        sessionStorage.setItem('knownTxnIds_' + name, JSON.stringify(knownIds));
+        const knownMap = {};
+        transactions.forEach(t => { knownMap[t.id] = t.updatedAt ?? 0; });
+        sessionStorage.setItem('knownTxnMap_' + name, JSON.stringify(knownMap));
     } catch(_) {}
     initAppUI();
 
@@ -4361,7 +4362,7 @@ function renderDetailContent(id) {
                 const toAcc   = tIn  ? accounts.find(a => a.id == tIn.accountId)  : null;
                 const fromName = fromAcc ? getAccountDisplayName(fromAcc) : '?';
                 const toName   = toAcc   ? getAccountDisplayName(toAcc)   : '?';
-                titleHtml = `<span style="font-size:0.83rem;font-weight:600;">${fromName}<span style="color:var(--bs-primary);margin:0 2px;">→</span>${toName}${isNewTxn(t) ? NEW_BADGE : ''}</span>`;
+                titleHtml = `<span style="font-size:0.83rem;font-weight:600;">${fromName}<span style="color:var(--bs-primary);margin:0 2px;">→</span>${toName}${getTxnBadge(t)}</span>`;
                 const cleanDesc = tOut ? (tOut.desc || '') : (t.desc || '');
                 if (cleanDesc) subLine += ' · ' + cleanDesc;
             } else {
@@ -4473,8 +4474,8 @@ function renderDetailContent(id) {
             tr.innerHTML = `
                 <td>${t.date}</td>
                 <td><div class="${typeColorClass}">${typeText}</div></td>
-                <td>${categoryDisplay}${!isTransfer && isNewTxn(t) ? NEW_BADGE : ''}</td>
-                <td>${accountOutDisplay}${isTransfer && isNewTxn(t) ? NEW_BADGE : ''}</td>
+                <td>${categoryDisplay}${!isTransfer ? getTxnBadge(t) : ''}</td>
+                <td>${accountOutDisplay}${isTransfer ? getTxnBadge(t) : ''}</td>
                 <td><div class="fw-bold ${amtColorClass}">${displayAmt}</div></td>
                 <td>${toAccDisplay}</td>
                 <td>${peerAmtDisplay}</td>
@@ -5352,7 +5353,7 @@ function renderSaDetailList() {
         card.style.cursor = 'pointer';
         card.innerHTML = `
             <div class="card-line-1">
-                <span class="category-text">${t.category || ''}${stBadge}${isExpanded ? '' : ''}${tagsHtml}${isNewTxn(t) ? NEW_BADGE : ''}</span>
+                <span class="category-text">${t.category || ''}${stBadge}${isExpanded ? '' : ''}${tagsHtml}${getTxnBadge(t)}</span>
                 <div class="amount-expense fw-bold">${sym}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
             </div>
             <div class="card-line-2">
@@ -5738,15 +5739,20 @@ function initMobileSwipeGestures(card, transactionId) {
     });
 }
 
-function isNewTxn(t) {
+function getTxnBadge(t) {
     try {
-        const raw = sessionStorage.getItem('knownTxnIds_' + currentUserName);
-        if (!raw) return false;
-        const known = JSON.parse(raw);
-        return !known.includes(t.id);
-    } catch(_) { return false; }
+        const raw = sessionStorage.getItem('knownTxnMap_' + currentUserName);
+        if (!raw) return '';
+        const knownMap = JSON.parse(raw);
+        if (!(t.id in knownMap)) return NEW_BADGE;
+        if ((t.updatedAt ?? 0) > (knownMap[t.id] ?? 0)) return UPDATED_BADGE;
+    } catch(_) {}
+    return '';
 }
+// 兼容旧调用
+function isNewTxn(t) { return getTxnBadge(t) !== ''; }
 const NEW_BADGE = '<em style="font-size:0.68rem;color:#fd7e14;font-style:italic;margin-left:4px;">新数据</em>';
+const UPDATED_BADGE = '<em style="font-size:0.68rem;color:#0d6efd;font-style:italic;margin-left:4px;">已更新</em>';
 function renderAllTransactions() {
     const tbody = $('transaction-table-body');
     tbody.innerHTML = '';
@@ -5811,8 +5817,8 @@ function renderAllTransactions() {
         tr.innerHTML = `
             <td>${t.date}</td>
             <td><div class="text-start ps-2 ${typeColorClass}">${typeText}</div></td>
-            <td>${t.isTransfer ? '' : (t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || ''))}${!t.isTransfer && isNewTxn(t) ? NEW_BADGE : ''}</td>
-            <td><small>${getAccountDisplayName(acc)}</small>${t.isTransfer && isNewTxn(t) ? NEW_BADGE : ''}</td>
+            <td>${t.isTransfer ? '' : (t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || ''))}${!t.isTransfer ? getTxnBadge(t) : ''}</td>
+            <td><small>${getAccountDisplayName(acc)}</small>${t.isTransfer ? getTxnBadge(t) : ''}</td>
             <td><div class="fw-bold ${t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success')}">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div></td>
             <td>${toAccountDisplay}</td>
             <td>${amountInDisplay}</td>
@@ -5849,7 +5855,7 @@ function renderAllTransactions() {
                 const isCrossCurrency = acc.currency !== accTo.currency;
  card.innerHTML = `
     <div class="card-line-1">
-        <div class="fw-bold flex-grow-1" style="font-size:0.85rem;">${accDisplayName} <i class="bi bi-arrow-right-short text-primary"></i> ${getAccountDisplayName(accTo)}${isNewTxn(t) ? NEW_BADGE : ''}</div>
+        <div class="fw-bold flex-grow-1" style="font-size:0.85rem;">${accDisplayName} <i class="bi bi-arrow-right-short text-primary"></i> ${getAccountDisplayName(accTo)}${getTxnBadge(t)}</div>
         <div class="amount-transfer fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
     </div>
     <div class="card-line-2 d-flex justify-content-between align-items-center">
@@ -5886,7 +5892,7 @@ function renderAllTransactions() {
 
                 card.innerHTML = `
                     <div class="card-line-1">
-                        <span class="category-text">${catDisplay}${tagsHtml}${attachIconHtml}${isNewTxn(t) ? NEW_BADGE : ''}</span>
+                        <span class="category-text">${catDisplay}${tagsHtml}${attachIconHtml}${getTxnBadge(t)}</span>
                         <div class="${amountClass} fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
                     </div>
                     <div class="card-line-2">
