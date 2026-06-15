@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.1.11</title>
+    <title>记一笔 v2.1.10</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -924,22 +924,6 @@ select.compact-form-control { height: 2.1rem; }
     flex-shrink: 0;
 }
 
-
-/* ── 被删除交易的删除线卡片 ── */
-.deleted-txn-row td {
-    text-decoration: line-through;
-    color: var(--bs-secondary) !important;
-    opacity: 0.6;
-}
-.deleted-txn-card {
-    opacity: 0.55;
-    text-decoration: line-through;
-    color: var(--bs-secondary) !important;
-}
-.deleted-txn-card .badge, .deleted-txn-card em {
-    text-decoration: none;
-}
-
 </style>
 </head>
 <body>
@@ -1072,7 +1056,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.11</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.10</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2016,10 +2000,6 @@ select.compact-form-control { height: 2.1rem; }
                         <input type="hidden" id="edit-trans-attachment-id" value="">
                     </div>
 
-                    <div id="txn-update-info" style="display:none;" class="mt-3 p-2 rounded" style="background:var(--bs-tertiary-bg);">
-                        <div class="small fw-bold mb-1" style="color:#0d6efd;"><i class="bi bi-clock-history"></i> 本次更新内容</div>
-                        <div id="txn-update-info-body" class="small" style="color:var(--bs-secondary);line-height:1.8;"></div>
-                    </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100 mt-2" id="edit-trans-submit-btn">保存</button>
                     <button type="button" class="btn btn-outline-danger btn-sm w-100 mt-2" id="edit-trans-delete-btn" onclick="deleteCurrentTransaction()" style="display:none!important;">删除交易</button>
                 </form>
@@ -2685,25 +2665,11 @@ function loginWithUser(name) {
 
     loadAllData();
     filterUserData();
-    // 记录本次登录时已知的交易快照（用于标注新同步/修改/删除数据）
+    // 记录本次登录时已知的交易快照（ID + updatedAt，用于标注新同步/修改数据）
     try {
         const knownMap = {};
-        // 只存当前用户的交易（filterUserData 已执行，userTransactions 已就绪）
-        userTransactions.forEach(t => {
-            knownMap[String(t.id)] = {
-                updatedAt: t.updatedAt ?? 0,
-                amount: t.amount,
-                category: t.category || '',
-                accountId: t.accountId || '',
-                date: t.date || '',
-                desc: t.desc || '',
-                tags: t.tags || '',
-                spendingType: t.spendingType || '',
-                isTransfer: t.isTransfer || false,
-                transferPairId: t.transferPairId || ''
-            };
-        });
-        sessionStorage.setItem('knownTxnMap_' + currentUserName, JSON.stringify(knownMap));
+        transactions.forEach(t => { knownMap[t.id] = t.updatedAt ?? 0; });
+        sessionStorage.setItem('knownTxnMap_' + name, JSON.stringify(knownMap));
     } catch(_) {}
     initAppUI();
 
@@ -3581,10 +3547,6 @@ async function syncToDrive(manual = false, forcePush = false) {
                     });
                     filterUserData();
                     loadAllData();
-                    // 对比快照，找出本次同步后消失的交易（被删除）
-                    detectDeletedTxns();
-                    renderAllTransactions();
-                    renderAccounts();
                 }
             }
             // 无新版本：跳过拉取与合并，直接上传本地数据
@@ -3824,7 +3786,6 @@ async function backgroundSyncAfterLogin() {
         } else {
             loadAllData();
             filterUserData();
-            detectDeletedTxns();
             renderAllTransactions();
             renderAccounts();
             if (strategyLabel) {
@@ -4677,7 +4638,6 @@ function _initNewTransModal(mode, title) {
     resetAttachmentUI();
     resetSpendingType();
     $('trans-tab-bar').style.display = '';
-    const _ui = $('txn-update-info'); if (_ui) _ui.style.display = 'none';
 }
 
 function openNewTransFromDetail() {
@@ -4893,20 +4853,6 @@ function openEditTransaction(id) {
         if (el.id === 'edit-trans-submit-btn' || el.id === 'edit-trans-delete-btn') return;
         el.disabled = readOnly;
     });
-    // 显示"已更新"内容详情
-    const updateInfoEl = $('txn-update-info');
-    const updateBodyEl = $('txn-update-info-body');
-    if (updateInfoEl && updateBodyEl) {
-        const tip = buildUpdateTooltip(t);
-        if (tip) {
-            updateBodyEl.innerHTML = tip.split('&#10;').map(line =>
-                `<div>• ${line}</div>`
-            ).join('');
-            updateInfoEl.style.display = '';
-        } else {
-            updateInfoEl.style.display = 'none';
-        }
-    }
     new bootstrap.Modal($('editTransactionModal')).show();
 }
 
@@ -5793,73 +5739,20 @@ function initMobileSwipeGestures(card, transactionId) {
     });
 }
 
-// 从快照获取某笔交易的已知字段
-
-// 本次登录内临时存储被删除的交易快照（用于显示删除线）
-let _deletedTxnSnaps = [];
-
-function detectDeletedTxns() {
-    try {
-        const raw = sessionStorage.getItem('knownTxnMap_' + currentUserName);
-        if (!raw) return;
-        const knownMap = JSON.parse(raw);
-        // 用当前用户的交易列表对比（userTransactions 已过滤当前用户）
-        const currentIds = new Set(userTransactions.map(t => String(t.id)));
-        _deletedTxnSnaps = [];
-        Object.entries(knownMap).forEach(([id, snap]) => {
-            if (!currentIds.has(id) && !snap.isTransfer) {
-                _deletedTxnSnaps.push({ id, ...snap });
-            }
-        });
-    } catch(_) {}
-}
-
-function getKnownTxnSnap(id) {
-    try {
-        const raw = sessionStorage.getItem('knownTxnMap_' + currentUserName);
-        if (!raw) return null;
-        const knownMap = JSON.parse(raw);
-        return knownMap[String(id)] || null;
-    } catch(_) { return null; }
-}
-
-// 账户 ID → 显示名（用于 hover 对比）
-function getAccNameById(id) {
-    const a = accounts.find(x => String(x.id) === String(id));
-    return a ? getAccountDisplayName(a) : id;
-}
-
-// 生成"已更新"hover tooltip 内容
-function buildUpdateTooltip(t) {
-    const snap = getKnownTxnSnap(t.id);
-    if (!snap) return '';
-    const fields = [
-        { label: '日期', old: snap.date, cur: t.date || '' },
-        { label: '金额', old: String(Math.abs(snap.amount ?? 0)), cur: String(Math.abs(t.amount ?? 0)) },
-        { label: '类别', old: snap.category, cur: t.category || '' },
-        { label: '分类', old: snap.spendingType, cur: t.spendingType || '' },
-        { label: '账户', old: getAccNameById(snap.accountId), cur: getAccNameById(t.accountId) },
-        { label: '备注', old: snap.desc, cur: t.desc || '' },
-        { label: '标签', old: snap.tags, cur: t.tags || '' },
-    ];
-    const changed = fields.filter(f => f.old !== f.cur);
-    if (!changed.length) return '';
-    return changed.map(f => `${f.label}：${f.old || '（空）'} → ${f.cur || '（空）'}`).join('&#10;');
-}
-
 function getTxnBadge(t) {
     try {
-        const snap = getKnownTxnSnap(t.id);
-        if (!snap) return NEW_BADGE;
-        if ((t.updatedAt ?? 0) > (snap.updatedAt ?? 0)) {
-            return `<em class="txn-updated-badge" style="font-size:0.68rem;color:#0d6efd;font-style:italic;margin-left:4px;" data-txn-id="${t.id}">已更新</em>`;
-        }
+        const raw = sessionStorage.getItem('knownTxnMap_' + currentUserName);
+        if (!raw) return '';
+        const knownMap = JSON.parse(raw);
+        if (!(t.id in knownMap)) return NEW_BADGE;
+        if ((t.updatedAt ?? 0) > (knownMap[t.id] ?? 0)) return UPDATED_BADGE;
     } catch(_) {}
     return '';
 }
 // 兼容旧调用
 function isNewTxn(t) { return getTxnBadge(t) !== ''; }
 const NEW_BADGE = '<em style="font-size:0.68rem;color:#fd7e14;font-style:italic;margin-left:4px;">新数据</em>';
+const UPDATED_BADGE = '<em style="font-size:0.68rem;color:#0d6efd;font-style:italic;margin-left:4px;">已更新</em>';
 function renderAllTransactions() {
     const tbody = $('transaction-table-body');
     tbody.innerHTML = '';
@@ -6031,46 +5924,6 @@ function renderAllTransactions() {
         if (loadMoreContainer) loadMoreContainer.classList.add('d-none');
         if (mobileLoadMore) mobileLoadMore.classList.add('d-none');
     }
-
-    // ── 渲染被删除的交易（删除线，仅本次登录显示）──
-    if (_deletedTxnSnaps.length > 0) {
-        const DELETED_BADGE = '<em style="font-size:0.68rem;color:#dc3545;font-style:italic;margin-left:4px;text-decoration:none;">已删除</em>';
-        // 桌面端
-        if (tbody) {
-            _deletedTxnSnaps.forEach(snap => {
-                const tr = document.createElement('tr');
-                tr.className = 'deleted-txn-row';
-                tr.innerHTML = `
-                    <td>${snap.date || ''}</td>
-                    <td></td>
-                    <td>${snap.amount != null ? Math.abs(snap.amount).toFixed(2) : ''}</td>
-                    <td>${snap.category || ''}${DELETED_BADGE}</td>
-                    <td>${getAccNameById(snap.accountId)}</td>
-                    <td></td><td></td><td></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-        // 移动端
-        if (mobileContainer) {
-            _deletedTxnSnaps.forEach(snap => {
-                const card = document.createElement('div');
-                card.className = 'card mb-2 deleted-txn-card';
-                card.innerHTML = `
-                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <div style="font-size:0.8rem;color:var(--bs-secondary);">${snap.date || ''}</div>
-                            <div style="font-size:0.85rem;">${snap.category || '（无类别）'}${DELETED_BADGE}</div>
-                            <div style="font-size:0.78rem;">${getAccNameById(snap.accountId)}</div>
-                        </div>
-                        <div style="font-size:0.95rem;font-weight:600;">
-                            ${snap.amount != null ? (snap.amount < 0 ? '-' : '+') + Math.abs(snap.amount).toFixed(2) : ''}
-                        </div>
-                    </div>`;
-                mobileContainer.appendChild(card);
-            });
-        }
-    }
 }
 
 function loadMoreTransactions() {
@@ -6235,7 +6088,6 @@ window.addEventListener('load', () => {
             window._pendingUIRefresh = false;
             loadAllData();
             filterUserData();
-            detectDeletedTxns();
             renderAllTransactions();
             renderAccounts();
             if (verboseToast) showToast('已刷新最新数据', 'success', 2500);
