@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.1.10</title>
+    <title>记一笔 v2.1.11</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1072,7 +1072,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.1.10</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.1.11</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2017,7 +2017,7 @@ select.compact-form-control { height: 2.1rem; }
                     </div>
 
                     <div id="txn-update-info" style="display:none;" class="mt-3 p-2 rounded" style="background:var(--bs-tertiary-bg);">
-                        <div class="small fw-bold mb-1" style="color:#0d6efd;"><i class="bi bi-clock-history"></i> 本次同步更新内容</div>
+                        <div class="small fw-bold mb-1" style="color:#0d6efd;"><i class="bi bi-clock-history"></i> 本次更新内容</div>
                         <div id="txn-update-info-body" class="small" style="color:var(--bs-secondary);line-height:1.8;"></div>
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100 mt-2" id="edit-trans-submit-btn">保存</button>
@@ -2688,7 +2688,8 @@ function loginWithUser(name) {
     // 记录本次登录时已知的交易快照（用于标注新同步/修改/删除数据）
     try {
         const knownMap = {};
-        transactions.forEach(t => {
+        // 只存当前用户的交易（filterUserData 已执行，userTransactions 已就绪）
+        userTransactions.forEach(t => {
             knownMap[String(t.id)] = {
                 updatedAt: t.updatedAt ?? 0,
                 amount: t.amount,
@@ -2702,7 +2703,7 @@ function loginWithUser(name) {
                 transferPairId: t.transferPairId || ''
             };
         });
-        sessionStorage.setItem('knownTxnMap_' + name, JSON.stringify(knownMap));
+        sessionStorage.setItem('knownTxnMap_' + currentUserName, JSON.stringify(knownMap));
     } catch(_) {}
     initAppUI();
 
@@ -3582,6 +3583,8 @@ async function syncToDrive(manual = false, forcePush = false) {
                     loadAllData();
                     // 对比快照，找出本次同步后消失的交易（被删除）
                     detectDeletedTxns();
+                    renderAllTransactions();
+                    renderAccounts();
                 }
             }
             // 无新版本：跳过拉取与合并，直接上传本地数据
@@ -6232,6 +6235,7 @@ window.addEventListener('load', () => {
             window._pendingUIRefresh = false;
             loadAllData();
             filterUserData();
+            detectDeletedTxns();
             renderAllTransactions();
             renderAccounts();
             if (verboseToast) showToast('已刷新最新数据', 'success', 2500);
