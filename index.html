@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.2.3</title>
+    <title>记一笔 v2.2.4</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -868,8 +868,16 @@ select.compact-form-control { height: 2.1rem; }
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px 6px;
-    padding: 4px 0 8px;
+    padding: 4px 2px 8px;
+    max-height: 232px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
+.cat-grid::-webkit-scrollbar { width: 4px; }
+.cat-grid::-webkit-scrollbar-thumb { background: var(--bs-border-color); border-radius: 4px; }
+.cat-grid::-webkit-scrollbar-track { background: transparent; }
 .cat-grid-item {
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     background: none; border: none; padding: 2px;
@@ -1390,7 +1398,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.2.3</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.2.4</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
