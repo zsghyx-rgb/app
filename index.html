@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.2.4</title>
+    <title>记一笔 v2.2.6</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -957,8 +957,9 @@ select.compact-form-control { height: 2.1rem; }
 .amount-input-v2::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .amount-input-v2 { -moz-appearance: textfield; }
 
+.trans-action-row { display: flex; gap: 8px; }
 .btn-save-immersive {
-    width: 100%;
+    flex: 1;
     border: none;
     border-radius: 10px;
     background: var(--bs-primary);
@@ -968,15 +969,14 @@ select.compact-form-control { height: 2.1rem; }
     padding: 10px 0;
 }
 .btn-delete-immersive {
-    width: 100%;
+    flex: 0 0 100px;
     border: none;
     border-radius: 10px;
     background: rgba(220,53,69,0.1);
     color: #dc3545;
     font-weight: 500;
     font-size: 0.85rem;
-    padding: 7px 0;
-    margin-top: 6px;
+    padding: 0;
 }
 
 /* 转账：账户流向卡片 */
@@ -1398,7 +1398,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.2.4</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.2.6</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2421,10 +2421,12 @@ select.compact-form-control { height: 2.1rem; }
                             <span class="amount-currency" id="amount-currency-symbol">¥</span>
                             <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 decimal-input" id="edit-trans-amount" required="">
                         </div>
-                        <button type="submit" class="btn-save-immersive" id="edit-trans-submit-btn">保存</button>
-                        <button type="button" class="btn-delete-immersive" id="edit-trans-delete-btn" onclick="deleteCurrentTransaction()" style="display:none!important;">
-                            <i class="bi bi-trash"></i> 删除交易
-                        </button>
+                        <div class="trans-action-row">
+                            <button type="button" class="btn-delete-immersive" id="edit-trans-delete-btn" onclick="deleteCurrentTransaction()" style="display:none!important;">
+                                <i class="bi bi-trash"></i> 删除
+                            </button>
+                            <button type="submit" class="btn-save-immersive" id="edit-trans-submit-btn">保存</button>
+                        </div>
                     </div>
                 </form>
 
@@ -2480,10 +2482,12 @@ select.compact-form-control { height: 2.1rem; }
                                 <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-in" oninput="handleEditTransferAmountChange('in')" required="">
                             </div>
                         </div>
-                        <button type="submit" class="btn-save-immersive" id="edit-transfer-submit-btn">保存</button>
-                        <button type="button" class="btn-delete-immersive d-md-none" id="edit-transfer-delete-btn" onclick="deleteCurrentTransfer()" style="display:none!important;">
-                            <i class="bi bi-trash"></i> 删除转账
-                        </button>
+                        <div class="trans-action-row">
+                            <button type="button" class="btn-delete-immersive d-md-none" id="edit-transfer-delete-btn" onclick="deleteCurrentTransfer()" style="display:none!important;">
+                                <i class="bi bi-trash"></i> 删除
+                            </button>
+                            <button type="submit" class="btn-save-immersive" id="edit-transfer-submit-btn">保存</button>
+                        </div>
                     </div>
                 </form>
 
@@ -5394,6 +5398,8 @@ function _initNewTransModal(mode, title) {
     $('editTransactionModalTitle').textContent = _userTitle(title);
     $('edit-trans-submit-btn').textContent = '保存';
     $('edit-trans-delete-btn').style.setProperty('display','none','important');
+    $('edit-transfer-submit-btn').textContent = '保存';
+    $('edit-transfer-delete-btn').style.setProperty('display','none','important');
     // 两个表单的日期同步初始化
     $('edit-trans-date').value = today;
     $('edit-transfer-date').value = today;
@@ -6348,7 +6354,7 @@ const CATEGORY_ICON_MAP = {
     '奶茶': { icon: 'bi-cup-straw', color: '#d63384' },
     '烟酒': { icon: 'bi-cup-fill', color: '#6c757d' },
     '零食': { icon: 'bi-egg-fried', color: '#fd7e14' },
-    '水果': { icon: 'bi-apple', color: '#198754' },
+    '水果': { icon: 'bi-basket3-fill', color: '#198754' },
     '蔬菜': { icon: 'bi-flower1', color: '#198754' },
     '生鲜': { icon: 'bi-basket-fill', color: '#198754' },
     '超市': { icon: 'bi-cart-fill', color: '#0d6efd' },
@@ -6590,6 +6596,10 @@ function onSubModalHide() {
     $('editTransactionModal').querySelector('.trans-modal-v2')?.classList.remove('view-only');
     $('edit-trans-submit-btn').style.display = '';
     $('edit-transfer-submit-btn').style.display = '';
+    $('edit-trans-delete-btn').style.setProperty('display','none','important');
+    $('edit-transfer-delete-btn').style.setProperty('display','none','important');
+    $('edit-trans-submit-btn').textContent = '保存';
+    $('edit-transfer-submit-btn').textContent = '保存';
     clearOcrBanner();
     // 确保单笔区域可见
     const singleRow = $('single-item-row');
@@ -8860,11 +8870,13 @@ const ICON_PICKER_LIST = [
     'bi-stars','bi-scissors','bi-shield-check','bi-graph-up-arrow','bi-cash-coin','bi-briefcase-fill',
     'bi-piggy-bank-fill','bi-wallet2','bi-credit-card-fill','bi-receipt','bi-arrow-counterclockwise','bi-tools',
     'bi-tree-fill','bi-cup-straw','bi-basket-fill','bi-umbrella-fill','bi-balloon-fill','bi-three-dots',
-    'bi-cup-fill','bi-apple','bi-flower1','bi-basket2-fill','bi-moon-stars-fill','bi-people-fill',
+    'bi-cup-fill','bi-flower1','bi-basket2-fill','bi-moon-stars-fill','bi-people-fill',
     'bi-p-circle-fill','bi-fuel-pump-fill','bi-hammer','bi-house-gear-fill','bi-plug-fill','bi-ticket-perforated-fill',
     'bi-mic-fill','bi-collection-play-fill','bi-patch-check-fill','bi-clipboard2-pulse-fill','bi-person-arms-up','bi-water',
     'bi-easel2-fill','bi-pencil-square','bi-pencil-fill','bi-droplet-half','bi-heart-fill','bi-receipt-cutoff',
-    'bi-exclamation-octagon-fill','bi-box-seam-fill','bi-bank','bi-question-circle','bi-sliders','bi-tag-fill'
+    'bi-exclamation-octagon-fill','bi-box-seam-fill','bi-bank','bi-question-circle','bi-sliders','bi-tag-fill',
+    'bi-flower2','bi-basket3-fill','bi-droplet','bi-bag-check-fill',
+    'bi-bag-dash-fill','bi-bandaid-fill','bi-emoji-laughing-fill','bi-person-fill','bi-envelope-fill'
 ];
 const ICON_PICKER_COLORS = ['#fd7e14','#dc3545','#d63384','#6610f2','#0d6efd','#0dcaf0','#198754','#6c757d'];
 
