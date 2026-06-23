@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.2.6</title>
+    <title>记一笔 v2.2.7</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -907,6 +907,27 @@ select.compact-form-control { height: 2.1rem; }
 }
 .cat-grid-item.selected .cat-name { color: var(--bs-body-color); font-weight: 600; }
 
+/* 折叠字段展开按钮 */
+.btn-expand-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    padding: 2px 6px 2px 2px;
+    font-size: 0.76rem;
+    color: var(--bs-secondary-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color .15s, background .15s;
+    line-height: 1.4;
+}
+.btn-expand-field:hover {
+    color: var(--bs-body-color);
+    background: var(--bs-tertiary-bg);
+}
+.btn-expand-field i { font-size: 0.85rem; }
+
 /* 消费类型分段药丸 */
 .st-pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
 .st-pill {
@@ -1007,7 +1028,8 @@ select.compact-form-control { height: 2.1rem; }
     background: var(--bs-tertiary-bg);
     border-radius: 10px;
     padding: 6px 6px 8px;
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 54px;
 }
 .transfer-amount-field .amt-label { font-size: 0.68rem; color: var(--bs-secondary-color); }
 .transfer-amount-input {
@@ -1398,7 +1420,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.2.6</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.2.7</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2336,21 +2358,6 @@ select.compact-form-control { height: 2.1rem; }
                             <div class="cat-grid-section" id="cat-grid-section">
                                 <select class="form-select" id="edit-trans-category" required="" style="display:none;"></select>
                                 <div class="cat-grid" id="cat-grid-edit-trans-category"></div>
-
-                                <div id="spending-type-select-wrap" class="mt-2">
-                                    <select id="edit-trans-spending-type" style="display:none;">
-                                        <option value="">未标记</option>
-                                        <option value="need">必须的</option>
-                                        <option value="want">想要的</option>
-                                        <option value="regret">后悔的</option>
-                                    </select>
-                                    <div class="st-pill-group" id="st-pill-group">
-                                        <button type="button" class="st-pill" data-val="" onclick="selectSpendingTypePill('')">未标记</button>
-                                        <button type="button" class="st-pill" data-val="need" onclick="selectSpendingTypePill('need')">必须的</button>
-                                        <button type="button" class="st-pill" data-val="want" onclick="selectSpendingTypePill('want')">想要的</button>
-                                        <button type="button" class="st-pill" data-val="regret" onclick="selectSpendingTypePill('regret')">后悔的</button>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -2367,39 +2374,76 @@ select.compact-form-control { height: 2.1rem; }
                             </div>
                         </div>
 
-                        <!-- 单笔时的标签/备注（拆分时隐藏） -->
+                        <!-- 单笔时的标签/备注/消费类型（拆分时隐藏） -->
                         <div id="single-meta-section">
-                            <div class="mb-2">
-                                <label class="compact-form-label">标签</label>
-                                <div class="tag-suggest-wrap">
-                                    <input type="text" class="form-control compact-form-control" id="edit-trans-tags"
-                                           placeholder="添加标签…" autocomplete="off"
-                                           onfocus="openTagSuggest(this,'ts-single')"
-                                           onblur="scheduleCloseTagSuggest('ts-single')">
-                                    <ul class="tag-suggest-list" id="ts-single"></ul>
+                            <!-- 消费类型：折叠式 -->
+                            <div class="mb-2" id="spending-type-collapse-wrap">
+                                <button type="button" class="btn-expand-field" id="spending-type-expand-btn" onclick="expandMetaField('spending-type')">
+                                    <i class="bi bi-plus-sm"></i> 添加消费类型
+                                </button>
+                                <div id="spending-type-expanded" style="display:none;">
+                                    <label class="compact-form-label">消费类型</label>
+                                    <div id="spending-type-select-wrap">
+                                        <select id="edit-trans-spending-type" style="display:none;">
+                                            <option value="">未标记</option>
+                                            <option value="need">必须的</option>
+                                            <option value="want">想要的</option>
+                                            <option value="regret">后悔的</option>
+                                        </select>
+                                        <div class="st-pill-group" id="st-pill-group">
+                                            <button type="button" class="st-pill" data-val="" onclick="selectSpendingTypePill('')">未标记</button>
+                                            <button type="button" class="st-pill" data-val="need" onclick="selectSpendingTypePill('need')">必须的</button>
+                                            <button type="button" class="st-pill" data-val="want" onclick="selectSpendingTypePill('want')">想要的</button>
+                                            <button type="button" class="st-pill" data-val="regret" onclick="selectSpendingTypePill('regret')">后悔的</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="mb-2">
-                                <label class="compact-form-label">备注</label>
-                                <div class="input-group" id="desc-input-group">
-                                    <input type="text" class="form-control compact-form-control" id="edit-trans-desc"
-                                           oninput="updateDescHint('edit-trans-desc','edit-trans-desc-hint','edit-trans-type','edit-trans-category','edit-trans-account')"
-                                           placeholder="添加备注...">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="attachment-btn" style="width: 45px;" onclick="document.getElementById('attachment-file-input').click()">
-                                        <i class="bi bi-image"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" id="ocr-scan-btn" style="width: 45px;" onclick="startOcrScan()" title="拍照识别小票">
-                                        <i class="bi bi-camera"></i>
-                                    </button>
+
+                            <!-- 标签：折叠式 -->
+                            <div class="mb-2" id="tags-collapse-wrap">
+                                <button type="button" class="btn-expand-field" id="tags-expand-btn" onclick="expandMetaField('tags')">
+                                    <i class="bi bi-plus-sm"></i> 添加标签
+                                </button>
+                                <div id="tags-expanded" style="display:none;">
+                                    <label class="compact-form-label">标签</label>
+                                    <div class="tag-suggest-wrap">
+                                        <input type="text" class="form-control compact-form-control" id="edit-trans-tags"
+                                               placeholder="添加标签…" autocomplete="off"
+                                               onfocus="openTagSuggest(this,'ts-single')"
+                                               onblur="scheduleCloseTagSuggest('ts-single')">
+                                        <ul class="tag-suggest-list" id="ts-single"></ul>
+                                    </div>
                                 </div>
-                                <div id="edit-trans-desc-hint" style="display:none;align-items:center;gap:6px;margin-top:3px;padding:3px 8px;border-radius:5px;background:rgba(var(--bs-primary-rgb),0.08);border:1px solid rgba(var(--bs-primary-rgb),0.2);font-size:0.78rem;"></div>
-                                <!-- OCR 识别状态横幅 -->
-                                <div id="ocr-result-banner" style="display:none;margin-top:4px;padding:4px 8px;border-radius:6px;background:rgba(var(--bs-success-rgb),0.1);border:1px solid rgba(var(--bs-success-rgb),0.3);font-size:0.78rem;color:var(--bs-success);">
-                                    <i class="bi bi-stars"></i> <span id="ocr-result-text"></span>
-                                    <button type="button" class="btn-close btn-close-sm ms-2" style="font-size:0.6rem;float:right;margin-top:2px;" onclick="clearOcrBanner()"></button>
+                            </div>
+
+                            <!-- 备注：折叠式 -->
+                            <div class="mb-2" id="desc-collapse-wrap">
+                                <button type="button" class="btn-expand-field" id="desc-expand-btn" onclick="expandMetaField('desc')">
+                                    <i class="bi bi-plus-sm"></i> 添加备注
+                                </button>
+                                <div id="desc-expanded" style="display:none;">
+                                    <label class="compact-form-label">备注</label>
+                                    <div class="input-group" id="desc-input-group">
+                                        <input type="text" class="form-control compact-form-control" id="edit-trans-desc"
+                                               oninput="updateDescHint('edit-trans-desc','edit-trans-desc-hint','edit-trans-type','edit-trans-category','edit-trans-account')"
+                                               placeholder="添加备注...">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="attachment-btn" style="width: 45px;" onclick="document.getElementById('attachment-file-input').click()">
+                                            <i class="bi bi-image"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="ocr-scan-btn" style="width: 45px;" onclick="startOcrScan()" title="拍照识别小票">
+                                            <i class="bi bi-camera"></i>
+                                        </button>
+                                    </div>
+                                    <div id="edit-trans-desc-hint" style="display:none;align-items:center;gap:6px;margin-top:3px;padding:3px 8px;border-radius:5px;background:rgba(var(--bs-primary-rgb),0.08);border:1px solid rgba(var(--bs-primary-rgb),0.2);font-size:0.78rem;"></div>
+                                    <!-- OCR 识别状态横幅 -->
+                                    <div id="ocr-result-banner" style="display:none;margin-top:4px;padding:4px 8px;border-radius:6px;background:rgba(var(--bs-success-rgb),0.1);border:1px solid rgba(var(--bs-success-rgb),0.3);font-size:0.78rem;color:var(--bs-success);">
+                                        <i class="bi bi-stars"></i> <span id="ocr-result-text"></span>
+                                        <button type="button" class="btn-close btn-close-sm ms-2" style="font-size:0.6rem;float:right;margin-top:2px;" onclick="clearOcrBanner()"></button>
+                                    </div>
+                                    <!-- OCR 隐藏文件输入（相机优先） -->
+                                    <input type="file" id="ocr-file-input" accept="image/*" capture="environment" class="d-none" onchange="handleOcrFileSelected(this)">
                                 </div>
-                                <!-- OCR 隐藏文件输入（相机优先） -->
-                                <input type="file" id="ocr-file-input" accept="image/*" capture="environment" class="d-none" onchange="handleOcrFileSelected(this)">
                             </div>
                         </div>
 
@@ -2465,9 +2509,15 @@ select.compact-form-control { height: 2.1rem; }
                             </div>
                         </div>
 
-                        <div class="mb-2">
-                            <label class="compact-form-label">备注</label>
-                            <input type="text" class="form-control compact-form-control" id="edit-transfer-desc">
+                        <!-- 转账备注：折叠式 -->
+                        <div class="mb-2" id="transfer-desc-collapse-wrap">
+                            <button type="button" class="btn-expand-field" id="transfer-desc-expand-btn" onclick="expandTransferDesc()">
+                                <i class="bi bi-plus-sm"></i> 添加备注
+                            </button>
+                            <div id="transfer-desc-expanded" style="display:none;">
+                                <label class="compact-form-label">备注</label>
+                                <input type="text" class="form-control compact-form-control" id="edit-transfer-desc" placeholder="添加备注...">
+                            </div>
                         </div>
                     </div>
 
@@ -3065,6 +3115,8 @@ function applyOcrResult(r) {
     }
     if (descVal) {
         $('edit-trans-desc').value = descVal;
+        // 自动展开备注区域，让用户看到识别结果
+        expandMetaField('desc');
         filled.push(`备注「${descVal}」`);
     }
 
@@ -5411,6 +5463,7 @@ function _initNewTransModal(mode, title) {
     resetAttachmentUI();
     resetSpendingType();
     clearOcrBanner();
+    resetMetaFieldsCollapse();
     $('trans-tab-bar').style.display = '';
 }
 
@@ -5445,6 +5498,7 @@ function openNewTransferFromDetail() {
     $('edit-transfer-amount-out').value = '';
     $('edit-transfer-amount-in').value = '';
     $('edit-transfer-desc').value = '';
+    resetMetaFieldsCollapse();
     $('trans-tab-bar').style.display = '';
     switchTransTab('transfer', true);
     new bootstrap.Modal($('editTransactionModal')).show();
@@ -5611,6 +5665,9 @@ function openEditTransaction(id) {
     setSpendingType(t.spendingType || '');
     // 编辑时隐藏 tab bar（固定类型）
     $('trans-tab-bar').style.display = 'none';
+    // 根据已有数据展开折叠字段
+    resetMetaFieldsCollapse();
+    expandMetaFieldsForExistingData(t.tags, t.desc, t.spendingType);
     switchTransTab(t.type, true);
     // 加载分录
     if (t.items && t.items.length > 1) {
@@ -5684,6 +5741,9 @@ function openEditTransfer(id) {
     $('edit-transfer-amount-out').value = Math.abs(tOut.amount);
     $('edit-transfer-amount-in').value = Math.abs(tIn.amount);
     $('edit-transfer-desc').value = tOut.desc || '';
+    // 重置并按已有数据展开
+    resetMetaFieldsCollapse();
+    expandTransferDescForExistingData(tOut.desc);
 
     // 只读模式：禁用所有转账表单控件
     const form = $('editTransactionModal');
@@ -5948,9 +6008,62 @@ function resetSpendingType() {
 }
 
 function showSpendingTypeRow(show) {
-    // 消费类型下拉框随支出/收入 tab 显示或隐藏
-    const wrap = $('spending-type-select-wrap');
+    // 消费类型折叠区随支出/收入 tab 显示或隐藏
+    const wrap = $('spending-type-collapse-wrap');
     if (wrap) wrap.style.display = show ? '' : 'none';
+}
+
+// ── 折叠字段展开/收起 ──
+// fieldKey: 'spending-type' | 'tags' | 'desc'
+function expandMetaField(fieldKey) {
+    const expandedEl = $(fieldKey + '-expanded');
+    const btnEl = $(fieldKey + '-expand-btn');
+    if (!expandedEl) return;
+    expandedEl.style.display = '';
+    if (btnEl) btnEl.style.display = 'none';
+    // 自动聚焦
+    if (fieldKey === 'tags') {
+        const inp = $('edit-trans-tags');
+        if (inp) setTimeout(() => inp.focus(), 50);
+    } else if (fieldKey === 'desc') {
+        const inp = $('edit-trans-desc');
+        if (inp) setTimeout(() => inp.focus(), 50);
+    }
+}
+
+function expandTransferDesc() {
+    const expandedEl = $('transfer-desc-expanded');
+    const btnEl = $('transfer-desc-expand-btn');
+    if (expandedEl) expandedEl.style.display = '';
+    if (btnEl) btnEl.style.display = 'none';
+    const inp = $('edit-transfer-desc');
+    if (inp) setTimeout(() => inp.focus(), 50);
+}
+
+// 折叠所有 meta 字段（新增/切换 tab 时调用）
+function resetMetaFieldsCollapse() {
+    ['spending-type', 'tags', 'desc'].forEach(key => {
+        const expandedEl = $(key + '-expanded');
+        const btnEl = $(key + '-expand-btn');
+        if (expandedEl) expandedEl.style.display = 'none';
+        if (btnEl) btnEl.style.display = '';
+    });
+    // 转账备注
+    const tfExp = $('transfer-desc-expanded');
+    const tfBtn = $('transfer-desc-expand-btn');
+    if (tfExp) tfExp.style.display = 'none';
+    if (tfBtn) tfBtn.style.display = '';
+}
+
+// 根据已有值展开对应的 meta 字段
+function expandMetaFieldsForExistingData(tags, desc, spendingType) {
+    if (tags) expandMetaField('tags');
+    if (desc) expandMetaField('desc');
+    if (spendingType) expandMetaField('spending-type');
+}
+
+function expandTransferDescForExistingData(desc) {
+    if (desc) expandTransferDesc();
 }
 
 let saChartType = null, saChartTrend = null;
