@@ -5828,34 +5828,41 @@ function runAiAnalysis() {
     var catSpend = {}, catIncome = {};
     var source = historyMode ? historyTransactions : transactions;
     var dispCurrency = currentStatsFilter.currency;
-    var monthTxns = source.filter(function(t) {
-        var d = t.date || '';
-        if (d.indexOf(String(year)) !== 0) return false;
-        var m = String(month + 1);
-        if (m.length < 2) m = '0' + m;
-        if (d.indexOf('-' + m) < 0) return false;
-        if (filterUser !== 'all' && t.ownerName !== filterUser) return false;
-        return true;
-    });
-    monthTxns.forEach(function(t) {
-        var amt = convertAmt(parseFloat(t.amount) || 0, t.currency || 'RMB');
-        if (t.type === 'income') { monthIncome += amt; catIncome[t.category] = (catIncome[t.category] || 0) + amt; }
-        else { monthExpense += amt; catSpend[t.category] = (catSpend[t.category] || 0) + amt; }
+    // 月份日期范围
+    var mStr = String(month + 1); if (mStr.length < 2) mStr = '0' + mStr;
+    var mStart = year + '-' + mStr + '-01';
+    var mEnd   = year + '-' + mStr + '-31';
+    // 正确计算：通过 accountId 查账户货币，排除 baseline/转账
+    source.forEach(function(t) {
+        if (t._isBaseline || t.isTransfer) return;
+        if (t.date < mStart || t.date > mEnd) return;
+        if (filterUser !== 'all' && t.ownerName !== filterUser) return;
+        var acc = accounts.find(function(a) { return a.id == t.accountId; });
+        var accCur = acc ? (acc.currency || 'RMB') : 'RMB';
+        var rawAmt = parseFloat(t.amount) || 0;
+        var amt = convertAmt(Math.abs(rawAmt), accCur);
+        if (t.type === 'income') {
+            monthIncome += amt;
+            catIncome[t.category] = (catIncome[t.category] || 0) + amt;
+        } else {
+            monthExpense += amt;
+            catSpend[t.category] = (catSpend[t.category] || 0) + amt;
+        }
     });
     var prevMonth = month - 1, prevYear = year;
     if (prevMonth < 0) { prevMonth = 11; prevYear--; }
-    var prevTxns = source.filter(function(t) {
-        var d = t.date || '';
-        if (d.indexOf(String(prevYear)) !== 0) return false;
-        var m = String(prevMonth + 1);
-        if (m.length < 2) m = '0' + m;
-        if (d.indexOf('-' + m) < 0) return false;
-        if (filterUser !== 'all' && t.ownerName !== filterUser) return false;
-        return true;
-    });
+    var pmStr = String(prevMonth + 1); if (pmStr.length < 2) pmStr = '0' + pmStr;
+    var pmStart = prevYear + '-' + pmStr + '-01';
+    var pmEnd   = prevYear + '-' + pmStr + '-31';
     var prevIncome = 0, prevExpense = 0;
-    prevTxns.forEach(function(t) {
-        var amt = convertAmt(parseFloat(t.amount) || 0, t.currency || 'RMB');
+    source.forEach(function(t) {
+        if (t._isBaseline || t.isTransfer) return;
+        if (t.date < pmStart || t.date > pmEnd) return;
+        if (filterUser !== 'all' && t.ownerName !== filterUser) return;
+        var acc = accounts.find(function(a) { return a.id == t.accountId; });
+        var accCur = acc ? (acc.currency || 'RMB') : 'RMB';
+        var rawAmt = parseFloat(t.amount) || 0;
+        var amt = convertAmt(Math.abs(rawAmt), accCur);
         if (t.type === 'income') prevIncome += amt; else prevExpense += amt;
     });
     var expenseCats = Object.keys(catSpend).sort(function(a,b) { return catSpend[b] - catSpend[a]; }).slice(0,5);
