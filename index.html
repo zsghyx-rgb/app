@@ -1,7 +1,7 @@
-<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
+﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.2.7</title>
+    <title>记一笔 v2.5.0</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -180,8 +180,6 @@ body {
 }
 
 .account-col { width: 40%; }
-
-@media (min-width: 992px) { .account-col { width: 30%; } }
 
 .account-card h5 { font-size: 1rem !important; font-weight: bold; margin-bottom: 0; }
 
@@ -436,8 +434,29 @@ select.compact-form-control { height: 2.1rem; }
 .mobile-transaction-card .amount-transfer{ color: #ff8c00; font-weight: bold; font-size: 1rem; }
 .mobile-transaction-card .category-text  { font-weight: bold; color: var(--bs-body-color); }
 
+/* ---- 交易页悬浮按钮：桌面端隐藏 ---- */
+#mobile-fab-group {
+    display: none !important;
+}
+
 @media (max-width: 768px) {
     body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+
+/* ---- 交易页悬浮按钮（仅移动端） ---- */
+#mobile-fab-group {
+    display: flex !important;
+    position: fixed;
+    right: 18px;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 14px);
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    z-index: 1010;
+    transition: opacity 0.2s;
+}
+#mobile-fab-group.d-none {
+    display: none !important;
+}
 
     .sidebar {
         position: fixed;
@@ -463,19 +482,7 @@ select.compact-form-control { height: 2.1rem; }
 
     .sidebar-footer { display: none; }
 
-/* ---- 交易页悬浮按钮  ---- */
-#mobile-fab-group {
-    position: fixed;
-    right: 18px;
-    bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 14px);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    z-index: 1010;
-    transition: opacity 0.2s;
-}
-#mobile-fab-group.d-none { display: none !important; }
+
 .fab-btn {
     width: 52px;
     height: 52px;
@@ -542,41 +549,6 @@ select.compact-form-control { height: 2.1rem; }
         max-height: none !important;
     }
 
-}
-
-@media (min-width: 769px) {
-    #mobile-transaction-list { display: none !important; }
-    .user-name-short { display: none; }
-    .user-name-full { display: inline; }
-
-    /* SA支出明细：桌面端双列网格 */
-    #sa-detail-list {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-    }
-    #sa-detail-list .mobile-transaction-card {
-        margin-bottom: 0;
-    }
-
-    .desc-content { cursor: help; }
-    .desc-content:hover { position: relative; overflow: visible; white-space: normal; z-index: 1000; }
-    .desc-content[title]:hover::after {
-        content: attr(title);
-        position: absolute;
-        left: 0;
-        top: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 4px;
-        white-space: normal;
-        max-width: 300px;
-        word-wrap: break-word;
-        z-index: 1001;
-        margin-top: 4px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
 }
 
 /* ── 标签建议下拉 ── */
@@ -667,18 +639,6 @@ select.compact-form-control { height: 2.1rem; }
         max-height: 100dvh !important;
     }
 }
-/* 桌面端：正常宽度居中，铺满全屏高度 */
-@media (min-width: 769px) {
-    #editTransactionModal .modal-dialog {
-        height: 100vh;
-        max-height: 100vh;
-        max-width: 560px;
-    }
-    #editTransactionModal .modal-content {
-        height: 100vh;
-        max-height: 100vh;
-    }
-}
 /* 拆分模式时分录列表占满剩余空间 */
 #split-items-section {
     flex: 1;
@@ -765,7 +725,7 @@ select.compact-form-control { height: 2.1rem; }
 }
 .trans-amount-bar {
     flex: 0 0 auto;
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg);
 }
@@ -928,9 +888,7 @@ select.compact-form-control { height: 2.1rem; }
 }
 .btn-expand-field i { font-size: 0.85rem; }
 
-/* 消费类型分段药丸 */
-.st-pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
-.st-pill {
+.btn-tag-filter {
     border: 1px solid var(--bs-border-color);
     background: transparent;
     color: var(--bs-secondary-color);
@@ -938,22 +896,18 @@ select.compact-form-control { height: 2.1rem; }
     padding: 4px 12px;
     font-size: 0.76rem;
 }
-.st-pill[data-val=""].active       { background: rgba(108,117,125,0.15); border-color: #6c757d; color: #6c757d; }
-.st-pill[data-val="need"].active   { background: rgba(13,110,253,0.15); border-color: #0d6efd; color: #0d6efd; }
-.st-pill[data-val="want"].active   { background: rgba(253,126,20,0.15); border-color: #fd7e14; color: #fd7e14; }
-.st-pill[data-val="regret"].active { background: rgba(220,53,69,0.15); border-color: #dc3545; color: #dc3545; }
 
 /* 沉浸式金额输入（系统键盘） */
 .amount-input-row {
     display: flex; align-items: center; justify-content: center; gap: 6px;
-    padding: 6px 0 10px;
+    padding: 4px 0 6px;
 }
 .amount-currency { font-size: 1.3rem; font-weight: 600; color: var(--bs-secondary-color); }
 .amount-input-v2 {
     border: none;
     background: transparent;
     outline: none;
-    font-size: 2.4rem;
+    font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     line-height: 1;
@@ -966,13 +920,6 @@ select.compact-form-control { height: 2.1rem; }
 }
 .trans-amount-bar.amt-expense .amount-input-v2 { color: #dc3545; }
 .trans-amount-bar.amt-income .amount-input-v2 { color: #198754; }
-.amount-input-v2.ocr-highlight {
-    animation: ocrPulse 1.4s ease-out 1;
-}
-@keyframes ocrPulse {
-    0%   { background-color: rgba(var(--bs-success-rgb), 0.18); }
-    100% { background-color: transparent; }
-}
 /* 隐藏数字输入框默认的上下箭头 */
 .amount-input-v2::-webkit-outer-spin-button,
 .amount-input-v2::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -1021,7 +968,7 @@ select.compact-form-control { height: 2.1rem; }
 .transfer-flow-arrow { flex-shrink: 0; color: var(--bs-primary); font-size: 1.3rem; }
 
 /* 转账：双金额输入（系统键盘） */
-.transfer-amount-row { display: flex; gap: 8px; margin-bottom: 4px; }
+.transfer-amount-row { display: flex; gap: 8px; margin-bottom: 2px; }
 .transfer-amount-field {
     flex: 1;
     border: 1px solid var(--bs-border-color);
@@ -1040,7 +987,6 @@ select.compact-form-control { height: 2.1rem; }
 
 /* 只读查看模式：禁用新组件的交互 */
 .trans-modal-v2.view-only .cat-grid-item,
-.trans-modal-v2.view-only .st-pill,
 .trans-modal-v2.view-only .chip-acc-trigger,
 .trans-modal-v2.view-only .chip-date,
 .trans-modal-v2.view-only .chip-split-btn,
@@ -1262,6 +1208,44 @@ select.compact-form-control { height: 2.1rem; }
     flex-shrink: 0;
 }
 
+/* Settings menu */
+.settings-menu-list { padding: 0; }
+.settings-menu-item {
+  display: flex; align-items: center; padding: 14px 16px;
+  border-bottom: 1px solid var(--bs-border-color);
+  cursor: pointer; transition: background 0.15s;
+  gap: 14px;
+}
+.settings-menu-item:hover { background: var(--bs-tertiary-bg); }
+.settings-menu-item:active { background: var(--bs-secondary-bg); }
+.settings-menu-item i:first-child { font-size: 1.3rem; width: 28px; text-align: center; }
+.settings-menu-item span { flex: 1; font-size: 0.95rem; }
+.settings-menu-item .bi-chevron-right { color: var(--bs-secondary-color); font-size: 0.85rem; }
+.settings-subpage { display: none; }
+.settings-subpage.active { display: block; }
+.subpage-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; margin-bottom: 16px;
+  border-bottom: 1px solid var(--bs-border-color);
+  font-weight: 600; font-size: 1rem;
+}
+.subpage-header .bi-arrow-left {
+  font-size: 1.3rem; cursor: pointer; padding: 4px;
+  border-radius: 50%;
+}
+.subpage-header .bi-arrow-left:hover { background: var(--bs-tertiary-bg); }
+.settings-menu-footer {
+  margin-top: 24px; padding-top: 16px;
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.cat-sort-list { display: flex; flex-direction: column; gap: 0; }
+.cat-sort-item .cat-icon-mini { font-size: 1.1rem; }
+.cat-sort-item .btn { font-size: 0.75rem; }
+.cat-sort-item .btn.invisible { visibility: hidden; }
+.cat-sort-item .btn-outline-danger { border-color: transparent; }
+.cat-sort-item .cat-text { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 </style>
 </head>
 <body>
@@ -1317,33 +1301,6 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
             </div>
 
-            <!-- AI 收据 OCR 识别（支持多家服务商） -->
-            <div class="mb-2">
-                <div id="ocr-key-saved-bar" class="d-flex align-items-center justify-content-between">
-                    <span class="small text-success"><i class="bi bi-camera-fill"></i> 收据识别已启用（<span id="ocr-provider-label"></span>）</span>
-                    <button class="btn btn-link btn-sm p-0 text-muted" onclick="showOcrKeyInput()">修改</button>
-                </div>
-                <div id="ocr-key-input-bar">
-                    <label class="form-label small mb-1">收据 OCR 识别 · AI 服务商</label>
-                    <select class="form-select form-select-sm mb-2" id="ocr-provider-select" onchange="onOcrProviderChange()">
-                        <option value="anthropic">Anthropic Claude</option>
-                        <option value="openai">OpenAI</option>
-                        <option value="custom">自定义（OpenAI 兼容接口）</option>
-                    </select>
-                    <div class="input-group input-group-sm mb-2" id="ocr-endpoint-wrap" style="display:none;">
-                        <span class="input-group-text" style="font-size:0.75rem;">接口地址</span>
-                        <input type="text" class="form-control" id="ocr-endpoint-input" placeholder="https://api.example.com/v1/chat/completions" autocomplete="off" spellcheck="false">
-                    </div>
-                    <div class="input-group input-group-sm mb-2">
-                        <input type="password" class="form-control" id="ocr-key-input" placeholder="API Key" autocomplete="off" spellcheck="false">
-                    </div>
-                    <div class="input-group input-group-sm mb-2">
-                        <input type="text" class="form-control" id="ocr-model-input" placeholder="模型名称（可选，留空使用默认）" autocomplete="off" spellcheck="false">
-                    </div>
-                    <button class="btn btn-outline-success btn-sm w-100" type="button" onclick="saveOcrKey()"><i class="bi bi-check-lg"></i> 保存</button>
-                    <div class="form-text" id="ocr-key-hint">Key 仅存本地，不会上传到任何服务器</div>
-                </div>
-            </div>
             <div class="mb-3">
                 <label class="form-label small mb-1">设备昵称 <span class="text-muted">(可选，用于访问日志)</span></label>
                 <div class="input-group input-group-sm">
@@ -1420,7 +1377,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.2.7</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.5.0</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1443,11 +1400,6 @@ select.compact-form-control { height: 2.1rem; }
             <li class="nav-item">
                 <button class="nav-link" onclick="switchTab('stats', this)">
                     <i class="bi bi-pie-chart"></i><span>统计</span>
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" onclick="switchTab('planned', this)">
-                    <i class="bi bi-calendar-check"></i><span>计划</span>
                 </button>
             </li>
             <li class="nav-item">
@@ -1476,7 +1428,7 @@ select.compact-form-control { height: 2.1rem; }
 
 
         <!-- 手机端悬浮操作按钮 (仅交易页显示) -->
-        <div id="mobile-fab-group" class="d-none d-md-none">
+        <div id="mobile-fab-group">
             <button class="fab-btn fab-btn-add" onclick="openNewTransaction()" title="新增交易">
                 <i class="bi bi-plus-lg"></i>
             </button>
@@ -1539,29 +1491,8 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
             </div>
 
-            <!-- 桌面端表格 -->
-            <div class="excel-table-container d-none d-md-block mt-2">
-                <table class="table table-hover excel-table">
-                    <thead>
-                        <tr>
-                            <th style="width:110px;">日期</th>
-                            <th style="width:60px;">类型</th>
-                            <th style="width:90px;">类别</th>
-                            <th style="width:120px;">账户/转出</th>
-                            <th style="width:110px;">金额</th>
-                            <th style="width:130px;">转入账户</th>
-                            <th style="width:110px;">转入金额</th>
-                            <th style="min-width:140px;">备注</th>
-                            <th style="width:100px;">标签</th>
-                            <th style="width:80px;" class="text-center">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ad-table-body"></tbody>
-                </table>
-            </div>
-
             <!-- 手机端卡片列表 -->
-            <div id="account-detail-view-list" class="list-group list-group-flush d-md-none mt-2" style="border:1px solid var(--bs-border-color);border-radius:6px;"></div>
+            <div id="account-detail-view-list" class="list-group list-group-flush mt-2" style="border:1px solid var(--bs-border-color);border-radius:6px;"></div>
             <div id="account-detail-view-empty" class="text-center text-muted py-4 d-none">
                 <i class="bi bi-inbox fs-2"></i><br>暂无交易记录
             </div>
@@ -1575,7 +1506,7 @@ select.compact-form-control { height: 2.1rem; }
                     <button class="btn btn-sm btn-outline-secondary" id="trans-filter-btn" onclick="toggleTransFilter()" title="搜索与筛选">
                         <i class="bi bi-sliders"></i>
                     </button>
-                    <button class="btn btn-sm btn-primary d-none d-md-inline-flex" onclick="openNewTransaction()" title="新增交易">
+                    <button class="btn btn-sm btn-primary" onclick="openNewTransaction()" title="新增交易">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>
@@ -1623,65 +1554,8 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
             </div>
 
-            <!-- 桌面端表格 -->
-            <div class="excel-table-container">
-                <div id="transaction-table-container">
-                    <table class="table table-hover excel-table" id="transaction-table">
-                        <thead>
-                            <tr id="table-header-row">
-                                <th data-column="date" style="width:120px" onclick="sortTransactions('date')">
-                                    日期 <i class="bi bi-arrow-down-up sort-indicator"></i>
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="type" style="width:60px">
-                                    类型
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="category" style="width:120px">
-                                    类别
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="account" style="width:150px">
-                                    账户/转出
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="amount" style="width:120px" onclick="sortTransactions('amount')">
-                                    金额/转出 <i class="bi bi-arrow-down-up sort-indicator"></i>
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="toAccount" style="width:150px">
-                                    转入账户
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="amountIn" style="width:120px" onclick="sortTransactions('amountIn')">
-                                    转入金额 <i class="bi bi-arrow-down-up sort-indicator"></i>
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="desc" style="min-width:150px">
-                                    备注
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="tags" style="width:120px">
-                                    标签
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="user" style="width:80px">
-                                    用户
-                                    <div class="column-resizer" onmousedown="startColumnResize(event, this)"></div>
-                                </th>
-                                <th data-column="actions" style="width:80px" class="text-center">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transaction-table-body"></tbody>
-                    </table>
-                    <div id="load-more-container" class="text-center py-3 d-none">
-                        <button class="btn btn-outline-primary" onclick="loadMoreTransactions()">加载更多</button>
-                    </div>
-                </div>
-            </div>
-
             <!-- 移动端卡片列表 -->
-            <div id="mobile-transaction-list" style="display: none;">
+            <div id="mobile-transaction-list">
                 <div id="mobile-transaction-cards"></div>
                 <div id="mobile-load-more-container" class="text-center py-3 d-none">
                     <button class="btn btn-outline-primary" onclick="loadMoreTransactions()">加载更多</button>
@@ -1752,11 +1626,11 @@ select.compact-form-control { height: 2.1rem; }
                 <button class="stats-sub-tab-btn active" id="stats-tab-overview" onclick="switchStatsTab('overview')">
                     <i class="bi bi-bar-chart-line"></i> 概览
                 </button>
-                <button class="stats-sub-tab-btn" id="stats-tab-spending" onclick="switchStatsTab('spending')">
-                    <i class="bi bi-pie-chart-fill"></i> 消费类型
-                </button>
                 <button class="stats-sub-tab-btn" id="stats-tab-budget" onclick="switchStatsTab('budget')">
                     <i class="bi bi-piggy-bank-fill"></i> 预算
+                </button>
+                <button class="stats-sub-tab-btn" id="stats-tab-ai" onclick="switchStatsTab('ai')">
+                    <i class="bi bi-robot"></i> AI 分析
                 </button>
             </div>
 
@@ -1843,36 +1717,6 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
             </div>
 
-            <!-- 消费类型子页 -->
-            <div id="stats-pane-spending" class="stats-sub-pane">
-                <div class="row g-2 mb-3" id="sa-summary-cards"></div>
-                <div class="card shadow-sm mb-3">
-                    <div class="card-body">
-                        <h6 class="card-title">占比分布</h6>
-                        <div style="height:260px;"><canvas id="saTypeChart"></canvas></div>
-                    </div>
-                </div>
-                <div class="card shadow-sm mb-3">
-                    <div class="card-body">
-                        <h6 class="card-title">月度趋势</h6>
-                        <div style="height:260px;overflow-x:auto;"><canvas id="saTrendChart"></canvas></div>
-                    </div>
-                </div>
-                <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
-                    <h6 class="mb-0 me-1">支出明细</h6>
-                    <select class="form-select form-select-sm" id="sa-filter-type" style="width:110px;" onchange="renderSaDetailList()">
-                        <option value="">全部类型</option>
-                        <option value="need">必须的</option>
-                        <option value="want">想要的</option>
-                        <option value="regret">后悔的</option>
-                        <option value="none">未标记</option>
-                    </select>
-                    <input type="text" class="form-control form-control-sm" id="sa-filter-search" style="width:150px;" placeholder="搜索类别/备注..." oninput="renderSaDetailList()">
-                    <span class="text-muted small ms-auto" id="sa-detail-count"></span>
-                </div>
-                <div id="sa-detail-list" class="mb-4"></div>
-            </div>
-
             <!-- 预算子页 -->
             <div id="stats-pane-budget" class="stats-sub-pane">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1881,17 +1725,11 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
                 <div id="budget-list" class="mb-4"></div>
             </div>
-        </div>
 
-        <div id="view-planned" class="view-section">
-            <div class="page-sticky-header d-flex justify-content-between align-items-center pt-1">
-                <h4 class="mb-0">计划交易</h4>
-                <button class="btn btn-primary" onclick="openNewPlanned()">
-                    <i class="bi bi-plus-lg"></i>
-                </button>
+            <!-- AI分析子页 -->
+            <div id="stats-pane-ai" class="stats-sub-pane">
+                <div id="ai-analysis-content"></div>
             </div>
-
-            <div id="planned-list-container"></div>
         </div>
 
         <div id="view-settings" class="view-section">
@@ -1899,223 +1737,332 @@ select.compact-form-control { height: 2.1rem; }
                 <h4 class="mb-0">系统设置</h4>
             </div>
 
-            <div class="d-md-none mb-4">
-                <button class="btn btn-outline-secondary w-100 mb-2" onclick="switchUser()">
-                    <i class="bi bi-arrow-left-right"></i> 切换用户
-                </button>
-                <button class="btn btn-outline-danger w-100" onclick="logout()">
-                    <i class="bi bi-box-arrow-left"></i> 退出登录 (<span id="mobile-current-user"></span>)
-                </button>
+            <!-- Settings Menu -->
+            <div id="settings-menu">
+                <div class="settings-menu-list">
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('planned')">
+                        <i class="bi bi-calendar-check"></i>
+                        <span>计划交易</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('exchange-rate')">
+                        <i class="bi bi-currency-exchange"></i>
+                        <span>汇率设置</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('categories')">
+                        <i class="bi bi-tags"></i>
+                        <span>分类管理</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('users')">
+                        <i class="bi bi-people"></i>
+                        <span>账户与用户</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('data-sync')">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <span>数据与同步</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('archive')">
+                        <i class="bi bi-archive"></i>
+                        <span>数据存档</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('password')">
+                        <i class="bi bi-key"></i>
+                        <span>数据密码</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('ai-config')">
+                        <i class="bi bi-robot"></i>
+                        <span>AI 配置</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('about')">
+                        <i class="bi bi-info-circle"></i>
+                        <span>关于</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                </div>
+                <div class="settings-menu-footer">
+                    <button class="btn btn-outline-secondary w-100 mb-2" onclick="switchUser()">
+                        <i class="bi bi-arrow-left-right"></i> 切换用户
+                    </button>
+                    <button class="btn btn-outline-danger w-100" onclick="logout()">
+                        <i class="bi bi-box-arrow-left"></i> 退出登录(<span id="mobile-current-user"></span>)
+                    </button>
+                </div>
             </div>
 
-            <div class="row g-4">
- <div class="col-12 col-md-6">
-    <div class="card shadow-sm h-100">
-        <div class="card-header bg-transparent fw-bold">
-            <i class="bi bi-archive"></i> 数据存档管理
-        </div>
-        <div class="card-body">
-            <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档数据只读，可解档恢复。</p>
-            <div id="archive-management-ui" class="mb-2"></div>
-<div class="dropdown" id="history-year-btn-group">
-    <button class="btn btn-outline-secondary btn-sm w-100 dropdown-toggle" type="button"
-        data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="bi bi-clock-history"></i> 查看历史存档
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end" id="history-year-dropdown">
-        <li><span class="dropdown-item text-muted small">暂无存档</span></li>
-    </ul>
-</div>
-        </div>
-    </div>
-</div>
+            <!-- Sub-page: 计划交易 -->
+            <div id="settings-sub-planned" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>计划交易</span>
+                    <button class="btn btn-primary btn-sm ms-auto" onclick="openNewPlanned()">
+                        <i class="bi bi-plus-lg"></i> 新增
+                    </button>
+                </div>
+                <div id="planned-list-container"></div>
+            </div>
 
-                <div class="col-12 col-md-6">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-transparent fw-bold">汇率配置 (对人民币)</div>
-                        <div class="card-body">
-                            <div id="exchange-rate-inputs"></div>
-                            <p class="text-muted small mt-2">当前: <span id="current-exchange-rate"></span></p>
+            <!-- Sub-page: 汇率设置 -->
+            <div id="settings-sub-exchange-rate" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>汇率设置</span>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">汇率配置 (对人民币)</div>
+                    <div class="card-body">
+                        <div id="exchange-rate-inputs"></div>
+                        <p class="text-muted small mt-2">当前: <span id="current-exchange-rate"></span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-page: 分类管理 -->
+            <div id="settings-sub-categories" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>分类管理</span>
+                </div>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-transparent fw-bold">支出类别</div>
+                    <div class="card-body pb-2">
+                        <div id="expense-cat-container" class="mb-2"></div>
+                        <form onsubmit="addCategory(event, 'expense')" class="input-group input-group-sm">
+                            <input type="text" class="form-control" id="new-expense-cat" placeholder="新分类名" required="">
+                            <button class="btn btn-outline-danger" type="submit">添加</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-transparent fw-bold">收入类别</div>
+                    <div class="card-body pb-2">
+                        <div id="income-cat-container" class="mb-2"></div>
+                        <form onsubmit="addCategory(event, 'income')" class="input-group input-group-sm">
+                            <input type="text" class="form-control" id="new-income-cat" placeholder="新分类名" required="">
+                            <button class="btn btn-outline-success" type="submit">添加</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-magic"></i> 分类历史校对</span>
+                            <button class="btn btn-warning btn-sm" onclick="checkHistoryCategories()">
+                                <i class="bi bi-magic"></i> 自动校对
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-0">根据您的历史记账行为，检测备注相近但分类不一致的交易，逐条提示修正。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-page: 账户与用户 -->
+            <div id="settings-sub-users" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>账户与用户</span>
+                </div>
+                <div class="mb-4">
+                    <button class="btn btn-outline-secondary w-100 mb-2" onclick="switchUser()">
+                        <i class="bi bi-arrow-left-right"></i> 切换用户
+                    </button>
+                    <button class="btn btn-outline-danger w-100" onclick="logout()">
+                        <i class="bi bi-box-arrow-left"></i> 退出登录(<span id="mobile-current-user"></span>)
+                    </button>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-people"></i> 用户管理
+                    </div>
+                    <div class="card-body">
+                        <div id="user-management-list" class="mb-3"></div>
+                        <form onsubmit="addUserFromSettings(event)" class="d-flex gap-2">
+                            <input type="text" class="form-control form-control-sm" id="new-user-input" placeholder="新用户名" required="">
+                            <button class="btn btn-outline-secondary btn-sm text-nowrap" type="submit">
+                                <i class="bi bi-plus-lg"></i> 添加
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-page: 数据与同步 -->
+            <div id="settings-sub-data-sync" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>数据与同步</span>
+                </div>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-transparent fw-bold">数据导出 &amp; 同步</div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            数据保存在本地，导出加密文件时输入密码，导入时使用相同密码解密。
+                        </p>
+                        <div id="offline-mode-badge" class="alert alert-warning py-1 px-2 small mb-2" style="display:none;">
+                            <i class="bi bi-wifi-off"></i> 当前为 <strong>离线模式</strong>，自动同步已关闭。手动点击下方按钮可主动同步。
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" onclick="syncToDrive(true)">
+                                <i class="bi bi-cloud-upload"></i> 保存到 Google Drive
+                            </button>
+                            <button class="btn btn-warning" onclick="exportEncData()">
+                                <i class="bi bi-shield-lock"></i> 导出本地文件
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-12 col-md-6">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-transparent fw-bold">数据导出 &amp; 同步</div>
-                        <div class="card-body">
-                            <p class="text-muted small mb-3">
-                                <i class="bi bi-info-circle"></i>
-                                数据保存在本地，导出加密文件时输入密码，导入时使用相同密码解密。
-                            </p>
-                            <div id="offline-mode-badge" class="alert alert-warning py-1 px-2 small mb-2" style="display:none;">
-                                <i class="bi bi-wifi-off"></i> 当前为<strong>离线模式</strong>，自动同步已关闭。手动点击下方按钮可主动同步。
-                            </div>
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-primary" onclick="syncToDrive(true)">
-                                    <i class="bi bi-cloud-upload"></i> 保存到 Google Drive
-                                </button>
-                                <button class="btn btn-warning" onclick="exportEncData()">
-                                    <i class="bi bi-shield-lock"></i> 导出本地文件
-                                </button>
-                            </div>
-                        </div>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-clock-history"></i> 云端备份浏览
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">查看 Drive 历史备份，与当前数据对比差异，或从备份恢复。</p>
+                        <button class="btn btn-outline-secondary btn-sm w-100 mb-2" onclick="loadBackupList()">
+                            <i class="bi bi-arrow-clockwise"></i> 读取备份列表
+                        </button>
+                        <div id="backup-list-container" class="mt-1" style="max-height:220px;overflow-y:auto;font-size:0.85rem;"></div>
                     </div>
                 </div>
-
-                <div class="col-12 col-md-6">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-transparent fw-bold">
-                            <i class="bi bi-key"></i> 数据文件密码
-                        </div>
-                        <div class="card-body d-flex flex-column justify-content-between">
-                            <p class="text-muted small mb-3">
-                                <i class="bi bi-info-circle"></i>
-                                修改密码后，需要重新导出加密文件才会生效。
-                            </p>
-                            <div>
-                                <div class="text-muted small mb-3" id="pwd-status-hint"></div>
-                                <button class="btn btn-outline-warning w-100" onclick="openChangePwdModal()">
-                                    <i class="bi bi-key-fill"></i> 修改密码…
-                                </button>
-                            </div>
-                        </div>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-journal-text"></i> 访问日志
                     </div>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-transparent fw-bold">
-                            <i class="bi bi-people"></i> 用户管理
-                        </div>
-                        <div class="card-body">
-                            <div id="user-management-list" class="mb-3"></div>
-                            <form onsubmit="addUserFromSettings(event)" class="d-flex gap-2">
-                                <input type="text" class="form-control form-control-sm" id="new-user-input" placeholder="新用户名" required="">
-                                <button class="btn btn-outline-success btn-sm text-nowrap" type="submit">
-                                    <i class="bi bi-plus-lg"></i> 添加
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12">
-                    <!-- 手机端显示提示，桌面端显示完整管理 -->
-                    <div class="card shadow-sm d-md-none">
-                        <div class="card-body py-3 text-center text-muted small">
-                            <i class="bi bi-laptop me-1"></i> 类别管理及账户排序请在电脑端操作
-                        </div>
-                    </div>
-                    <div class="card shadow-sm d-none d-md-block">
-                        <div class="card-header bg-transparent fw-bold">类别管理 (可拖拽排序)</div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6 class="text-danger border-bottom pb-2">支出类别</h6>
-                                    <div id="expense-cat-container" class="d-flex flex-wrap gap-2 mb-3 p-2 rounded" style="background-color: var(--bs-tertiary-bg);" ondragover="allowDrop(event)" ondrop="dropCategory(event, 'expense')"></div>
-                                    <form onsubmit="addCategory(event, 'expense')" class="input-group input-group-sm">
-                                        <input type="text" class="form-control" id="new-expense-cat" placeholder="新类别名" required="">
-                                        <button class="btn btn-outline-danger" type="submit">添加</button>
-                                    </form>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6 class="text-success border-bottom pb-2">收入类别</h6>
-                                    <div id="income-cat-container" class="d-flex flex-wrap gap-2 mb-3 p-2 rounded" style="background-color: var(--bs-tertiary-bg);" ondragover="allowDrop(event)" ondrop="dropCategory(event, 'income')"></div>
-                                    <form onsubmit="addCategory(event, 'income')" class="input-group input-group-sm">
-                                        <input type="text" class="form-control" id="new-income-cat" placeholder="新类别名" required="">
-                                        <button class="btn btn-outline-success" type="submit">添加</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    </div><!-- end d-none d-md-block -->
-                </div>
-
-                <div class="col-12">
-                    <div class="card shadow-sm mb-3">
-                        <div class="card-header bg-transparent fw-bold">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-magic"></i> 分类历史校对</span>
-                                <button class="btn btn-warning btn-sm" onclick="checkHistoryCategories()">
-                                    <i class="bi bi-magic"></i> 自动校对
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted small mb-0">根据您的历史记账行为，检测备注相近但分类不一致的交易，逐条提示修正。</p>
-                        </div>
-                    </div>
-
-                    <div class="mb-2">
-                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="toggleAdvancedExportSection()">
-                            <i class="bi bi-gear" id="adv-export-toggle-icon"></i>
-                            <span id="adv-export-toggle-text">显示高级设置</span>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">查看云端 access_log.txt 的访问记录，支持分页浏览。</p>
+                        <button class="btn btn-outline-secondary btn-sm w-100" onclick="loadAccessLog()">
+                            <i class="bi bi-journal-text"></i> 打开访问日志
                         </button>
                     </div>
-
-                    <div id="adv-export-card" style="display: none;">
-
-                        <!-- 云端备份浏览 -->
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-header bg-transparent fw-bold">
-                                <i class="bi bi-clock-history"></i> 云端备份浏览
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted small mb-2">查看 Drive 历史备份，与当前数据对比差异，或从备份恢复。</p>
-                                <button class="btn btn-outline-secondary btn-sm w-100 mb-2" onclick="loadBackupList()">
-                                    <i class="bi bi-arrow-clockwise"></i> 读取备份列表
+                </div>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-file-earmark-code"></i> 高级导出 / 导入
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <div class="btn-group">
+                                <button class="btn btn-success" onclick="exportJsonData()">
+                                    <i class="bi bi-download"></i> 导出 JSON
                                 </button>
-                                <div id="backup-list-container" class="mt-1" style="max-height:220px;overflow-y:auto;font-size:0.85rem;"></div>
-                            </div>
-                        </div>
-
-                        <!-- 查看访问日志 -->
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-header bg-transparent fw-bold">
-                                <i class="bi bi-journal-text"></i> 访问日志
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted small mb-2">查看云端 access_log.txt 的访问记录，支持分页浏览。</p>
-                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="loadAccessLog()">
-                                    <i class="bi bi-journal-text"></i> 打开访问日志
+                                <button class="btn btn-info text-white" onclick="exportTransactionCsv()">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> 导出交易CSV
+                                </button>
+                                <button class="btn btn-info text-white" onclick="exportTransferCsv()">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> 导出转账CSV
                                 </button>
                             </div>
-                        </div>
-
-                        <!-- 高级导出 / 导入 -->
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-header bg-transparent fw-bold">
-                                <i class="bi bi-file-earmark-code"></i> 高级导出 / 导入
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="$('transaction-csv-input').click()">
+                                    <i class="bi bi-file-earmark-arrow-up"></i> 导入交易CSV
+                                </button>
+                                <button class="btn btn-primary" onclick="$('transfer-csv-input').click()">
+                                    <i class="bi bi-file-earmark-arrow-up"></i> 导入转账CSV
+                                </button>
                             </div>
-                            <div class="card-body">
-                                <div class="d-grid gap-2">
-                                    <div class="btn-group">
-                                        <button class="btn btn-success" onclick="exportJsonData()">
-                                            <i class="bi bi-download"></i> 导出 JSON
-                                        </button>
-                                        <button class="btn btn-info text-white" onclick="exportTransactionCsv()">
-                                            <i class="bi bi-file-earmark-spreadsheet"></i> 导出交易CSV
-                                        </button>
-                                        <button class="btn btn-info text-white" onclick="exportTransferCsv()">
-                                            <i class="bi bi-file-earmark-spreadsheet"></i> 导出转账CSV
-                                        </button>
-                                    </div>
-                                    <div class="btn-group">
-                                        <button class="btn btn-primary" onclick="$('transaction-csv-input').click()">
-                                            <i class="bi bi-file-earmark-arrow-up"></i> 导入交易CSV
-                                        </button>
-                                        <button class="btn btn-primary" onclick="$('transfer-csv-input').click()">
-                                            <i class="bi bi-file-earmark-arrow-up"></i> 导入转账CSV
-                                        </button>
-                                    </div>
-                                    <input type="file" id="transaction-csv-input" class="d-none" accept=".csv" onchange="importTransactionCsv()">
-                                    <input type="file" id="transfer-csv-input" class="d-none" accept=".csv" onchange="importTransferCsv()">
-                                </div>
-                            </div>
+                            <input type="file" id="transaction-csv-input" class="d-none" accept=".csv" onchange="importTransactionCsv()">
+                            <input type="file" id="transfer-csv-input" class="d-none" accept=".csv" onchange="importTransferCsv()">
                         </div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Sub-page: 数据存档 -->
+            <div id="settings-sub-archive" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>数据存档</span>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-archive"></i> 数据存档管理
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档数据只读，可解档恢复。</p>
+                        <div id="archive-management-ui" class="mb-2"></div>
+                        <div class="dropdown" id="history-year-btn-group">
+                            <button class="btn btn-outline-secondary btn-sm w-100 dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-clock-history"></i> 查看历史存档
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" id="history-year-dropdown">
+                                <li><span class="dropdown-item text-muted small">暂无存档</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-page: 数据密码 -->
+            <div id="settings-sub-password" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>数据密码</span>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-key"></i> 数据文件密码
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            修改密码后，需要重新导出加密文件才会生效。
+                        </p>
+                        <div>
+                            <div class="text-muted small mb-3" id="pwd-status-hint"></div>
+                            <button class="btn btn-outline-warning w-100" onclick="openChangePwdModal()">
+                                <i class="bi bi-key-fill"></i> 修改密码...
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-page: AI 配置 -->
+            <div id="settings-sub-ai-config" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>AI 配置</span>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-robot"></i> DeepSeek 配置
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">配置 DeepSeek API Key 即可使用 AI 数据分析功能。</p>
+                        <div class="mb-3">
+                            <label class="form-label small">DeepSeek API Key</label>
+                            <input type="password" class="form-control form-control-sm" id="ai-api-key" placeholder="sk-...">
+                        </div>
+                        <div class="small text-muted mb-3">
+                            <i class="bi bi-info-circle"></i> 使用 DeepSeek 最新模型，固定接口 https://api.deepseek.com/v1/chat/completions
+                        </div>
+                        <button class="btn btn-primary w-100" onclick="saveAiConfig()">
+                            <i class="bi bi-check-lg"></i> 保存配置
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-page: 关于 -->
+            <div id="settings-sub-about" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>关于</span>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <h5>记一笔</h5>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.5.0</span></p>
+                        <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
             </div>
@@ -2374,31 +2321,8 @@ select.compact-form-control { height: 2.1rem; }
                             </div>
                         </div>
 
-                        <!-- 单笔时的标签/备注/消费类型（拆分时隐藏） -->
+                        <!-- 单笔时的标签/备注（拆分时隐藏） -->
                         <div id="single-meta-section">
-                            <!-- 消费类型：折叠式 -->
-                            <div class="mb-2" id="spending-type-collapse-wrap">
-                                <button type="button" class="btn-expand-field" id="spending-type-expand-btn" onclick="expandMetaField('spending-type')">
-                                    <i class="bi bi-plus-sm"></i> 添加消费类型
-                                </button>
-                                <div id="spending-type-expanded" style="display:none;">
-                                    <label class="compact-form-label">消费类型</label>
-                                    <div id="spending-type-select-wrap">
-                                        <select id="edit-trans-spending-type" style="display:none;">
-                                            <option value="">未标记</option>
-                                            <option value="need">必须的</option>
-                                            <option value="want">想要的</option>
-                                            <option value="regret">后悔的</option>
-                                        </select>
-                                        <div class="st-pill-group" id="st-pill-group">
-                                            <button type="button" class="st-pill" data-val="" onclick="selectSpendingTypePill('')">未标记</button>
-                                            <button type="button" class="st-pill" data-val="need" onclick="selectSpendingTypePill('need')">必须的</button>
-                                            <button type="button" class="st-pill" data-val="want" onclick="selectSpendingTypePill('want')">想要的</button>
-                                            <button type="button" class="st-pill" data-val="regret" onclick="selectSpendingTypePill('regret')">后悔的</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
                             <!-- 标签：折叠式 -->
                             <div class="mb-2" id="tags-collapse-wrap">
@@ -2417,12 +2341,12 @@ select.compact-form-control { height: 2.1rem; }
                                 </div>
                             </div>
 
-                            <!-- 备注：折叠式 -->
+                            <!-- 备注：默认展开 -->
                             <div class="mb-2" id="desc-collapse-wrap">
-                                <button type="button" class="btn-expand-field" id="desc-expand-btn" onclick="expandMetaField('desc')">
+                                <button type="button" class="btn-expand-field" id="desc-expand-btn" onclick="expandMetaField('desc')" style="display:none;">
                                     <i class="bi bi-plus-sm"></i> 添加备注
                                 </button>
-                                <div id="desc-expanded" style="display:none;">
+                                <div id="desc-expanded">
                                     <label class="compact-form-label">备注</label>
                                     <div class="input-group" id="desc-input-group">
                                         <input type="text" class="form-control compact-form-control" id="edit-trans-desc"
@@ -2431,18 +2355,8 @@ select.compact-form-control { height: 2.1rem; }
                                         <button type="button" class="btn btn-outline-secondary btn-sm" id="attachment-btn" style="width: 45px;" onclick="document.getElementById('attachment-file-input').click()">
                                             <i class="bi bi-image"></i>
                                         </button>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" id="ocr-scan-btn" style="width: 45px;" onclick="startOcrScan()" title="拍照识别小票">
-                                            <i class="bi bi-camera"></i>
-                                        </button>
                                     </div>
                                     <div id="edit-trans-desc-hint" style="display:none;align-items:center;gap:6px;margin-top:3px;padding:3px 8px;border-radius:5px;background:rgba(var(--bs-primary-rgb),0.08);border:1px solid rgba(var(--bs-primary-rgb),0.2);font-size:0.78rem;"></div>
-                                    <!-- OCR 识别状态横幅 -->
-                                    <div id="ocr-result-banner" style="display:none;margin-top:4px;padding:4px 8px;border-radius:6px;background:rgba(var(--bs-success-rgb),0.1);border:1px solid rgba(var(--bs-success-rgb),0.3);font-size:0.78rem;color:var(--bs-success);">
-                                        <i class="bi bi-stars"></i> <span id="ocr-result-text"></span>
-                                        <button type="button" class="btn-close btn-close-sm ms-2" style="font-size:0.6rem;float:right;margin-top:2px;" onclick="clearOcrBanner()"></button>
-                                    </div>
-                                    <!-- OCR 隐藏文件输入（相机优先） -->
-                                    <input type="file" id="ocr-file-input" accept="image/*" capture="environment" class="d-none" onchange="handleOcrFileSelected(this)">
                                 </div>
                             </div>
                         </div>
@@ -2509,12 +2423,12 @@ select.compact-form-control { height: 2.1rem; }
                             </div>
                         </div>
 
-                        <!-- 转账备注：折叠式 -->
+                        <!-- 转账备注：默认展开 -->
                         <div class="mb-2" id="transfer-desc-collapse-wrap">
-                            <button type="button" class="btn-expand-field" id="transfer-desc-expand-btn" onclick="expandTransferDesc()">
+                            <button type="button" class="btn-expand-field" id="transfer-desc-expand-btn" onclick="expandTransferDesc()" style="display:none;">
                                 <i class="bi bi-plus-sm"></i> 添加备注
                             </button>
-                            <div id="transfer-desc-expanded" style="display:none;">
+                            <div id="transfer-desc-expanded">
                                 <label class="compact-form-label">备注</label>
                                 <input type="text" class="form-control compact-form-control" id="edit-transfer-desc" placeholder="添加备注...">
                             </div>
@@ -2533,7 +2447,7 @@ select.compact-form-control { height: 2.1rem; }
                             </div>
                         </div>
                         <div class="trans-action-row">
-                            <button type="button" class="btn-delete-immersive d-md-none" id="edit-transfer-delete-btn" onclick="deleteCurrentTransfer()" style="display:none!important;">
+                            <button type="button" class="btn-delete-immersive" id="edit-transfer-delete-btn" onclick="deleteCurrentTransfer()" style="display:none!important;">
                                 <i class="bi bi-trash"></i> 删除
                             </button>
                             <button type="submit" class="btn-save-immersive" id="edit-transfer-submit-btn">保存</button>
@@ -2753,7 +2667,6 @@ function initLoginSettingsUI() {
     initGasUrlUI();
     initGasTokenUI();
     initDeviceNameUI();
-    initOcrKeyUI();
     renderVerboseToastBtn();
 }
 
@@ -2886,284 +2799,6 @@ function saveDeviceName() {
     if (verboseToast) showToast(`设备昵称已保存：${val}`, 'success', 2000);
 }
 
-// ── OCR 收据识别（支持多家 AI 服务商）──────────────────────────
-
-const OCR_PROVIDER_DEFAULTS = {
-    anthropic: { endpoint: 'https://api.anthropic.com/v1/messages',          model: 'claude-sonnet-4-6', label: 'Claude',  keyHint: 'sk-ant-...' },
-    openai:    { endpoint: 'https://api.openai.com/v1/chat/completions',     model: 'gpt-4o-mini',       label: 'OpenAI',  keyHint: 'sk-...' },
-    custom:    { endpoint: '',                                               model: 'gpt-4o-mini',       label: '自定义',  keyHint: 'API Key' }
-};
-
-function onOcrProviderChange() {
-    const provider = $('ocr-provider-select').value;
-    const def = OCR_PROVIDER_DEFAULTS[provider] || OCR_PROVIDER_DEFAULTS.anthropic;
-    const endpointWrap = $('ocr-endpoint-wrap');
-    if (endpointWrap) endpointWrap.style.display = provider === 'custom' ? '' : 'none';
-    const keyInput = $('ocr-key-input');
-    if (keyInput) keyInput.placeholder = def.keyHint;
-    const modelInput = $('ocr-model-input');
-    if (modelInput) modelInput.placeholder = `模型名称（可选，默认 ${def.model}）`;
-}
-
-function initOcrKeyUI() {
-    const saved = localStorage.getItem('APP_ocr_key') || '';
-    const provider = localStorage.getItem('APP_ocr_provider') || 'anthropic';
-    const providerSel = $('ocr-provider-select');
-    if (providerSel) providerSel.value = provider;
-    onOcrProviderChange();
-    const savedBar = $('ocr-key-saved-bar');
-    const inputBar = $('ocr-key-input-bar');
-    if (!savedBar || !inputBar) return;
-    if (saved) {
-        savedBar.style.removeProperty('display');
-        inputBar.style.display = 'none';
-        const label = $('ocr-provider-label');
-        if (label) label.textContent = (OCR_PROVIDER_DEFAULTS[provider] || {}).label || provider;
-    } else {
-        savedBar.style.display = 'none';
-        inputBar.style.removeProperty('display');
-    }
-}
-
-function showOcrKeyInput() {
-    $('ocr-key-saved-bar').style.display = 'none';
-    $('ocr-key-input-bar').style.removeProperty('display');
-    const provider = localStorage.getItem('APP_ocr_provider') || 'anthropic';
-    $('ocr-provider-select').value = provider;
-    onOcrProviderChange();
-    $('ocr-key-input').value = localStorage.getItem('APP_ocr_key') || '';
-    $('ocr-endpoint-input').value = localStorage.getItem('APP_ocr_endpoint') || '';
-    $('ocr-model-input').value = localStorage.getItem('APP_ocr_model') || '';
-    $('ocr-key-input').focus();
-}
-
-function saveOcrKey() {
-    const provider = $('ocr-provider-select').value;
-    const key = ($('ocr-key-input').value || '').trim();
-    if (!key) { alert('请输入 API Key'); return; }
-    let endpoint = '';
-    if (provider === 'custom') {
-        endpoint = ($('ocr-endpoint-input').value || '').trim();
-        if (!endpoint) { alert('请输入自定义接口地址'); return; }
-    }
-    const model = ($('ocr-model-input').value || '').trim();
-    localStorage.setItem('APP_ocr_provider', provider);
-    localStorage.setItem('APP_ocr_key', key);
-    localStorage.setItem('APP_ocr_endpoint', endpoint);
-    localStorage.setItem('APP_ocr_model', model);
-    initOcrKeyUI();
-    showToast('AI 设置已保存，收据识别已启用 📷', 'success', 2500);
-}
-
-function startOcrScan() {
-    const key = localStorage.getItem('APP_ocr_key') || '';
-    if (!key) {
-        showToast('请先在设置中配置 AI 服务商和 API Key', 'warning', 3000);
-        return;
-    }
-    // 重置 input 以允许重复选择同一文件
-    const fi = $('ocr-file-input');
-    fi.value = '';
-    fi.click();
-}
-
-// 调用对应服务商的视觉模型接口，返回模型输出的原始文本
-async function callOcrVisionAPI(base64, prompt) {
-    const provider = localStorage.getItem('APP_ocr_provider') || 'anthropic';
-    const key = localStorage.getItem('APP_ocr_key') || '';
-    const customEndpoint = localStorage.getItem('APP_ocr_endpoint') || '';
-    const customModel = localStorage.getItem('APP_ocr_model') || '';
-    const def = OCR_PROVIDER_DEFAULTS[provider] || OCR_PROVIDER_DEFAULTS.anthropic;
-    const model = customModel || def.model;
-
-    if (provider === 'anthropic') {
-        const resp = await fetch(def.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': key,
-                'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-direct-browser-access': 'true'
-            },
-            body: JSON.stringify({
-                model,
-                max_tokens: 800,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
-                        { type: 'text', text: prompt }
-                    ]
-                }]
-            })
-        });
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err?.error?.message || `HTTP ${resp.status}`);
-        }
-        const data = await resp.json();
-        return (data.content || []).map(b => b.text || '').join('').trim();
-    }
-
-    // OpenAI 与自定义服务商均使用 OpenAI 兼容的 chat/completions 格式
-    const endpoint = provider === 'openai' ? def.endpoint : customEndpoint;
-    const resp = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify({
-            model,
-            max_tokens: 800,
-            messages: [{
-                role: 'user',
-                content: [
-                    { type: 'text', text: prompt },
-                    { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
-                ]
-            }]
-        })
-    });
-    if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err?.error?.message || `HTTP ${resp.status}`);
-    }
-    const data = await resp.json();
-    return (data?.choices?.[0]?.message?.content || '').trim();
-}
-
-async function handleOcrFileSelected(input) {
-    if (!input.files || !input.files[0]) return;
-    const file = input.files[0];
-
-    // 显示加载状态
-    const btn = $('ocr-scan-btn');
-    const origHTML = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-    btn.disabled = true;
-
-    try {
-        // 压缩图片（最大 1200px 宽，JPEG 0.85）
-        const base64 = await compressImageToBase64(file, 1200, 0.85);
-
-        const txType = $('edit-trans-type').value; // 'expense' | 'income'
-        const catList = (categories[txType === 'income' ? 'income' : 'expense'] || []).join('、');
-
-        const prompt = `你是一个专业的多语言记账助手。这张图片可能是超市/商店的购物小票，也可能是购物网站的订单截图或转账记录。图片上的文字可能是中文、英语或德语，请将识别结果统一翻译/整理为中文后再输出。
-
-请只返回如下 JSON，不要输出任何其他文字、解释或 markdown 代码块包裹：
-{
-  "amount": <数字，小票/订单的总金额，按原始数字填写，不要换算汇率；完全无法识别填 null>,
-  "currency": <三位货币代码，如 "CNY"、"EUR"、"USD"，根据货币符号或文字判断；无法判断填 null>,
-  "merchant": <"商家/店铺名称"，翻译成中文；无法识别填 null>,
-  "date": <"YYYY-MM-DD" 格式日期；无法识别填 null>,
-  "category": <从下面列表中选最贴切的一项，必须是列表中的原文："${catList}">,
-  "items": [<逐条列出小票/订单上的商品或服务名称，全部翻译为中文，尽量简洁，例如 "包菜"、"食盐"、"樱桃"；如果是购物网站截图，列出每个商品的名称；完全无法识别任何条目则返回空数组>],
-  "desc": <"15字以内的简短备注，如果 items 非空可直接用顿号拼接商品名，否则用商家名称或场景概括，例如：超市购物、午餐、打车出行">
-}`;
-
-        const text = await callOcrVisionAPI(base64, prompt);
-        // 去除可能的 ```json ``` 包裹
-        const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-        const result = JSON.parse(cleaned);
-
-        applyOcrResult(result);
-
-    } catch (e) {
-        console.error('OCR error', e);
-        showToast('识别失败：' + (e.message || '未知错误'), 'danger', 4000);
-    } finally {
-        btn.innerHTML = origHTML;
-        btn.disabled = false;
-    }
-}
-
-function applyOcrResult(r) {
-    const filled = [];
-
-    if (r.amount && !isNaN(r.amount)) {
-        $('edit-trans-amount').value = Math.abs(Number(r.amount)).toFixed(2);
-        const amtInput = $('edit-trans-amount');
-        if (amtInput) amtInput.classList.add('ocr-highlight');
-        filled.push(`金额 ${r.amount}${r.currency ? ' ' + r.currency : ''}`);
-    }
-    if (r.date) {
-        $('edit-trans-date').value = r.date;
-        filled.push(`日期 ${r.date}`);
-    }
-    if (r.category) {
-        const sel = $('edit-trans-category');
-        for (let i = 0; i < sel.options.length; i++) {
-            if (sel.options[i].value === r.category) {
-                sel.value = r.category;
-                catGridSync('edit-trans-category', 'cat-grid-edit-trans-category');
-                filled.push(`类别「${r.category}」`);
-                break;
-            }
-        }
-    }
-
-    // 备注优先使用逐条商品清单，其次是 AI 生成的简短备注，最后回退到商家名
-    let descVal = '';
-    if (Array.isArray(r.items) && r.items.length > 0) {
-        descVal = r.items.join('、');
-    } else if (r.desc) {
-        descVal = r.desc;
-    } else if (r.merchant) {
-        descVal = r.merchant;
-    }
-    if (descVal) {
-        $('edit-trans-desc').value = descVal;
-        // 自动展开备注区域，让用户看到识别结果
-        expandMetaField('desc');
-        filled.push(`备注「${descVal}」`);
-    }
-
-    if (filled.length === 0) {
-        showToast('未能识别到有效信息，请手动填写', 'warning', 3000);
-        return;
-    }
-
-    // 显示结果横幅
-    const banner = $('ocr-result-banner');
-    const bannerText = $('ocr-result-text');
-    if (banner && bannerText) {
-        bannerText.textContent = '已识别：' + filled.join('、') + '，请确认后保存';
-        banner.style.display = 'block';
-    }
-}
-
-function clearOcrBanner() {
-    const banner = $('ocr-result-banner');
-    if (banner) banner.style.display = 'none';
-    // 清除金额高亮
-    const amtInput = $('edit-trans-amount');
-    if (amtInput) amtInput.classList.remove('ocr-highlight');
-}
-
-// 图片压缩（canvas 缩放 → base64 JPEG）
-function compressImageToBase64(file, maxWidth, quality) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = reject;
-        reader.onload = e => {
-            const img = new Image();
-            img.onerror = reject;
-            img.onload = () => {
-                let w = img.width, h = img.height;
-                if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
-                const canvas = document.createElement('canvas');
-                canvas.width = w; canvas.height = h;
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                const dataURL = canvas.toDataURL('image/jpeg', quality);
-                resolve(dataURL.split(',')[1]); // 只返回 base64 部分
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
 
 
 function initOfflineModeUI() {
@@ -3493,9 +3128,9 @@ function loginWithUser(name) {
     } catch(_) {}
     initAppUI();
 
-    // 初始 tab = 交易页，显示悬浮按钮
+    // 初始 tab = 交易页，仅手机端显示悬浮按钮
     const fabInit = $('mobile-fab-group');
-    if (fabInit) fabInit.classList.remove('d-none');
+    if (fabInit && window.innerWidth <= 768) fabInit.classList.remove('d-none');
 
     // 更新离线模式状态显示
     const badge = $('offline-mode-badge');
@@ -4844,7 +4479,6 @@ function renderAccounts() {
             <div class="col-4">净值: <b class="text-primary ${hiddenClass}">¥${(totalAssets + totalLiabilities).toFixed(2)}</b></div>
         </div>`;
 
-    const isDesktop = window.innerWidth >= 769;
     ['Asset', 'Liability', 'Receivable'].forEach(type => {
         const rawAccs = userAccounts.filter(a => (a.accountType || 'Asset') === type);
         if (rawAccs.length === 0) return;
@@ -4860,13 +4494,9 @@ function renderAccounts() {
             col.className = 'account-col';
             col.dataset.accId = acc.id;
             const balClass = amountsHidden ? 'amount-hidden' : (bal < 0 ? 'text-danger' : 'text-success');
-            const dragHandle = isDesktop
-                ? `<div class="text-muted d-none d-md-flex align-items-center px-1" style="cursor:grab;opacity:0.35;font-size:0.85rem;" title="拖拽排序"><i class="bi bi-grip-vertical"></i></div>`
-                : '';
             col.innerHTML = `
                 <div class="card account-card p-3 shadow-sm d-flex flex-row align-items-center gap-1"
                      data-id="${acc.id}" style="cursor:pointer;">
-                    ${dragHandle}
                     <div class="flex-grow-1" onclick="openAccountDetail(${acc.id})">
                         <div class="d-flex justify-content-between align-items-start">
                             <div style="flex:1">
@@ -4880,37 +4510,6 @@ function renderAccounts() {
                         </div>
                     </div>
                 </div>`;
-            if (isDesktop) {
-                col.draggable = true;
-                col.addEventListener('dragstart', e => {
-                    e.dataTransfer.setData('accId', acc.id);
-                    e.dataTransfer.setData('accType', type);
-                    col.classList.add('dragging');
-                });
-                col.addEventListener('dragend', () => col.classList.remove('dragging'));
-                col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
-                col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
-                col.addEventListener('drop', e => {
-                    e.preventDefault();
-                    col.classList.remove('drag-over');
-                    const fromId = Number(e.dataTransfer.getData('accId'));
-                    const fromType = e.dataTransfer.getData('accType');
-                    if (fromType !== type || fromId === acc.id) return;
-                    // Reorder: build new order from current DOM, swap
-                    const allOfType = sortedUserAccounts(userAccounts.filter(a => (a.accountType || 'Asset') === type));
-                    const ids = allOfType.map(a => a.id);
-                    const fi = ids.indexOf(fromId), ti = ids.indexOf(acc.id);
-                    if (fi < 0 || ti < 0) return;
-                    ids.splice(fi, 1); ids.splice(ti, 0, fromId);
-                    // Merge with order for other types
-                    const otherOrder = (getAccountOrder() || []).filter(id => !ids.includes(id));
-                    saveAccountOrder([...otherOrder.filter(id => {
-                        const a = accounts.find(x => x.id === id);
-                        return a && (a.accountType || 'Asset') !== type;
-                    }), ...ids]);
-                    renderAccounts();
-                });
-            }
             row.appendChild(col);
         });
         container.appendChild(row);
@@ -5090,6 +4689,8 @@ $('account-form').addEventListener('submit', (e) => {
 
 let currentDetailAccountId = null;
 let openedFromDetail = false;
+var _fromChartDrawer = false;
+var _chartDrawerData = null;
 
 function renderDetailContent(id) {
     const acc = accounts.find(a => a.id === id);
@@ -5113,7 +4714,6 @@ function renderDetailContent(id) {
         .sort((a, b) => b.date.localeCompare(a.date));
 
     const mobileContainer = $('account-detail-view-list');
-    const desktopTbody = $('ad-table-body');
     const empty = $('account-detail-view-empty');
 
     const resolveTransfer = (t) => {
@@ -5168,7 +4768,6 @@ function renderDetailContent(id) {
 
     if (filteredTrans.length === 0) {
         if (mobileContainer) mobileContainer.innerHTML = '';
-        if (desktopTbody) desktopTbody.innerHTML = '';
         if (empty) empty.classList.remove('d-none');
         return;
     }
@@ -5239,79 +4838,6 @@ function renderDetailContent(id) {
                 </div>
                 <div style="font-weight:700;font-size:0.88rem;color:${amtColor};margin-left:8px;white-space:nowrap;">${displayAmt}</div>`;
             mobileContainer.appendChild(item);
-        });
-    }
-
-    // ---- 桌面表格 ----
-    if (desktopTbody) {
-        desktopTbody.innerHTML = '';
-        filteredTrans.forEach(t => {
-            const isTransfer = t.isTransfer;
-            let canEdit = t.ownerName === currentUserName && !t._isArchived;
-
-            // 统一用 tOut 视角渲染转账（两侧账户详情页显示完全一致）
-            let typeText, typeColorClass, amtColorClass;
-            let accountOutDisplay = '', displayAmt = '';
-            let toAccDisplay = '', peerAmtDisplay = '';
-            let categoryDisplay = '', descDisplay = '';
-
-            if (isTransfer) {
-                const { tOut, tIn } = resolveTransfer(t);
-                if (tOut) canEdit = (tOut.ownerName === currentUserName) && !t._isArchived;
-
-                typeText = '转账';
-                typeColorClass = 'text-warning';
-                amtColorClass = 'text-warning';
-                categoryDisplay = '';
-
-                if (tOut) {
-                    const accOut = accounts.find(a => a.id == tOut.accountId);
-                    accountOutDisplay = accOut ? `<small>${getAccountDisplayName(accOut)}</small>` : '';
-                    displayAmt = `${CURRENCY_SYMBOLS[accOut ? accOut.currency : acc.currency]}${formatAmount(Math.abs(tOut.amount), accOut ? accOut.currency : acc.currency)}`;
-                    descDisplay = tOut.desc || '';
-                } else {
-                    displayAmt = `${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}`;
-                    descDisplay = t.desc || '';
-                }
-                if (tIn) {
-                    const accTo = accounts.find(a => a.id == tIn.accountId);
-                    if (accTo) {
-                        toAccDisplay = `<small>${getAccountDisplayName(accTo)}</small>`;
-                        peerAmtDisplay = `<div class="fw-bold text-warning">${CURRENCY_SYMBOLS[accTo.currency]}${formatAmount(Math.abs(tIn.amount), accTo.currency)}</div>`;
-                    }
-                }
-            } else {
-                typeText = t.amount < 0 ? '支出' : '收入';
-                typeColorClass = t.amount < 0 ? 'text-danger' : 'text-success';
-                amtColorClass = t.amount < 0 ? 'text-danger' : 'text-success';
-                accountOutDisplay = `<small>${getAccountDisplayName(acc)}</small>`;
-                displayAmt = `${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}`;
-                categoryDisplay = t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || '');
-                descDisplay = t.desc || '';
-            }
-
-            const editBtns = canEdit
-                ? (isTransfer
-                    ? `<i class="bi bi-pencil text-primary me-2" style="cursor:pointer;" onclick="openedFromDetail=true;openEditTransfer(${t.id})"></i><i class="bi bi-trash text-danger" style="cursor:pointer;" onclick="deleteTransaction(${t.id})"></i>`
-                    : `<i class="bi bi-pencil text-primary me-2" style="cursor:pointer;" onclick="openedFromDetail=true;openEditTransaction(${t.id})"></i><i class="bi bi-trash text-danger" style="cursor:pointer;" onclick="deleteTransaction(${t.id})"></i>`)
-                : (t._isArchived ? '<span class="badge bg-secondary" style="font-size:0.6rem;">存档</span>' : '');
-
-            const trTagsDisplay = isTransfer
-                ? (() => { const { tOut } = resolveTransfer(t); return tOut ? (tOut.tags||'') : (t.tags||''); })()
-                : (t.tags||'');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${t.date}</td>
-                <td><div class="${typeColorClass}">${typeText}</div></td>
-                <td>${categoryDisplay}${!isTransfer ? getTxnBadge(t) : ''}</td>
-                <td>${accountOutDisplay}${isTransfer ? getTxnBadge(t) : ''}</td>
-                <td><div class="fw-bold ${amtColorClass}">${displayAmt}</div></td>
-                <td>${toAccDisplay}</td>
-                <td>${peerAmtDisplay}</td>
-                <td><div class="desc-content" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;" title="${descDisplay.replace(/"/g,'&quot;')}">${descDisplay}</div></td>
-                <td>${trTagsDisplay}</td>
-                <td><div class="text-center">${editBtns}</div></td>`;
-            desktopTbody.appendChild(tr);
         });
     }
 }
@@ -5422,9 +4948,6 @@ function switchTransTab(tab, skipReset) {
         const attachBtn = $('attachment-btn');
         if (attachSec) attachSec.style.display = tab === 'expense' ? '' : 'none';
         if (attachBtn) attachBtn.style.display = tab === 'expense' ? '' : 'none';
-        const ocrBtn = $('ocr-scan-btn');
-        if (ocrBtn) ocrBtn.style.display = tab === 'expense' ? '' : 'none';
-        showSpendingTypeRow(tab === 'expense');
         // 拆分按钮仅在支出时显示
         const splitBtn = $('split-toggle-btn');
         if (splitBtn) splitBtn.style.display = tab === 'expense' ? '' : 'none';
@@ -5461,8 +4984,6 @@ function _initNewTransModal(mode, title) {
     if (hintEl) hintEl.style.display = 'none';
     resetInlineItems();
     resetAttachmentUI();
-    resetSpendingType();
-    clearOcrBanner();
     resetMetaFieldsCollapse();
     $('trans-tab-bar').style.display = '';
 }
@@ -5662,12 +5183,11 @@ function openEditTransaction(id) {
     $('edit-trans-account').value = t.accountId; accSelectSync('edit-trans-account');
     $('edit-trans-tags').value = t.tags || '';
     $('edit-trans-desc').value = t.desc || '';
-    setSpendingType(t.spendingType || '');
     // 编辑时隐藏 tab bar（固定类型）
     $('trans-tab-bar').style.display = 'none';
     // 根据已有数据展开折叠字段
     resetMetaFieldsCollapse();
-    expandMetaFieldsForExistingData(t.tags, t.desc, t.spendingType);
+    expandMetaFieldsForExistingData(t.tags, t.desc);
     switchTransTab(t.type, true);
     // 加载分录
     if (t.items && t.items.length > 1) {
@@ -5790,10 +5310,9 @@ function deleteCurrentTransfer() {
 }
 
 
-let _splitData = []; // [{category, amount, spendingType, tags, desc}, ...]
 let _inSplitMode = false;
 
-function _stOptsHTML(selected) {
+function _buildMarkOpts(selected) {
     return [
         {v:'', l:'未标记'}, {v:'need', l:'必须的'},
         {v:'want', l:'想要的'}, {v:'regret', l:'后悔的'},
@@ -5816,7 +5335,7 @@ function _buildSplitItemCard(item, idx) {
                    value="${item.amount>0?item.amount:''}"
                    oninput="_splitData[${idx}].amount=parseFloat(this.value)||0;refreshSplitTotal()">
             <select class="form-select compact-form-control" style="font-size:0.78rem;"
-                    onchange="_splitData[${idx}].spendingType=this.value">${_stOptsHTML(item.spendingType)}</select>
+                    onchange="_splitData[${idx}].mark=this.value">${_buildMarkOpts(item.mark||'')}</select>
             <div class="split-card-del">
                 <button type="button" class="btn btn-link text-danger btn-sm p-0"
                         onclick="removeSplitItem(${idx})"><i class="bi bi-x-lg"></i></button>
@@ -5854,7 +5373,7 @@ function refreshSplitTotal() {
 
 function addSplitItemRow() {
     const cats = categories.expense || [];
-    _splitData.push({ category: cats[0]||'', amount: 0, spendingType: '', tags: '', desc: '' });
+    _splitData.push({ category: cats[0]||'', amount: 0, tags: '', desc: '' });
     renderSplitItems();
     const list = $('split-items-list');
     if (list) setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
@@ -5889,12 +5408,11 @@ function enterSplitMode() {
     if (_splitData.length === 0) {
         const cat = $('edit-trans-category').value || (categories.expense[0]||'');
         const amt = parseFloat($('edit-trans-amount').value) || 0;
-        const st  = $('edit-trans-spending-type').value || '';
         const tags = $('edit-trans-tags').value || '';
         const desc = $('edit-trans-desc').value || '';
         _splitData = [
-            { category: cat, amount: amt, spendingType: st, tags, desc },
-            { category: categories.expense[0]||'', amount: 0, spendingType: '', tags: '', desc: '' },
+            { category: cat, amount: amt, tags, desc },
+            { category: categories.expense[0]||'', amount: 0, tags: '', desc: '' },
         ];
     }
     renderSplitItems();
@@ -5945,7 +5463,6 @@ function getInlineItems() {
     const items = _splitData.filter(it => it.amount > 0).map(it => ({
         category: it.category,
         amount: sign * Math.abs(it.amount),
-        ...(it.spendingType ? { spendingType: it.spendingType } : {}),
         ...(it.tags ? { tags: it.tags } : {}),
         ...(it.desc ? { desc: it.desc } : {}),
     }));
@@ -5970,7 +5487,6 @@ function loadInlineItems(items, type) {
     _splitData = items.map(it => ({
         category: it.category || '',
         amount: Math.abs(it.amount),
-        spendingType: it.spendingType || '',
         tags: it.tags || '',
         desc: it.desc || '',
     }));
@@ -5978,43 +5494,7 @@ function loadInlineItems(items, type) {
     renderSplitItems();
 }
 
-
-
-const SPENDING_TYPE_CONFIG = {
-    need:   { label: '必须的', color: '#0d6efd', bg: 'rgba(13,110,253,0.12)' },
-    want:   { label: '想要的', color: '#fd7e14', bg: 'rgba(253,126,20,0.12)' },
-    regret: { label: '后悔的', color: '#dc3545', bg: 'rgba(220,53,69,0.12)' },
-};
-
-function getSpendingTypeConfig() {
-    return {
-        need:   { label: SPENDING_TYPE_CONFIG.need.label,   color: SPENDING_TYPE_CONFIG.need.color,   bg: SPENDING_TYPE_CONFIG.need.bg },
-        want:   { label: SPENDING_TYPE_CONFIG.want.label,   color: SPENDING_TYPE_CONFIG.want.color,   bg: SPENDING_TYPE_CONFIG.want.bg },
-        regret: { label: SPENDING_TYPE_CONFIG.regret.label, color: SPENDING_TYPE_CONFIG.regret.color, bg: SPENDING_TYPE_CONFIG.regret.bg },
-        '':     { label: '未标记', color: '#6c757d', bg: 'rgba(108,117,125,0.12)' },
-    };
-}
-
-function setSpendingType(val) {
-    const sel = $('edit-trans-spending-type');
-    if (sel) sel.value = val || '';
-    spendingTypePillSync();
-}
-
-function resetSpendingType() {
-    const sel = $('edit-trans-spending-type');
-    if (sel) sel.value = '';
-    spendingTypePillSync();
-}
-
-function showSpendingTypeRow(show) {
-    // 消费类型折叠区随支出/收入 tab 显示或隐藏
-    const wrap = $('spending-type-collapse-wrap');
-    if (wrap) wrap.style.display = show ? '' : 'none';
-}
-
 // ── 折叠字段展开/收起 ──
-// fieldKey: 'spending-type' | 'tags' | 'desc'
 function expandMetaField(fieldKey) {
     const expandedEl = $(fieldKey + '-expanded');
     const btnEl = $(fieldKey + '-expand-btn');
@@ -6042,247 +5522,35 @@ function expandTransferDesc() {
 
 // 折叠所有 meta 字段（新增/切换 tab 时调用）
 function resetMetaFieldsCollapse() {
-    ['spending-type', 'tags', 'desc'].forEach(key => {
+    // 标签折叠，其他默认展开
+    ['tags'].forEach(key => {
         const expandedEl = $(key + '-expanded');
         const btnEl = $(key + '-expand-btn');
         if (expandedEl) expandedEl.style.display = 'none';
         if (btnEl) btnEl.style.display = '';
     });
-    // 转账备注
+    // 备注默认展开
+    const descExp = $('desc-expanded');
+    const descBtn = $('desc-expand-btn');
+    if (descExp) descExp.style.display = '';
+    if (descBtn) descBtn.style.display = 'none';
+    // 转账备注默认展开
     const tfExp = $('transfer-desc-expanded');
     const tfBtn = $('transfer-desc-expand-btn');
-    if (tfExp) tfExp.style.display = 'none';
-    if (tfBtn) tfBtn.style.display = '';
+    if (tfExp) tfExp.style.display = '';
+    if (tfBtn) tfBtn.style.display = 'none';
 }
 
 // 根据已有值展开对应的 meta 字段
-function expandMetaFieldsForExistingData(tags, desc, spendingType) {
+function expandMetaFieldsForExistingData(tags, desc) {
     if (tags) expandMetaField('tags');
     if (desc) expandMetaField('desc');
-    if (spendingType) expandMetaField('spending-type');
 }
 
 function expandTransferDescForExistingData(desc) {
     if (desc) expandTransferDesc();
 }
 
-let saChartType = null, saChartTrend = null;
-
-let _saCurrentUser = ''; // '' = 所有用户
-
-function saCycleUser() {
-    const options = ['', ...dataUsers];
-    const idx = options.indexOf(_saCurrentUser);
-    _saCurrentUser = options[(idx + 1) % options.length];
-    const btn = $('sa-user-filter-btn');
-    const textEl = $('sa-user-filter-text');
-    if (textEl) textEl.textContent = _saCurrentUser || '所有用户';
-    if (btn) btn.className = _saCurrentUser
-        ? 'btn btn-sm btn-primary flex-shrink-0'
-        : 'btn btn-sm btn-outline-secondary flex-shrink-0';
-    renderSpendingAnalysis();
-}
-
-function openSpendingAnalysis() {
-    // 切换到统计页消费类型子Tab
-    switchTab('stats', document.querySelector('.nav-link[onclick*="stats"]') || document.querySelector('.nav-link[onclick*=stats]'));
-    switchStatsTab('spending');
-}
-
-function closeSpendingAnalysis() {
-    // 兼容旧调用，切回概览
-    switchStatsTab('overview');
-}
-
-function saQuickDate(p) {
-    quickStatsDateFilter(p);
-}
-
-function renderSpendingAnalysis() {
-    const start  = currentStatsFilter.startDate || '';
-    const end    = currentStatsFilter.endDate   || '';
-    const saUser = (currentStatsFilter.user !== 'all') ? currentStatsFilter.user : '';
-    const rawData = transactions.filter(t => {
-        if (t.isTransfer || t._isBaseline || t.amount >= 0) return false;
-        if (start && t.date < start) return false;
-        if (end   && t.date > end)   return false;
-        if (saUser && t.ownerName !== saUser) return false;
-        return true;
-    });
-
-    // 展开多笔分录：每条 item 作为独立统计单元
-    const data = [];
-    rawData.forEach(t => {
-        const acc = accounts.find(a => a.id == t.accountId);
-        if (t.items && t.items.length > 1) {
-            t.items.forEach(it => {
-                data.push({
-                    ...t,
-                    amount: it.amount,
-                    category: it.category,
-                    spendingType: it.spendingType || t.spendingType || '',
-                    tags: it.tags !== undefined ? it.tags : (t.tags || ''),
-                    desc: it.desc !== undefined ? it.desc : (t.desc || ''),
-                    _parentId: t.id,
-                });
-            });
-        } else {
-            data.push(t);
-        }
-    });
-
-    // Group by spendingType
-    const groups = { need: 0, want: 0, regret: 0, '': 0 };
-    data.forEach(t => {
-        const acc = accounts.find(a => a.id == t.accountId);
-        const amt = acc ? convertAmt(Math.abs(t.amount), acc.currency) : Math.abs(t.amount);
-        const key = t.spendingType || '';
-        groups[key] = (groups[key] || 0) + amt;
-    });
-    const total = Object.values(groups).reduce((s, v) => s + v, 0);
-
-    // Summary cards
-    const cardsEl = $('sa-summary-cards');
-    cardsEl.innerHTML = '';
-    const types = [
-        { key: 'need', label: '必须的', icon: 'bi-shield-check', color: '#0d6efd' },
-        { key: 'want', label: '想要的', icon: 'bi-star', color: '#fd7e14' },
-        { key: 'regret', label: '后悔的', icon: 'bi-emoji-frown', color: '#dc3545' },
-        { key: '',     label: '未标记', icon: 'bi-question-circle', color: '#6c757d' },
-    ];
-    types.forEach(tp => {
-        const amt = groups[tp.key] || 0;
-        const pct = total > 0 ? ((amt / total) * 100).toFixed(1) : '0.0';
-        cardsEl.innerHTML += `<div class="col-6">
-            <div class="card shadow-sm text-center py-2">
-                <div style="color:${tp.color};font-size:1.3rem;"><i class="bi ${tp.icon}"></i></div>
-                <div class="fw-bold" style="font-size:0.85rem;">${tp.label}</div>
-                <div class="fw-bold" style="color:${tp.color};">${formatAmount(amt,'RMB')}</div>
-                <div class="text-muted" style="font-size:0.75rem;">${pct}%</div>
-            </div>
-        </div>`;
-    });
-
-    // Pie chart
-    if (saChartType) { saChartType.destroy(); saChartType = null; }
-    const ctxPie = $('saTypeChart');
-    const pieLabels = types.map(t => t.label);
-    const pieData   = types.map(t => groups[t.key] || 0);
-    const pieColors = types.map(t => t.color);
-    saChartType = new Chart(ctxPie, {
-        type: 'doughnut',
-        data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors }] },
-        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, animation: { duration: 400 } }
-    });
-
-    // Trend chart (monthly)
-    if (saChartTrend) { saChartTrend.destroy(); saChartTrend = null; }
-    const months = {};
-    data.forEach(t => {
-        const m = t.date.substring(0,7);
-        const acc = accounts.find(a => a.id == t.accountId);
-        const amt = acc ? convertAmt(Math.abs(t.amount), acc.currency) : Math.abs(t.amount);
-        if (!months[m]) months[m] = { need:0, want:0, regret:0, '':0 };
-        const key = t.spendingType || '';
-        months[m][key] = (months[m][key] || 0) + amt;
-    });
-    const mLabels = Object.keys(months).sort();
-    const ctxTrend = $('saTrendChart');
-    ctxTrend.width = Math.max(mLabels.length * 70, 400);
-    saChartTrend = new Chart(ctxTrend, {
-        type: 'bar',
-        data: {
-            labels: mLabels,
-            datasets: [
-                { label:'必须', data: mLabels.map(m => months[m].need), backgroundColor:'#0d6efd' },
-                { label:'想要', data: mLabels.map(m => months[m].want), backgroundColor:'#fd7e14' },
-                { label:'后悔的', data: mLabels.map(m => months[m].regret), backgroundColor:'#dc3545', stack:'s' },
-                { label:'未标记', data: mLabels.map(m => months[m]['']), backgroundColor:'#adb5bd' },
-            ]
-        },
-        options: { maintainAspectRatio: false, scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } }, animation:{ duration:400 } }
-    });
-
-    // store data for filter re-render
-    window._saCurrentData = data;
-    renderSaDetailList();
-}
-
-function renderSaDetailList() {
-    const data = window._saCurrentData || [];
-    const filterType   = $('sa-filter-type')?.value || '';
-    const filterSearch = ($('sa-filter-search')?.value || '').toLowerCase();
-
-    let filtered = [...data].sort((a,b) => b.date.localeCompare(a.date));
-    if (filterType === 'none') {
-        filtered = filtered.filter(t => !t.spendingType || t.spendingType === '');
-    } else if (filterType) {
-        filtered = filtered.filter(t => t.spendingType === filterType);
-    }
-    if (filterSearch) {
-        filtered = filtered.filter(t =>
-            (t.category || '').toLowerCase().includes(filterSearch) ||
-            (t.desc || '').toLowerCase().includes(filterSearch)
-        );
-    }
-
-    const countEl = $('sa-detail-count');
-    if (countEl) countEl.textContent = `共 ${filtered.length} 条`;
-
-    const listEl = $('sa-detail-list');
-    listEl.innerHTML = '';
-
-    filtered.slice(0, 100).forEach(t => {
-        const acc = accounts.find(a => a.id == t.accountId);
-        if (!acc) return;
-        const sym = CURRENCY_SYMBOLS[acc.currency] || '';
-        const accDisplayName = getAccountDisplayName(acc);
-        const cfg = (getSpendingTypeConfig()[t.spendingType || '']) || { label:'未标记', color:'#6c757d', bg:'rgba(108,117,125,0.12)' };
-        const editId = t._parentId || t.id;
-        const isExpanded = !!t._parentId;
-        const descClean = t.desc || '';
-        const tagsHtml = t.tags
-            ? `<span style="color:var(--bs-secondary);font-size:0.78rem;"> <i class="bi bi-tag" style="font-size:0.62rem;"></i> ${t.tags}</span>`
-            : '';
-        const noteHtml = descClean
-            ? `<span style="color:var(--bs-secondary);font-size:0.78rem;"> <i class="bi bi-chat-left-text" style="font-size:0.62rem;"></i> ${descClean}</span>`
-            : '';
-        const stBadge = `<span style="font-size:0.62rem;background:${cfg.bg || cfg.color};color:${cfg.color};border-radius:3px;padding:0 4px;margin-left:4px;border:1px solid ${cfg.color};vertical-align:middle;">${cfg.label}</span>`;
-
-        const card = document.createElement('div');
-        card.className = 'mobile-transaction-card';
-        card.style.cursor = 'pointer';
-        card.innerHTML = `
-            <div class="card-line-1">
-                <span class="category-text">${t.category || ''}${stBadge}${isExpanded ? '' : ''}${tagsHtml}${getTxnBadge(t)}</span>
-                <div class="amount-expense fw-bold">${sym}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
-            </div>
-            <div class="card-line-2">
-                <span class="text-muted small">${t.date} · ${accDisplayName}${noteHtml}</span>
-            </div>`;
-
-        const isOwn = t.ownerName === currentUserName && !t._isArchived;
-        if (isOwn) {
-            card.addEventListener('click', () => {
-                const modalEl = $('editTransactionModal');
-                modalEl.style.zIndex = '2100';
-                const backdrop = () => { document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = '2050'); };
-                const onHide = () => {
-                    modalEl.style.zIndex = '';
-                    document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = '');
-                    modalEl.removeEventListener('hidden.bs.modal', onHide);
-                };
-                modalEl.addEventListener('hidden.bs.modal', onHide);
-                openEditTransaction(editId);
-                setTimeout(backdrop, 50);
-            });
-        } else {
-            card.style.cursor = 'default';
-            card.style.opacity = '0.75';
-        }
-        listEl.appendChild(card);
-    });
-}
 
 // ── 预算管理 ────────────────────────────────────────────────────
 
@@ -6450,6 +5718,206 @@ function deleteBudget(id) {
     budgets = budgets.filter(b => b.id !== id);
     triggerAutoSave();
     renderBudgetPane();
+}
+
+// AI data analysis
+// ── AI 分类修改建议执行 ──────────────────────────────────────
+function applyAiCatSuggestion(btnEl, type, action, oldName, newName) {
+    const card = btnEl.closest('.ai-cat-suggestion-card');
+    if (action === 'rename') {
+        if (!categories[type]) return;
+        const trimmed = (newName || '').trim();
+        if (!trimmed || trimmed === oldName) return;
+        if (categories[type].includes(trimmed)) { showToast('分类名已存在：' + trimmed, 'warning'); return; }
+        const idx = categories[type].indexOf(oldName);
+        if (idx > -1) categories[type][idx] = trimmed;
+        transactions.forEach(function(t) { if (t.type === type && t.category === oldName) t.category = trimmed; });
+        if (plannedTransactions) plannedTransactions.forEach(function(p) { if (p.type === type && p.category === oldName) p.category = trimmed; });
+        saveUserData(); triggerAutoSave(); renderCategorySettings();
+        displayedTransactionCount = 100; renderAllTransactions(); renderStats();
+        showToast('分类已重命名：' + oldName + ' → ' + trimmed, 'success');
+    } else if (action === 'delete') {
+        if (!categories[type]) return;
+        const transCount = transactions.filter(function(t) { return t.type === type && t.category === oldName; }).length;
+        if (transCount > 0 && !confirm('删除分类 "' + oldName + '"？\n将影响 ' + transCount + ' 条记录（改为"未分类"）')) return;
+        categories[type] = categories[type].filter(function(c) { return c !== oldName; });
+        transactions.forEach(function(t) { if (t.type === type && t.category === oldName) t.category = '未分类'; });
+        if (plannedTransactions) plannedTransactions.forEach(function(p) { if (p.type === type && p.category === oldName) p.category = '未分类'; });
+        delete categoryIcons[oldName];
+        saveUserData(); triggerAutoSave(); renderCategorySettings();
+        displayedTransactionCount = 100; renderAllTransactions(); renderStats();
+        showToast('分类已删除：' + oldName, 'success');
+    } else if (action === 'add') {
+        if (!categories[type]) return;
+        const trimmed = (newName || '').trim();
+        if (!trimmed) return;
+        if (categories[type].includes(trimmed)) { showToast('分类已存在：' + trimmed, 'warning'); return; }
+        categories[type].push(trimmed);
+        saveUserData(); triggerAutoSave(); renderCategorySettings();
+        showToast('已添加分类：' + trimmed, 'success');
+    }
+    if (card) {
+        card.style.opacity = '0.45';
+        card.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+        const badge = card.querySelector('.ai-cat-badge');
+        if (badge) { badge.textContent = '已应用'; badge.className = 'ai-cat-badge badge bg-success ms-2'; badge.style.display = ''; }
+    }
+}
+
+function renderAiCatSuggestions(suggestions, container) {
+    if (!suggestions || suggestions.length === 0) return;
+    const actionLabel = { rename: '重命名', delete: '删除', add: '添加' };
+    const actionColor = { rename: 'warning', delete: 'danger', add: 'success' };
+    const typeLabel = { expense: '支出', income: '收入' };
+    let html = '<div class="card shadow-sm mt-3 border-warning">';
+    html += '<div class="card-header bg-transparent fw-bold"><i class="bi bi-magic text-warning"></i> AI 分类优化建议 <span class="badge bg-warning text-dark ms-1">' + suggestions.length + ' 项</span></div>';
+    html += '<div class="card-body p-2">';
+    suggestions.forEach(function(s) {
+        const actLbl = actionLabel[s.action] || s.action;
+        const actColor = actionColor[s.action] || 'secondary';
+        const typeLbl = typeLabel[s.type] || s.type;
+        let desc = '';
+        if (s.action === 'rename') desc = '"' + s.old_name + '" → "' + s.new_name + '"';
+        else if (s.action === 'delete') desc = '"' + s.old_name + '"';
+        else if (s.action === 'add') desc = '"' + s.new_name + '"';
+        const oldEsc = (s.old_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const newEsc = (s.new_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        html += '<div class="ai-cat-suggestion-card d-flex align-items-start gap-2 p-2 mb-1 rounded border" style="transition:opacity .3s;">';
+        html += '<div class="flex-grow-1" style="font-size:0.88rem;">';
+        html += '<span class="badge bg-' + actColor + ' me-1">' + actLbl + '</span>';
+        html += '<span class="badge bg-secondary me-1">' + typeLbl + '</span>';
+        html += '<span>' + _escHtml(desc) + '</span>';
+        html += '<span class="ai-cat-badge badge ms-2" style="display:none;"></span>';
+        if (s.reason) html += '<div class="text-muted small mt-1">' + _escHtml(s.reason) + '</div>';
+        html += '</div>';
+        html += '<div class="d-flex gap-1 flex-shrink-0">';
+        html += '<button class="btn btn-sm btn-outline-' + actColor + ' py-0" onclick="applyAiCatSuggestion(this,\'' + s.type + '\',\'' + s.action + '\',\'' + oldEsc + '\',\'' + newEsc + '\')">应用</button>';
+        html += '<button class="btn btn-sm btn-outline-secondary py-0" onclick="this.closest(\'.ai-cat-suggestion-card\').remove()">忽略</button>';
+        html += '</div></div>';
+    });
+    html += '</div></div>';
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function renderAiAnalysis() {
+    var container = $('ai-analysis-content');
+    if (!container) return;
+    // abort any in-progress analysis
+    if (_aiAbortController) { _aiAbortController.abort(); _aiAbortController = null; }
+    var apiKey = localStorage.getItem('ai_api_key');
+    if (!apiKey) {
+        container.innerHTML = '<div class="text-center py-5"><i class="bi bi-robot" style="font-size:2.5rem;opacity:.4;"></i><p class="text-muted mt-3">尚未配置 AI 服务</p><p class="text-muted small">请前往 <a href="#" onclick="switchTab(\'settings\',document.querySelector(\'[onclick*=settings]\'));showSettingsSubpage(\'ai-config\');return false;">设置 → AI 配置</a> 填写接口信息</p></div>';
+        return;
+    }
+    container.innerHTML = '<div class="text-center py-5"><button class="btn btn-lg btn-outline-info px-5" onclick="runAiAnalysis()"><i class="bi bi-robot"></i> 开始分析</button><p class="text-muted small mt-3">点击按钮对当前月份进行 AI 消费分析</p></div>';
+}
+
+var _aiAbortController = null;
+
+function runAiAnalysis() {
+    var container = $('ai-analysis-content');
+    if (!container) return;
+    var apiUrl = localStorage.getItem('ai_api_url');
+    var apiKey = localStorage.getItem('ai_api_key');
+    if (!apiUrl || !apiKey) { renderAiAnalysis(); return; }
+    container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-info mb-3" role="status"></div><p class="text-muted">AI 分析中...</p></div>';
+    var year = statsNavYear, month = statsNavMonth;
+    var filterUser = currentStatsFilter.user || 'all';
+    var monthLabel = year + '年' + (month + 1) + '月';
+    var monthIncome = 0, monthExpense = 0;
+    var catSpend = {}, catIncome = {};
+    var source = historyMode ? historyTransactions : transactions;
+    var dispCurrency = currentStatsFilter.currency;
+    var monthTxns = source.filter(function(t) {
+        var d = t.date || '';
+        if (d.indexOf(String(year)) !== 0) return false;
+        var m = String(month + 1);
+        if (m.length < 2) m = '0' + m;
+        if (d.indexOf('-' + m) < 0) return false;
+        if (filterUser !== 'all' && t.user !== filterUser) return false;
+        return true;
+    });
+    monthTxns.forEach(function(t) {
+        var amt = convertAmt(parseFloat(t.amount) || 0, t.currency || 'RMB');
+        if (t.type === 'income') { monthIncome += amt; catIncome[t.category] = (catIncome[t.category] || 0) + amt; }
+        else { monthExpense += amt; catSpend[t.category] = (catSpend[t.category] || 0) + amt; }
+    });
+    var prevMonth = month - 1, prevYear = year;
+    if (prevMonth < 0) { prevMonth = 11; prevYear--; }
+    var prevTxns = source.filter(function(t) {
+        var d = t.date || '';
+        if (d.indexOf(String(prevYear)) !== 0) return false;
+        var m = String(prevMonth + 1);
+        if (m.length < 2) m = '0' + m;
+        if (d.indexOf('-' + m) < 0) return false;
+        if (filterUser !== 'all' && t.user !== filterUser) return false;
+        return true;
+    });
+    var prevIncome = 0, prevExpense = 0;
+    prevTxns.forEach(function(t) {
+        var amt = convertAmt(parseFloat(t.amount) || 0, t.currency || 'RMB');
+        if (t.type === 'income') prevIncome += amt; else prevExpense += amt;
+    });
+    var expenseCats = Object.keys(catSpend).sort(function(a,b) { return catSpend[b] - catSpend[a]; }).slice(0,5);
+    var incomeCats = Object.keys(catIncome).sort(function(a,b) { return catIncome[b] - catIncome[a]; }).slice(0,3);
+    var topExpense = expenseCats.map(function(c) { return c + '(' + formatAmount(catSpend[c], dispCurrency) + ')'; }).join('、');
+    var topIncome = incomeCats.map(function(c) { return c + '(' + formatAmount(catIncome[c], dispCurrency) + ')'; }).join('、');
+    var budgetInfo = '未设置预算';
+    if (budgets.length > 0) {
+        var over = [], near = [];
+        budgets.forEach(function(b) {
+            var ba = convertAmt(b.amount, b.currency || 'RMB');
+            var spent = b.category === '__total__' ? monthExpense : (catSpend[b.category] || 0);
+            var pct = ba > 0 ? Math.round(spent / ba * 100) : 0;
+            if (pct >= 100) over.push(b.category);
+            else if (pct >= 80) near.push(b.category);
+        });
+        if (over.length) budgetInfo = '超支类别：' + over.join('、');
+        else if (near.length) budgetInfo = '接近预算：' + near.join('、');
+        else budgetInfo = '各类别均在预算范围内';
+    }
+    var allExpCats = (categories.expense || []).join('、');
+    var allIncCats = (categories.income || []).join('、');
+    var prompt = '你是个人财务记账应用的分析助手。请严格以 JSON 格式返回，不要有任何多余文字、注释或 markdown 代码块。\n';
+    prompt += '返回格式：{"analysis":"消费分析（200字以内，中文）","suggestions":[{"action":"rename|delete|add","type":"expense|income","old_name":"原名(rename/delete必填)","new_name":"新名(rename/add必填)","reason":"简短理由"}]}\n';
+    prompt += 'suggestions：仅在发现分类确实有问题时填写（重复/混淆/错误分类的交易），若合理则返回 []。\n\n';
+    prompt += '月份：' + monthLabel + '\n';
+    prompt += '收入：' + formatAmount(monthIncome, dispCurrency) + '，支出：' + formatAmount(monthExpense, dispCurrency) + '，结余：' + formatAmount(monthIncome - monthExpense, dispCurrency) + '\n';
+    prompt += '上月收入：' + formatAmount(prevIncome, dispCurrency) + '，上月支出：' + formatAmount(prevExpense, dispCurrency) + '\n';
+    prompt += '支出TOP5：' + (topExpense || '无') + '\n';
+    prompt += '收入TOP3：' + (topIncome || '无') + '\n';
+    prompt += '预算：' + budgetInfo + '\n';
+    prompt += '当前支出分类：' + (allExpCats || '无') + '\n';
+    prompt += '当前收入分类：' + (allIncCats || '无') + '\n';
+    var model = localStorage.getItem('ai_model') || 'deepseek-chat';
+    // abort any previous analysis
+    if (_aiAbortController) _aiAbortController.abort();
+    _aiAbortController = new AbortController();
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({ model: model, messages: [{ role: 'user', content: prompt }], max_tokens: 1200, temperature: 0.5 }),
+        signal: _aiAbortController.signal
+    })
+    .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText); return res.json(); })
+    .then(function(data) {
+        var raw = '';
+        if (data && data.choices && data.choices[0] && data.choices[0].message) raw = data.choices[0].message.content;
+        var analysisText = raw, suggestions = [];
+        try {
+            var cleaned = raw.replace(/^```json\s*/m,'').replace(/^```\s*/m,'').replace(/```\s*$/m,'').trim();
+            var parsed = JSON.parse(cleaned);
+            analysisText = parsed.analysis || raw;
+            suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+        } catch(e) {
+            analysisText = raw; // 降级为纯文字
+        }
+        container.innerHTML = '<div class="card shadow-sm"><div class="card-header bg-transparent fw-bold"><i class="bi bi-robot text-info"></i> AI 消费分析 - ' + monthLabel + '</div><div class="card-body"><div style="white-space:pre-wrap;line-height:1.7;font-size:0.92rem;">' + _escHtml(analysisText) + '</div></div><div class="card-footer bg-transparent text-muted small text-end"><i class="bi bi-info-circle"></i> 分析由 ' + model + ' 生成，详情请以实际为准</div></div>';
+        renderAiCatSuggestions(suggestions, container);
+    })
+    .catch(function(err) {
+        container.innerHTML = '<div class="text-center py-5"><i class="bi bi-exclamation-triangle text-warning" style="font-size:2.5rem;"></i><p class="text-danger mt-3">AI 分析失败</p><p class="text-muted small">' + _escHtml(err.message) + '</p><button class="btn btn-outline-secondary btn-sm mt-2" onclick="renderAiAnalysis()"><i class="bi bi-arrow-clockwise"></i> 重试</button></div>';
+    });
 }
 
 
@@ -6668,18 +6136,8 @@ function updateAmountCurrencySymbol() {
     symEl.textContent = acc ? (CURRENCY_SYMBOLS[acc.currency] || acc.currency) : '¥';
 }
 
-// ── 消费类型分段药丸 ─────────────────────────────────────────
-function selectSpendingTypePill(val) {
-    setSpendingType(val);
-}
 
-function spendingTypePillSync() {
-    const sel = $('edit-trans-spending-type');
-    const val = sel ? (sel.value || '') : '';
-    $$('#st-pill-group .st-pill').forEach(p => {
-        p.classList.toggle('active', p.dataset.val === val);
-    });
-}
+
 
 function updateEditFormCategories() {
     const type = $('edit-trans-type').value;
@@ -6713,13 +6171,16 @@ function onSubModalHide() {
     $('edit-transfer-delete-btn').style.setProperty('display','none','important');
     $('edit-trans-submit-btn').textContent = '保存';
     $('edit-transfer-submit-btn').textContent = '保存';
-    clearOcrBanner();
     // 确保单笔区域可见
     const singleRow = $('single-item-row');
     const metaSec = $('single-meta-section');
     if (singleRow) singleRow.style.display = '';
     if (metaSec) metaSec.style.display = '';
     maybeReturnToDetail();
+    if (_fromChartDrawer && _chartDrawerData) {
+        _fromChartDrawer = false;
+        setTimeout(function() { showChartDrawer(_chartDrawerData.title, _chartDrawerData.txList); }, 100);
+    }
 }
 $('editTransactionModal').addEventListener('hidden.bs.modal', onSubModalHide);
 
@@ -6733,8 +6194,7 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
     const tags = $('edit-trans-tags').value;
     const desc = $('edit-trans-desc').value;
     const attachmentId = $('edit-trans-attachment-id')?.value || '';
-    const spendingType = type === 'expense' ? ($('edit-trans-spending-type').value || '') : '';
-
+    
     // 取分录（内联多笔）
     const itemsData = getInlineItems();
     // 拆分模式下如果 getInlineItems 返回 null，说明验证未通过（alert已弹），直接停止
@@ -6760,7 +6220,6 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
             amount: finalAmount, category, tags, desc,
             ...(itemsData ? { items: itemsData } : {}),
             ...(attachmentId ? { attachmentId } : {}),
-            ...(spendingType ? { spendingType } : {}),
             ownerName: currentUserName, isTransfer: false, updatedAt: Date.now()
         });
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
@@ -6775,7 +6234,6 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
         catGridSync('edit-trans-category', 'cat-grid-edit-trans-category');
         if (currentDetailAccountId) refreshDetailContent(currentDetailAccountId);
         resetInlineItems();
-        resetSpendingType();
         $('edit-trans-tags').value = '';
         $('edit-trans-desc').value = '';
         const hintEl = $('edit-trans-desc-hint');
@@ -6789,7 +6247,6 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
         if (t) {
             t.date = date; t.type = type; t.accountId = accountId;
             t.category = category; t.amount = finalAmount; t.tags = tags; t.desc = desc;
-            if (spendingType) t.spendingType = spendingType; else delete t.spendingType;
             if (itemsData) t.items = itemsData; else delete t.items;
             if (attachmentId) t.attachmentId = attachmentId; else delete t.attachmentId;
             t.updatedAt = Date.now();
@@ -7063,8 +6520,6 @@ const NEW_BADGE = '<em style="font-size:0.68rem;color:#fd7e14;font-style:italic;
 const UPDATED_BADGE = '<em style="font-size:0.68rem;color:#0d6efd;font-style:italic;margin-left:4px;">已更新</em>';
 function renderAllTransactions() {
     _statsDataVersion++; // 交易数据可能已变化，使统计页缓存失效
-    const tbody = $('transaction-table-body');
-    tbody.innerHTML = '';
     const mobileContainer = $('mobile-transaction-cards');
     if (mobileContainer) mobileContainer.innerHTML = '';
 
@@ -7087,57 +6542,7 @@ function renderAllTransactions() {
 
     const displayData = filtered.slice(0, Math.min(displayedTransactionCount, filtered.length));
 
-    displayData.forEach(t => {
-        const acc = accounts.find(a => a.id == t.accountId);
-        if (!acc) return;
-        const typeText = t.isTransfer ? '转账' : (t.amount < 0 ? '支出' : '收入');
-        const typeColorClass = t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success');
-
-        let toAccountDisplay = '', amountInDisplay = '';
-        if (t.isTransfer && t.type === 'expense') {
-            const accTo = accounts.find(a => a.id == t.relatedAccountId);
-            if (accTo) {
-                toAccountDisplay = `<small>${getAccountDisplayName(accTo)}</small>`;
-                let tIn = t.transferPairId ?
-                    transactions.find(tx => tx.transferPairId === t.transferPairId && tx.type === 'income') :
-                    transactions.find(tx => tx.isTransfer && tx.type === 'income' && tx.date === t.date && tx.relatedAccountId == t.accountId);
-                const amountIn = tIn ? Math.abs(tIn.amount) : Math.abs(t.amount);
-                amountInDisplay = `<div class="fw-bold text-warning">${CURRENCY_SYMBOLS[accTo.currency]}${formatAmount(amountIn, accTo.currency)}</div>`;
-            }
-        } else if (t.isTransfer && t.type === 'income') {
-            return; // 跳过转入记录
-        }
-
-        const canEdit = t.ownerName === currentUserName && !t._isArchived;
-        const canView = t.ownerName === currentUserName && t._isArchived; // 历史模式：自己的存档交易可查看
-        const editBtns = canEdit ? (t.isTransfer ?
-        `<i class="bi bi-pencil text-primary cursor-pointer me-2" style="cursor:pointer;" onclick="openEditTransfer(${t.id})"></i><i class="bi bi-trash text-danger cursor-pointer" style="cursor:pointer;" onclick="deleteTransaction(${t.id})"></i>` :
-        `<i class="bi bi-pencil text-primary cursor-pointer me-2" style="cursor:pointer;" onclick="openEditTransaction(${t.id})"></i><i class="bi bi-trash text-danger cursor-pointer" style="cursor:pointer;" onclick="deleteTransaction(${t.id})"></i>`) :
-        (canView ? `<i class="bi bi-eye text-secondary" style="cursor:pointer;" title="查看" onclick="${t.isTransfer ? `openEditTransfer(${t.id})` : `openEditTransaction(${t.id})`}"></i>` :
-        (!t.isTransfer ? `<i class="bi bi-eye text-secondary" style="cursor:pointer;" title="查看" onclick="openEditTransaction(${t.id})"></i>` : ''));
-
-        const tr = document.createElement('tr');
-        const tDescDisplay = t.items && t.items.length > 1
-            ? t.items.filter(it => it.desc).map(it => it.desc).join(' / ')
-            : (t.desc||'');
-        const tTagsDisplay = t.items && t.items.length > 1
-            ? t.items.filter(it => it.tags).map(it => `@${it.tags}`).join(' ')
-            : (t.tags||'');
-        tr.innerHTML = `
-            <td>${t.date}</td>
-            <td><div class="text-start ps-2 ${typeColorClass}">${typeText}</div></td>
-            <td>${t.isTransfer ? '' : (t.items && t.items.length > 1 ? t.items[0].category + '等' + (t.items.length-1) + '项' : (t.category || ''))}${!t.isTransfer ? getTxnBadge(t) : ''}</td>
-            <td><small>${getAccountDisplayName(acc)}</small>${t.isTransfer ? getTxnBadge(t) : ''}</td>
-            <td><div class="fw-bold ${t.isTransfer ? 'text-warning' : (t.amount < 0 ? 'text-danger' : 'text-success')}">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div></td>
-            <td>${toAccountDisplay}</td>
-            <td>${amountInDisplay}</td>
-            <td><div class="desc-content" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px;" title="${tDescDisplay.replace(/"/g,'&quot;')}">${tDescDisplay}${t.attachmentId ? ` <a href="${getDriveAttachmentUrl(t.attachmentId)}" target="_blank" title="查看附件" onclick="event.stopPropagation()"><i class="bi bi-paperclip text-muted"></i></a>` : ''}</div></td>
-            <td>${tTagsDisplay}</td>
-            <td><span class="badge bg-secondary">${t.ownerName}</span></td>
-            <td><div class="text-center">${editBtns}</div></td>`;
-        tbody.appendChild(tr);
-    });
-
+    // 移动端卡片
     if (mobileContainer) {
         displayData.forEach(t => {
             const acc = accounts.find(a => a.id == t.accountId);
@@ -7463,7 +6868,7 @@ async function handleAttachmentSelected(input) {
             currentIds.push(storedId);
             $('edit-trans-attachment-id').value = currentIds.join(',');
             renderAttachmentThumbs(currentIds);
-            if (verboseToast) showToast(`已上传（${fileSizeKB}KB）`, 'success', 3000);
+            showToast(`已上传（${fileSizeKB}KB）`, 'success', 3000);
         } else {
             showToast('上传失败：' + (result.error || '未知错误'), 'error');
         }
@@ -7661,12 +7066,14 @@ function toggleStatsFilter() {
 
 // ── 统计页子Tab切换 ─────────────────────────────────────────
 function switchStatsTab(tab) {
+    // abort AI analysis when leaving the AI tab
+    if (tab !== 'ai' && _aiAbortController) { _aiAbortController.abort(); _aiAbortController = null; }
     $$('.stats-sub-tab-btn').forEach(b => b.classList.remove('active'));
     $$('.stats-sub-pane').forEach(p => p.classList.remove('active'));
     $(`stats-tab-${tab}`).classList.add('active');
     $(`stats-pane-${tab}`).classList.add('active');
-    if (tab === 'spending') renderSpendingAnalysis();
     if (tab === 'budget') renderBudgetPane();
+    if (tab === 'ai') renderAiAnalysis();
 }
 
 
@@ -7874,8 +7281,7 @@ function renderStats() {
         categories.expense.forEach(c => sel.add(new Option(c, c)));
         if (categories.expense[0]) renderCategoryTrendChart(filtered);
     }
-    // 消费类型 / 预算子页若当前可见，同步刷新（集中在此处理，避免各个筛选入口各自维护一份遗漏）
-    if ($('stats-pane-spending')?.classList.contains('active')) renderSpendingAnalysis();
+    // 预算子页若当前可见，同步刷新（集中在此处理，避免各个筛选入口各自维护一份遗漏）
     if ($('stats-pane-budget')?.classList.contains('active')) renderBudgetPane();
 }
 
@@ -7886,9 +7292,9 @@ function showChartDrawer(title, txList) {
     const titleEl   = $('chart-drawer-title');
     const summaryEl = $('chart-drawer-summary');
     const body      = $('chart-drawer-body');
-    const isDesktop = window.innerWidth >= 768;
 
     titleEl.textContent = title;
+    _chartDrawerData = { title: title, txList: txList };
     body.innerHTML = '';
 
     if (!txList || txList.length === 0) {
@@ -7910,61 +7316,8 @@ function showChartDrawer(title, txList) {
             .filter(t => !(t.isTransfer && t.type === 'income'))
             .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
 
-        if (isDesktop) {
-            // ── 桌面：表格 ──
-            const table = document.createElement('table');
-            table.className = 'drawer-table';
-            table.innerHTML = `<thead><tr>
-                <th>日期</th><th>类别</th><th>账户</th><th>备注</th><th>标签</th><th style="text-align:right;">金额</th>
-            </tr></thead>`;
-            const tbody = document.createElement('tbody');
-
-            sorted.forEach(t => {
-                const acc = accounts.find(a => a.id == t.accountId);
-                if (!acc) return;
-                const tr = document.createElement('tr');
-
-                if (t.isTransfer && t.type === 'expense') {
-                    const accTo = accounts.find(a => a.id == t.relatedAccountId);
-                    const toName = accTo ? getAccountDisplayName(accTo) : '?';
-                    tr.innerHTML = `
-                        <td>${t.date}</td>
-                        <td><span class="text-primary"><i class="bi bi-arrow-left-right"></i> 转账</span></td>
-                        <td>${getAccountDisplayName(acc)} → ${toName}</td>
-                        <td class="text-muted">${t.desc || ''}</td>
-                        <td class="text-muted">${t.tags || ''}</td>
-                        <td style="text-align:right;" class="amount-transfer fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</td>`;
-                } else {
-                    const catDisplay = t.items && t.items.length > 1
-                        ? t.items[0].category + ' 等' + (t.items.length - 1) + '项'
-                        : (t.category || '') + (t._splitPortion ? ' <span class="text-muted" style="font-size:.72rem;">(拆分)</span>' : '');
-                    const amountClass = t.amount < 0 ? 'amount-expense' : 'amount-income';
-                    const attachIcon  = t.attachmentId ? ' <i class="bi bi-paperclip text-muted" style="font-size:.72rem;"></i>' : '';
-                    tr.innerHTML = `
-                        <td>${t.date}</td>
-                        <td>${catDisplay}${attachIcon}</td>
-                        <td class="text-muted">${getAccountDisplayName(acc)}</td>
-                        <td class="text-muted">${t.desc || ''}</td>
-                        <td class="text-muted" style="font-size:.8rem;">${t.tags ? '<i class="bi bi-tag" style="font-size:.65rem;"></i> ' + t.tags : ''}</td>
-                        <td style="text-align:right;" class="${amountClass} fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</td>`;
-                }
-
-                tr.addEventListener('click', () => {
-                    closeChartDrawer();
-                    setTimeout(() => {
-                        if (t.isTransfer) openEditTransfer(t.id);
-                        else openEditTransaction(t.id);
-                    }, 280);
-                });
-                tbody.appendChild(tr);
-            });
-
-            table.appendChild(tbody);
-            body.appendChild(table);
-
-        } else {
-            // ── 手机：卡片 ──
-            sorted.forEach(t => {
+        // ── 卡片 ──
+        sorted.forEach(t => {
                 const acc = accounts.find(a => a.id == t.accountId);
                 if (!acc) return;
                 const card = document.createElement('div');
@@ -8001,6 +7354,7 @@ function showChartDrawer(title, txList) {
                 }
 
                 card.addEventListener('click', () => {
+                    _fromChartDrawer = true;
                     closeChartDrawer();
                     setTimeout(() => {
                         if (t.isTransfer) openEditTransfer(t.id);
@@ -8010,7 +7364,6 @@ function showChartDrawer(title, txList) {
                 body.appendChild(card);
             });
         }
-    }
 
     backdrop.classList.add('show');
     drawer.classList.add('show');
@@ -8373,6 +7726,16 @@ function closeChartDrawer() {
     $('chart-drawer').classList.remove('show');
     $('chart-drawer-backdrop').classList.remove('show');
     document.body.style.overflow = '';
+    // 注意：_fromChartDrawer 不在此处清除——若是点击流水卡片触发的关闭，
+    // 需要保留该标记以便弹窗关闭后重新弹出抽屉。只有用户主动关闭时才清除。
+    if (!_fromChartDrawer) {
+        // already false, nothing to do
+    }
+}
+
+function closeChartDrawerByUser() {
+    _fromChartDrawer = false;
+    closeChartDrawer();
 }
 
 // 拆分交易钻取辅助：按类别取出对应分录的"虚拟流水"，金额只取该分录自身金额，
@@ -8387,7 +7750,7 @@ function expandTxByCategory(t, cat) {
                 category: it.category,
                 tags: it.tags || t.tags,
                 desc: it.desc || t.desc,
-                spendingType: it.spendingType || t.spendingType,
+                
                 items: undefined,
                 _splitPortion: true
             }));
@@ -8411,7 +7774,7 @@ function expandTxByTag(t, tag) {
                 category: it.category,
                 tags: it.tags || t.tags,
                 desc: it.desc || t.desc,
-                spendingType: it.spendingType || t.spendingType,
+                
                 items: undefined,
                 _splitPortion: true
             }));
@@ -8716,17 +8079,46 @@ function switchTab(t, el) {
     if (t !== 'account-detail') currentDetailAccountId = null;
 
     $$('.view-section').forEach(v => v.classList.remove('active-view'));
-    $(`view-${t}`).classList.add('active-view');
+    const viewEl = $(`view-${t}`);
+    if (viewEl) viewEl.classList.add('active-view');
     $$('.nav-link').forEach(n => n.classList.remove('active'));
     if (el) el.classList.add('active');
 
     const fab = $('mobile-fab-group');
-    // 历史模式下始终隐藏新增悬浮按钮
-    if (fab) fab.classList.toggle('d-none', t !== 'transactions' || historyMode);
+    // 历史模式或桌面端下始终隐藏悬浮按钮
+    if (fab) fab.classList.toggle('d-none', t !== 'transactions' || historyMode || window.innerWidth > 768);
 
     if (t === 'stats') { renderStats(); maybeShowInsight(); }
-    if (t === 'planned') renderPlannedTransactions();
-    if (t === 'settings') { renderExchangeRateSettings(); initPasswordHint(); renderUserManagement(); renderArchiveManagementUI(); }
+    if (t === 'settings') { showSettingsMenu(); renderExchangeRateSettings(); initPasswordHint(); renderUserManagement(); renderArchiveManagementUI(); }
+}
+
+function showSettingsMenu() {
+    $('settings-menu').style.display = 'block';
+    $$('.settings-subpage').forEach(function(el) { el.classList.remove('active'); });
+}
+function showSettingsSubpage(name) {
+    $('settings-menu').style.display = 'none';
+    $$('.settings-subpage').forEach(function(el) { el.classList.remove('active'); });
+    var sub = $('settings-sub-' + name);
+    if (sub) sub.classList.add('active');
+    if (name === 'exchange-rate') renderExchangeRateSettings();
+    if (name === 'categories') renderCategorySettings();
+    if (name === 'users') { renderUserManagement(); initPasswordHint(); }
+    if (name === 'archive') renderArchiveManagementUI();
+    if (name === 'password') initPasswordHint();
+    if (name === 'ai-config') loadAiConfig();
+    if (name === 'planned') renderPlannedTransactions();
+}
+function saveAiConfig() {
+    var key = $('ai-api-key').value.trim();
+    if (!key) { showToast('请填写 DeepSeek API Key', 'warning'); return; }
+    localStorage.setItem('ai_api_url', 'https://api.deepseek.com/v1/chat/completions');
+    localStorage.setItem('ai_api_key', key);
+    localStorage.setItem('ai_model', 'deepseek-chat');
+    showToast('DeepSeek 配置已保存', 'success');
+}
+function loadAiConfig() {
+    $('ai-api-key').value = localStorage.getItem('ai_api_key') || '';
 }
 
 
@@ -8910,42 +8302,46 @@ function setExchangeRate(from, to, rate) {
 }
 
 function renderCategorySettings() {
-    const render = (type, id) => {
-        const div = $(id);
+    var render = function(type, id) {
+        var div = $(id);
         if (!div) return;
         div.innerHTML = '';
         if (!categories[type]) return;
-        categories[type].forEach((cat, idx) => {
-            const el = document.createElement('span');
-            const meta = getCatIcon(cat);
-            el.className = 'badge bg-white text-dark border draggable-badge p-2 me-2 mb-2 d-inline-flex align-items-center';
-            el.innerHTML = `<span class="cat-icon-mini" style="--cat-color:${meta.color};--cat-color-rgb:${_hexToRgbStr(meta.color)};" onclick="openIconPicker('${type}','${cat}')" title="设置图标"><i class="bi ${meta.icon}"></i></span>` +
-                `<span class="cat-text" style="cursor:pointer;" title="点击修改名称" onclick="editCategoryName('${type}', '${cat}')">${cat}</span> <i class="bi bi-x text-danger ms-1" style="cursor:pointer;" onclick="removeCategory('${type}','${cat}')"></i>`;
-            el.draggable = true; el.dataset.idx = idx; el.dataset.type = type;
-            el.addEventListener('dragstart', function() { window.dragCatIdx = idx; window.dragCatType = type; this.classList.add('dragging'); });
-            el.addEventListener('dragend', function() { this.classList.remove('dragging'); });
-            el.addEventListener('dragover', e => e.preventDefault());
-            el.addEventListener('drop', (e) => {
-                e.preventDefault();
-                if (window.dragCatType !== type) return;
-                const badge = e.target.closest('.draggable-badge');
-                if (!badge) return;
-                const targetIdx = parseInt(badge.dataset.idx);
-                const list = categories[type];
-                const [moved] = list.splice(window.dragCatIdx, 1);
-                list.splice(targetIdx, 0, moved);
-                saveUserData(); triggerAutoSave(); renderCategorySettings();
-            });
-            div.appendChild(el);
+        var list = document.createElement('div');
+        list.className = 'cat-sort-list';
+        categories[type].forEach(function(cat, idx) {
+            var meta = getCatIcon(cat);
+            var row = document.createElement('div');
+            row.className = 'cat-sort-item d-flex align-items-center gap-2 p-2 mb-1 rounded border';
+            row.style.background = 'var(--bs-secondary-bg)';
+            row.innerHTML = '\
+                <div class="d-flex flex-column gap-0">\
+                    <button class="btn btn-sm py-0 px-1 ' + (idx === 0 ? 'invisible' : '') + '" onclick="moveCategory(\'' + type + '\',' + idx + ',-1)" style="line-height:1;"><i class="bi bi-chevron-up"></i></button>\
+                    <button class="btn btn-sm py-0 px-1 ' + (idx === categories[type].length - 1 ? 'invisible' : '') + '" onclick="moveCategory(\'' + type + '\',' + idx + ',1)" style="line-height:1;"><i class="bi bi-chevron-down"></i></button>\
+                </div>\
+                <span class="cat-icon-mini" style="--cat-color:' + meta.color + ';--cat-color-rgb:' + _hexToRgbStr(meta.color) + ';cursor:pointer;" onclick="openIconPicker(\'' + type + '\',\'' + cat + '\')" title="设置图标"><i class="bi ' + meta.icon + '"></i></span>\
+                <span class="cat-text flex-grow-1" style="cursor:pointer;" title="点击修改名称" onclick="editCategoryName(\'' + type + '\',\'' + cat + '\')">' + cat + '</span>\
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeCategory(\'' + type + '\',\'' + cat + '\')" title="删除分类"><i class="bi bi-trash"></i></button>';
+            row.dataset.idx = idx;
+            row.dataset.type = type;
+            list.appendChild(row);
         });
+        div.appendChild(list);
     };
     render('expense', 'expense-cat-container');
     render('income', 'income-cat-container');
     updateSelectOptions();
 }
 
-function allowDrop(e) { e.preventDefault(); }
-function dropCategory(e, type) { e.preventDefault(); }
+function moveCategory(type, idx, dir) {
+    var list = categories[type];
+    var target = idx + dir;
+    if (target < 0 || target >= list.length) return;
+    var temp = list[idx];
+    list[idx] = list[target];
+    list[target] = temp;
+    saveUserData(); triggerAutoSave(); renderCategorySettings();
+}
 
 function addCategory(e, type) {
     e.preventDefault();
@@ -8954,6 +8350,7 @@ function addCategory(e, type) {
     if (val && !categories[type].includes(val)) {
         categories[type].push(val); input.value = '';
         saveUserData(); triggerAutoSave(); renderCategorySettings();
+        setTimeout(function() { openIconPicker(type, val); }, 100);
     }
 }
 
@@ -8975,21 +8372,59 @@ function removeCategory(type, cat) {
 
 // ── 分类图标选择器 ───────────────────────────────────────────
 const ICON_PICKER_LIST = [
-    'bi-cup-hot-fill','bi-egg-fried','bi-cart-fill','bi-bag-fill','bi-bus-front-fill','bi-car-front-fill',
-    'bi-airplane-fill','bi-train-front-fill','bi-house-door-fill','bi-building','bi-lightning-charge-fill','bi-droplet-fill',
-    'bi-controller','bi-film','bi-music-note-beamed','bi-dice-5-fill','bi-heart-pulse-fill','bi-capsule',
-    'bi-mortarboard-fill','bi-book-fill','bi-phone-fill','bi-wifi','bi-handbag-fill','bi-gem',
-    'bi-laptop','bi-camera-fill','bi-emoji-smile-fill','bi-gift-fill','bi-bicycle','bi-trophy-fill',
-    'bi-stars','bi-scissors','bi-shield-check','bi-graph-up-arrow','bi-cash-coin','bi-briefcase-fill',
-    'bi-piggy-bank-fill','bi-wallet2','bi-credit-card-fill','bi-receipt','bi-arrow-counterclockwise','bi-tools',
-    'bi-tree-fill','bi-cup-straw','bi-basket-fill','bi-umbrella-fill','bi-balloon-fill','bi-three-dots',
-    'bi-cup-fill','bi-flower1','bi-basket2-fill','bi-moon-stars-fill','bi-people-fill',
-    'bi-p-circle-fill','bi-fuel-pump-fill','bi-hammer','bi-house-gear-fill','bi-plug-fill','bi-ticket-perforated-fill',
-    'bi-mic-fill','bi-collection-play-fill','bi-patch-check-fill','bi-clipboard2-pulse-fill','bi-person-arms-up','bi-water',
-    'bi-easel2-fill','bi-pencil-square','bi-pencil-fill','bi-droplet-half','bi-heart-fill','bi-receipt-cutoff',
-    'bi-exclamation-octagon-fill','bi-box-seam-fill','bi-bank','bi-question-circle','bi-sliders','bi-tag-fill',
-    'bi-flower2','bi-basket3-fill','bi-droplet','bi-bag-check-fill',
-    'bi-bag-dash-fill','bi-bandaid-fill','bi-emoji-laughing-fill','bi-person-fill','bi-envelope-fill'
+    // 餐饮
+    'bi-cup-hot-fill','bi-cup-straw','bi-cup-fill','bi-basket-fill','bi-basket2-fill','bi-basket3-fill',
+    'bi-egg-fried','bi-flower1','bi-flower2',
+    // 交通
+    'bi-car-front-fill','bi-bus-front-fill','bi-train-front-fill','bi-airplane-fill','bi-bicycle',
+    'bi-fuel-pump-fill','bi-scooter','bi-ship-fill','bi-geo-alt-fill','bi-signpost-fill',
+    // 住房
+    'bi-house-fill','bi-house-door-fill','bi-house-gear-fill','bi-building','bi-building-fill','bi-door-open-fill',
+    'bi-key-fill','bi-lamp-fill','bi-fan','bi-tools','bi-hammer','bi-bricks',
+    // 购物
+    'bi-handbag-fill','bi-bag-fill','bi-bag-check-fill','bi-bag-dash-fill','bi-bag-plus-fill',
+    'bi-cart-fill','bi-cart-check-fill','bi-box-seam-fill','bi-gift-fill','bi-tshirt-fill',
+    'bi-gem','bi-tag-fill','bi-tags-fill',
+    // 娱乐
+    'bi-controller','bi-film','bi-music-note-beamed','bi-dice-5-fill','bi-camera-reels-fill',
+    'bi-camera-fill','bi-headset','bi-boombox-fill','bi-play-circle-fill','bi-collection-play-fill',
+    'bi-mic-fill','bi-easel2-fill',
+    // 医疗
+    'bi-heart-pulse-fill','bi-capsule','bi-bandaid-fill','bi-heart-fill','bi-heartbreak-fill',
+    'bi-activity','bi-droplet','bi-droplet-fill','bi-eyedropper','bi-exclamation-octagon-fill','bi-shield-plus',
+    // 教育
+    'bi-mortarboard-fill','bi-book-fill','bi-book-half','bi-journal-text','bi-pencil-square',
+    'bi-pencil-fill','bi-pen-fill','bi-pen','bi-clipboard2-pulse-fill','bi-globe2',
+    // 数码
+    'bi-laptop','bi-phone-fill','bi-tablet-fill','bi-wifi','bi-bluetooth','bi-printer-fill',
+    'bi-cpu-fill','bi-motherboard-fill','bi-usb-drive-fill','bi-watch','bi-smartwatch',
+    // 运动
+    'bi-trophy-fill','bi-award-fill','bi-star-fill','bi-emoji-sunglasses-fill','bi-person-arms-up',
+    // 人情往来
+    'bi-people-fill','bi-person-fill','bi-people','bi-person-heart','bi-envelope-fill',
+    'bi-envelope-paper-fill','bi-chat-heart-fill','bi-suit-heart-fill','bi-balloon-fill',
+    // 旅行
+    'bi-suitcase-fill','bi-suitcase2-fill','bi-compass-fill','bi-map-fill','bi-globe-asia-australia',
+    'bi-sun-fill','bi-umbrella-fill','bi-tree-fill','bi-moon-stars-fill','bi-water',
+    // 宠物
+    'bi-p-circle-fill','bi-paw','bi-cat-fill','bi-dog-fill','bi-bug-fill','bi-tree',
+    // 工资/收入
+    'bi-cash-coin','bi-cash-stack','bi-bank','bi-wallet2','bi-credit-card-fill','bi-wallet-fill',
+    'bi-coin','bi-piggy-bank-fill','bi-briefcase-fill','bi-briefcase','bi-bar-chart-fill',
+    // 投资/理财
+    'bi-graph-up-arrow','bi-graph-down-arrow','bi-graph-up','bi-pie-chart-fill','bi-bar-chart-line-fill',
+    'bi-currency-exchange','bi-arrow-up-circle-fill','bi-arrow-down-circle-fill',
+    // 礼金/退款
+    'bi-gift','bi-megaphone-fill','bi-bell-fill','bi-ticket-perforated-fill','bi-receipt',
+    'bi-receipt-cutoff','bi-arrow-counterclockwise','bi-arrow-return-left','bi-send-fill',
+    // 其他
+    'bi-three-dots','bi-question-circle','bi-sliders','bi-shield-check','bi-patch-check-fill',
+    'bi-check-circle-fill','bi-x-circle-fill','bi-plus-circle-fill','bi-dash-circle-fill',
+    'bi-info-circle-fill','bi-exclamation-triangle-fill','bi-cloud-sun-fill','bi-fire',
+    'bi-trash-fill','bi-folder-fill','bi-file-earmark-text','bi-clipboard-data','bi-stopwatch-fill',
+    'bi-box-fill','bi-cone-striped','bi-brightness-high-fill','bi-palette-fill',
+    'bi-emoji-smile-fill','bi-stars','bi-scissors','bi-umbrella','bi-moon',
+    'bi-lightning-charge-fill','bi-plug-fill','bi-droplet-half',
 ];
 const ICON_PICKER_COLORS = ['#fd7e14','#dc3545','#d63384','#6610f2','#0d6efd','#0dcaf0','#198754','#6c757d'];
 
@@ -10467,12 +9902,12 @@ window.addEventListener('online', () => {
     <div id="backup-drawer-body" style="overflow-y:auto;flex:1;padding:16px;"></div>
 </div>
 
-<div id="chart-drawer-backdrop" onclick="closeChartDrawer()"></div>
+<div id="chart-drawer-backdrop" onclick="closeChartDrawerByUser()"></div>
 <div id="chart-drawer">
     <div id="chart-drawer-header">
         <span id="chart-drawer-title"></span>
         <span id="chart-drawer-summary"></span>
-        <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeChartDrawer()">
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeChartDrawerByUser()">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
@@ -10510,7 +9945,6 @@ window.addEventListener('online', () => {
     </div>
 </div>
 
-</body></html>
 <div id="log-drawer-backdrop" onclick="closeLogDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1060;opacity:0;pointer-events:none;transition:opacity .25s;"></div>
 <div id="log-drawer" style="position:fixed;left:0;right:0;bottom:0;z-index:1061;background:var(--bs-body-bg);border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,0.2);max-height:85vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);">
     <!-- 抽屉顶栏 -->
