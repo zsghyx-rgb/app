@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
+<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>记一笔 v2.5.0</title>
@@ -5879,7 +5879,7 @@ function runAiAnalysis() {
     var allExpCats = (categories.expense || []).join('、');
     var allIncCats = (categories.income || []).join('、');
     var prompt = '你是个人财务记账应用的分析助手。请严格以 JSON 格式返回，不要有任何多余文字、注释或 markdown 代码块。\n';
-    prompt += '返回格式：{"analysis":"消费分析（200字以内，中文）","suggestions":[{"action":"rename|delete|add","type":"expense|income","old_name":"原名(rename/delete必填)","new_name":"新名(rename/add必填)","reason":"简短理由"}]}\n';
+    prompt += '返回格式：{"analysis":"消费分析（500字以内，中文）","suggestions":[{"action":"rename|delete|add","type":"expense|income","old_name":"原名(rename/delete必填)","new_name":"新名(rename/add必填)","reason":"简短理由"}]}\n';
     prompt += 'suggestions：仅在发现分类确实有问题时填写（重复/混淆/错误分类的交易），若合理则返回 []。\n\n';
     prompt += '月份：' + monthLabel + '\n';
     prompt += '收入：' + formatAmount(monthIncome, dispCurrency) + '，支出：' + formatAmount(monthExpense, dispCurrency) + '，结余：' + formatAmount(monthIncome - monthExpense, dispCurrency) + '\n';
