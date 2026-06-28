@@ -5799,27 +5799,38 @@ function renderAiCatSuggestions(suggestions, container) {
     container.insertAdjacentHTML('beforeend', html);
 }
 
-function renderAiAnalysis() {
+var _aiResultCache = null; // {html, month, year} — 保留到登出
+
+function renderAiAnalysis(forceRefresh) {
     var container = $('ai-analysis-content');
     if (!container) return;
-    // abort any in-progress analysis
-    if (_aiAbortController) { _aiAbortController.abort(); _aiAbortController = null; }
     var apiKey = localStorage.getItem('ai_api_key');
     if (!apiKey) {
         container.innerHTML = '<div class="text-center py-5"><i class="bi bi-robot" style="font-size:2.5rem;opacity:.4;"></i><p class="text-muted mt-3">尚未配置 AI 服务</p><p class="text-muted small">请前往 <a href="#" onclick="switchTab(\'settings\',document.querySelector(\'[onclick*=settings]\'));showSettingsSubpage(\'ai-config\');return false;">设置 → AI 配置</a> 填写接口信息</p></div>';
         return;
     }
-    container.innerHTML = '<div class="text-center py-5"><button class="btn btn-lg btn-outline-info px-5" onclick="runAiAnalysis()"><i class="bi bi-robot"></i> 开始分析</button><p class="text-muted small mt-3">点击按钮对当前月份进行 AI 消费分析</p></div>';
+    // 有缓存且不强制刷新 → 直接复用
+    if (!forceRefresh && _aiResultCache) {
+        container.innerHTML = _aiResultCache;
+        return;
+    }
+    // 没有缓存 → 显示"开始分析"入口
+    container.innerHTML = '<div class="text-center py-5"><button class="btn btn-lg btn-outline-info px-5" onclick="_doRunAiAnalysis()"><i class="bi bi-robot"></i> 开始分析</button><p class="text-muted small mt-3">点击按钮对当前月份进行 AI 消费分析</p></div>';
 }
 
 var _aiAbortController = null;
 
 function runAiAnalysis() {
+    _aiResultCache = null; // 强制刷新时清除缓存
+    renderAiAnalysis(true);
+}
+
+function _doRunAiAnalysis() {
     var container = $('ai-analysis-content');
     if (!container) return;
     var apiUrl = localStorage.getItem('ai_api_url');
     var apiKey = localStorage.getItem('ai_api_key');
-    if (!apiUrl || !apiKey) { renderAiAnalysis(); return; }
+    if (!apiUrl || !apiKey) { renderAiAnalysis(false); return; }
     container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-info mb-3" role="status"></div><p class="text-muted">AI 分析中...</p></div>';
     var year = statsNavYear, month = statsNavMonth;
     var filterUser = currentStatsFilter.user || 'all';
@@ -5921,6 +5932,10 @@ function runAiAnalysis() {
         }
         container.innerHTML = '<div class="card shadow-sm"><div class="card-header bg-transparent fw-bold"><i class="bi bi-robot text-info"></i> AI 消费分析 - ' + monthLabel + '</div><div class="card-body"><div style="white-space:pre-wrap;line-height:1.7;font-size:0.92rem;">' + _escHtml(analysisText) + '</div></div><div class="card-footer bg-transparent text-muted small text-end"><i class="bi bi-info-circle"></i> 分析由 ' + model + ' 生成，详情请以实际为准</div></div>';
         renderAiCatSuggestions(suggestions, container);
+        // 在底部追加"重新分析"按钮
+        container.insertAdjacentHTML('beforeend', '<div class="text-center mt-3 mb-1"><button class="btn btn-sm btn-outline-secondary" onclick="runAiAnalysis()"><i class="bi bi-arrow-clockwise me-1"></i>重新分析</button></div>');
+        // 存入缓存（含分类建议卡片 HTML）
+        _aiResultCache = container.innerHTML;
     })
     .catch(function(err) {
         container.innerHTML = '<div class="text-center py-5"><i class="bi bi-exclamation-triangle text-warning" style="font-size:2.5rem;"></i><p class="text-danger mt-3">AI 分析失败</p><p class="text-muted small">' + _escHtml(err.message) + '</p><button class="btn btn-outline-secondary btn-sm mt-2" onclick="renderAiAnalysis()"><i class="bi bi-arrow-clockwise"></i> 重试</button></div>';
@@ -7080,7 +7095,7 @@ function switchStatsTab(tab) {
     $(`stats-tab-${tab}`).classList.add('active');
     $(`stats-pane-${tab}`).classList.add('active');
     if (tab === 'budget') renderBudgetPane();
-    if (tab === 'ai') renderAiAnalysis();
+    if (tab === 'ai') renderAiAnalysis(false); // false = 不强制刷新，有缓存则复用
 }
 
 
