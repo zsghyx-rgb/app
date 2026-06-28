@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
+﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>记一笔 v2.5.0</title>
@@ -5834,7 +5834,7 @@ function runAiAnalysis() {
         var m = String(month + 1);
         if (m.length < 2) m = '0' + m;
         if (d.indexOf('-' + m) < 0) return false;
-        if (filterUser !== 'all' && t.user !== filterUser) return false;
+        if (filterUser !== 'all' && t.ownerName !== filterUser) return false;
         return true;
     });
     monthTxns.forEach(function(t) {
@@ -5850,7 +5850,7 @@ function runAiAnalysis() {
         var m = String(prevMonth + 1);
         if (m.length < 2) m = '0' + m;
         if (d.indexOf('-' + m) < 0) return false;
-        if (filterUser !== 'all' && t.user !== filterUser) return false;
+        if (filterUser !== 'all' && t.ownerName !== filterUser) return false;
         return true;
     });
     var prevIncome = 0, prevExpense = 0;
@@ -5896,7 +5896,7 @@ function runAiAnalysis() {
     fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-        body: JSON.stringify({ model: model, messages: [{ role: 'user', content: prompt }], max_tokens: 1200, temperature: 0.5 }),
+        body: JSON.stringify({ model: model, messages: [{ role: 'user', content: prompt }], max_tokens: 2000, temperature: 0.5 }),
         signal: _aiAbortController.signal
     })
     .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText); return res.json(); })
