@@ -4938,10 +4938,12 @@ function renderDetailContent(id) {
             if (isTransfer) {
                 const { tOut, tIn } = resolveTransfer(t);
                 if (tOut) canEdit = (tOut.ownerName === currentUserName) && !t._isArchived;
-                const fromAcc = tOut ? accounts.find(a => a.id == tOut.accountId) : null;
-                const toAcc   = tIn  ? accounts.find(a => a.id == tIn.accountId)  : null;
-                const fromName = fromAcc ? getAccountDisplayName(fromAcc) : '?';
-                const toName   = toAcc   ? getAccountDisplayName(toAcc)   : '?';
+                const fromAcc = tOut ? accounts.find(a => a.id == tOut.accountId)
+                              : (t.type === 'income' ? accounts.find(a => a.id == t.relatedAccountId) : null);
+                const toAcc   = tIn  ? accounts.find(a => a.id == tIn.accountId)
+                              : (t.type === 'expense' ? accounts.find(a => a.id == t.relatedAccountId) : null);
+                const fromName = fromAcc ? getAccountDisplayName(fromAcc) : (tOut ? '?' : '(已存档)');
+                const toName   = toAcc   ? getAccountDisplayName(toAcc)   : (tIn  ? '?' : '(已存档)');
                 titleHtml = `<span style="font-size:0.83rem;font-weight:600;">${fromName}<span style="color:var(--bs-primary);margin:0 2px;">→</span>${toName}${getTxnBadge(t)}</span>`;
                 const cleanDesc = tOut ? (tOut.desc || '') : (t.desc || '');
                 if (cleanDesc) subLine += ' · ' + cleanDesc;
