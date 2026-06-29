@@ -3318,18 +3318,29 @@ async function archiveYear(year) {
             users: dataUsers, categories, exchangeRates,
             allUserData: {}
         };
+        // 只存档资产账户，应收和负债账户不纳入存档
+        const archivableAccTypes = ['Asset'];
+        const archivableAccIds = new Set(
+            accounts.filter(a => archivableAccTypes.includes(a.accountType || 'Asset')).map(a => a.id)
+        );
+        // 只保留属于可存档账户的交易
+        const archivableTrans = yearTrans.filter(t =>
+            archivableAccIds.has(t.accountId) ||
+            (t.isTransfer && (archivableAccIds.has(t.fromAccountId) || archivableAccIds.has(t.toAccountId)))
+        );
+
         dataUsers.forEach(u => {
             archiveData.allUserData[u] = {
-                accounts: accounts.filter(a => a.ownerName === u).map(a => ({...a})),
-                transactions: yearTrans.filter(t => t.ownerName === u),
+                accounts: accounts.filter(a => a.ownerName === u && archivableAccTypes.includes(a.accountType || 'Asset')).map(a => ({...a})),
+                transactions: archivableTrans.filter(t => t.ownerName === u),
                 plannedTransactions: []
             };
         });
 
-        // 为每个账户生成期初余额基准交易（净额 = 该年所有交易之和）
+        // 为每个可存档账户生成期初余额基准交易
         const baselineDate = `${year}-12-31`;
-        accounts.forEach(acc => {
-            const yearSum = yearTrans.filter(t => t.accountId == acc.id)
+        accounts.filter(a => archivableAccIds.has(a.id)).forEach(acc => {
+            const yearSum = archivableTrans.filter(t => t.accountId == acc.id)
                 .reduce((s, t) => s + parseFloat(t.amount), 0);
             if (yearSum !== 0) {
                 transactions.push({
@@ -3345,15 +3356,17 @@ async function archiveYear(year) {
                 });
             }
         });
-
-        // 从主数据删除该年原始交易
-        const removeIds = new Set(yearTrans.map(t => t.id));
-        transactions = transactions.filter(t => !removeIds.has(t.id));
         
-        // 【新增代码】记录到删除日志，防止被 mergeData 幽灵复活
+        // 从主数据删除的只是可存档账户的交易（应收/负债交易保留在主数据）
+        const archiveRemoveIds = new Set(archivableTrans.map(t => t.id));
+
+        // 从主数据删除已存档的交易（应收/负债账户的交易不删除，继续保留在主数据）
+        transactions = transactions.filter(t => !archiveRemoveIds.has(t.id));
+        
+        // 记录到删除日志，防止被 mergeData 幽灵复活
         if (!inMemoryLoadedData.deletedLog) inMemoryLoadedData.deletedLog = [];
         const nowTime = Date.now();
-        removeIds.forEach(id => {
+        archiveRemoveIds.forEach(id => {
             inMemoryLoadedData.deletedLog.push({ id: String(id), deletedAt: nowTime, type: 'transaction' });
         });
 
