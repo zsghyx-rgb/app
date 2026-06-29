@@ -4874,6 +4874,13 @@ function renderDetailContent(id) {
             const pair = transactions.filter(x => x.transferPairId === t.transferPairId);
             tOut = pair.find(x => x.type === 'expense');
             tIn  = pair.find(x => x.type === 'income');
+            // 归档后配对记录可能只剩一条，用 relatedAccountId 兜底
+            if (!tOut && tIn && tIn.relatedAccountId) {
+                tOut = transactions.find(x => x.isTransfer && x.type === 'expense' && x.accountId == tIn.relatedAccountId && x.date === tIn.date);
+            }
+            if (!tIn && tOut && tOut.relatedAccountId) {
+                tIn = transactions.find(x => x.isTransfer && x.type === 'income' && x.accountId == tOut.relatedAccountId && x.date === tOut.date);
+            }
         } else {
             if (t.type === 'expense') {
                 tOut = t;
