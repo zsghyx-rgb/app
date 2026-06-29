@@ -2529,6 +2529,8 @@ let currentUserName = null;
 let hasUnsavedChanges = false;
 let driveAutoSaveTimer = null;   // 防抖计时器
 let _lastTransPrefs = {};        // 上次新增交易的选项（仅本次会话有效）
+let _configUpdatedAt = Date.now(); // 配置块（分类/图标/预算/汇率）最后修改时间，用于同步合并冲突
+function markConfigUpdated() { _configUpdatedAt = Date.now(); }
 let _toastTimer = null;          // toast 自动消失计时器
 let _toastMinimizeTimer = null;  // toast 缩小为角标的计时器
 let driveIsSyncing = false;      // 防并发
@@ -2844,6 +2846,7 @@ function toggleOfflineMode() {
         draftKeys.forEach(k => localStorage.removeItem(k));
         // 清空内存数据，强制手动选文件
         inMemoryLoadedData = null;
+        _configUpdatedAt = Date.now();
         userPassword = ''; dataUsers = [];
         accounts = []; transactions = []; plannedTransactions = [];
         userAccounts = []; userTransactions = []; userPlannedTransactions = [];
@@ -2907,6 +2910,7 @@ function onFileSelected() {
                 inMemoryLoadedData = data;
                 categories = data.categories || DEFAULT_CATEGORIES;
                 exchangeRates = data.exchangeRates || DEFAULT_RATES;
+                _configUpdatedAt = data.configUpdatedAt || Date.now();
                 onDataLoaded();
                 $('password-section').style.display = 'none';
             } catch(err) {
@@ -2950,6 +2954,7 @@ function decryptAndLoadData() {
             inMemoryLoadedData = data;
             categories = data.categories || DEFAULT_CATEGORIES;
             exchangeRates = data.exchangeRates || DEFAULT_RATES;
+            _configUpdatedAt = data.configUpdatedAt || Date.now();
             $('password-error').classList.add('d-none');
             if (verboseToast) showToast('Drive 数据解密成功，请选择用户', 'success', 3000);
             window._driveMode = false;
@@ -2992,6 +2997,7 @@ function decryptAndLoadData() {
             inMemoryLoadedData = data;
             categories = data.categories || DEFAULT_CATEGORIES;
             exchangeRates = data.exchangeRates || DEFAULT_RATES;
+            _configUpdatedAt = data.configUpdatedAt || Date.now();
             $('password-error').classList.add('d-none');
             onDataLoaded();
         } catch(e) {
@@ -3087,10 +3093,12 @@ function createNewDataFile() {
         allUserData: allUserData,
         categories: DEFAULT_CATEGORIES,
         exchangeRates: {...DEFAULT_RATES},
+        configUpdatedAt: Date.now(),
     };
 
     categories = DEFAULT_CATEGORIES;
     exchangeRates = DEFAULT_RATES;
+    _configUpdatedAt = inMemoryLoadedData.configUpdatedAt;
     userPassword = pwd;
     dataUsers = users;
 
@@ -3179,6 +3187,7 @@ function checkAndRestoreDraft(userName) {
             const draft = JSON.parse(draftStr);
             // 草稿作为 local，当前内存数据作为 remote，按 updatedAt 取最新
             inMemoryLoadedData = mergeData(draft, inMemoryLoadedData);
+            _configUpdatedAt = inMemoryLoadedData.configUpdatedAt || Date.now();
             hasUnsavedChanges = true;
 
             const timeStr = new Date(parseInt(draftTime))
@@ -3697,6 +3706,7 @@ function saveUserData() {
     inMemoryLoadedData.exchangeRates = exchangeRates;
     inMemoryLoadedData.budgets = budgets;
     inMemoryLoadedData.categoryIcons = categoryIcons;
+    inMemoryLoadedData.configUpdatedAt = _configUpdatedAt;
 }
 
 /** 获取当前用户的账户顺序数组，不存在则返回 null */
@@ -3887,6 +3897,24 @@ function mergeData(local, remote) {
         allUserData: {}
     };
 
+    // ── 配置块冲突合并：比较 configUpdatedAt，取较新的那份 ──
+    const localConfigTs  = local.configUpdatedAt  || 0;
+    const remoteConfigTs = remote.configUpdatedAt || 0;
+    if (remoteConfigTs > localConfigTs) {
+        merged.categories    = remote.categories    || local.categories;
+        merged.exchangeRates = remote.exchangeRates || local.exchangeRates;
+        merged.budgets       = remote.budgets       || local.budgets;
+        merged.categoryIcons = remote.categoryIcons || local.categoryIcons || {};
+        merged.configUpdatedAt = remoteConfigTs;
+    } else {
+        merged.budgets       = local.budgets       || remote.budgets || [];
+        merged.categoryIcons = local.categoryIcons || remote.categoryIcons || {};
+        merged.configUpdatedAt = localConfigTs || remoteConfigTs || 0;
+    }
+    // 确保 categories 和 exchangeRates 有值（local 优先已在上方设置，但以防为 undefined）
+    if (!merged.categories) merged.categories = local.categories || remote.categories || { expense: [], income: [] };
+    if (!merged.exchangeRates) merged.exchangeRates = local.exchangeRates || remote.exchangeRates || {};
+
     // 合并每个用户的数据
     const allUsers = new Set([
         ...Object.keys(local.allUserData || {}),
@@ -3994,6 +4022,7 @@ async function syncToDrive(manual = false, forcePush = false) {
                     pulledNewCount = countNewItemsFromRemote(inMemoryLoadedData, remoteData);
                     finalData = mergeData(inMemoryLoadedData, remoteData);
                     inMemoryLoadedData = finalData;
+                    _configUpdatedAt = finalData.configUpdatedAt || Date.now();
                     accounts = []; transactions = []; plannedTransactions = [];
                     Object.entries(finalData.allUserData || {}).forEach(([u, uData]) => {
                         accounts.push(...(uData.accounts || []).map(a => ({...a, ownerName: u})));
@@ -4071,6 +4100,7 @@ async function loadFromDrive() {
             inMemoryLoadedData = parsed;
             categories = parsed.categories || DEFAULT_CATEGORIES;
             exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
+            _configUpdatedAt = parsed.configUpdatedAt || Date.now();
             $('password-section').style.display = 'none';
             if (verboseToast) showToast('已加载本地缓存', 'info', 3000);
             onDataLoaded();
@@ -4124,6 +4154,7 @@ async function loadFromDrive() {
             inMemoryLoadedData = parsed;
             categories = parsed.categories || DEFAULT_CATEGORIES;
             exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
+            _configUpdatedAt = parsed.configUpdatedAt || Date.now();
             $('password-section').style.display = 'none';
             if (verboseToast) showToast('已从 Drive 加载数据', 'success', 3000);
             onDataLoaded();
@@ -4227,6 +4258,7 @@ async function backgroundSyncAfterLogin() {
         // ── 步骤6：更新内存并刷新 UI ──
         const newCount = countNewItemsFromRemote(inMemoryLoadedData, remoteData);
         inMemoryLoadedData = finalData;
+        _configUpdatedAt = finalData.configUpdatedAt || Date.now();
 
         const isFormOpen = $('add-transaction-section') && $('add-transaction-section').classList.contains('show');
 
@@ -4562,7 +4594,7 @@ function getOrCreateBalanceAdjCategory(type) {
     if (found) return found;
     // 未找到，创建「余额调整」分类
     list.push('余额调整');
-    saveUserData();
+    markConfigUpdated(); saveUserData();
     return '余额调整';
 }
 
@@ -5708,7 +5740,7 @@ function saveBudgetModal() {
         budgets.push({ id: Date.now(), category, amount, currency: currentStatsFilter.currency });
     }
     bootstrap.Modal.getInstance($('budgetModal'))?.hide();
-    triggerAutoSave();
+    markConfigUpdated(); triggerAutoSave();
     renderBudgetPane();
     showToast('预算已保存', 'success', 2000);
 }
@@ -5716,7 +5748,7 @@ function saveBudgetModal() {
 function deleteBudget(id) {
     if (!confirm('删除这条预算？')) return;
     budgets = budgets.filter(b => b.id !== id);
-    triggerAutoSave();
+    markConfigUpdated(); triggerAutoSave();
     renderBudgetPane();
 }
 
@@ -5731,9 +5763,14 @@ function applyAiCatSuggestion(btnEl, type, action, oldName, newName) {
         if (categories[type].includes(trimmed)) { showToast('分类名已存在：' + trimmed, 'warning'); return; }
         const idx = categories[type].indexOf(oldName);
         if (idx > -1) categories[type][idx] = trimmed;
-        transactions.forEach(function(t) { if (t.type === type && t.category === oldName) t.category = trimmed; });
+        transactions.forEach(function(t) {
+            if (t.type !== type) return;
+            if (t.category === oldName) t.category = trimmed;
+            if (t.items) t.items.forEach(function(it) { if (it.category === oldName) it.category = trimmed; });
+            if (t.items && t.items.length > 0) t.category = t.items[0].category;
+        });
         if (plannedTransactions) plannedTransactions.forEach(function(p) { if (p.type === type && p.category === oldName) p.category = trimmed; });
-        saveUserData(); triggerAutoSave(); renderCategorySettings();
+        markConfigUpdated(); saveUserData(); triggerAutoSave(); renderCategorySettings();
         displayedTransactionCount = 100; renderAllTransactions(); renderStats();
         showToast('分类已重命名：' + oldName + ' → ' + trimmed, 'success');
     } else if (action === 'delete') {
@@ -5741,10 +5778,15 @@ function applyAiCatSuggestion(btnEl, type, action, oldName, newName) {
         const transCount = transactions.filter(function(t) { return t.type === type && t.category === oldName; }).length;
         if (transCount > 0 && !confirm('删除分类 "' + oldName + '"？\n将影响 ' + transCount + ' 条记录（改为"未分类"）')) return;
         categories[type] = categories[type].filter(function(c) { return c !== oldName; });
-        transactions.forEach(function(t) { if (t.type === type && t.category === oldName) t.category = '未分类'; });
+        transactions.forEach(function(t) {
+            if (t.type !== type) return;
+            if (t.category === oldName) t.category = '未分类';
+            if (t.items) t.items.forEach(function(it) { if (it.category === oldName) it.category = '未分类'; });
+            if (t.items && t.items.length > 0) t.category = t.items[0].category;
+        });
         if (plannedTransactions) plannedTransactions.forEach(function(p) { if (p.type === type && p.category === oldName) p.category = '未分类'; });
         delete categoryIcons[oldName];
-        saveUserData(); triggerAutoSave(); renderCategorySettings();
+        markConfigUpdated(); saveUserData(); triggerAutoSave(); renderCategorySettings();
         displayedTransactionCount = 100; renderAllTransactions(); renderStats();
         showToast('分类已删除：' + oldName, 'success');
     } else if (action === 'add') {
@@ -5753,7 +5795,7 @@ function applyAiCatSuggestion(btnEl, type, action, oldName, newName) {
         if (!trimmed) return;
         if (categories[type].includes(trimmed)) { showToast('分类已存在：' + trimmed, 'warning'); return; }
         categories[type].push(trimmed);
-        saveUserData(); triggerAutoSave(); renderCategorySettings();
+        markConfigUpdated(); saveUserData(); triggerAutoSave(); renderCategorySettings();
         showToast('已添加分类：' + trimmed, 'success');
     }
     if (card) {
@@ -7722,6 +7764,7 @@ async function restoreFromBackup(fileName, dateStr) {
     if (!window._pendingRestoreData) return;
     if (!confirm(`确认从备份「${dateStr}」恢复？\n\n此操作将完全覆盖当前本地数据，且不可撤销。`)) return;
     inMemoryLoadedData = window._pendingRestoreData;
+    _configUpdatedAt = window._pendingRestoreData.configUpdatedAt || Date.now();
     window._pendingRestoreData = null;
     saveUserData();
     loadAllData();
@@ -8318,7 +8361,7 @@ function renderExchangeRateSettings() {
 function setExchangeRate(from, to, rate) {
     const key = `${from}_${to}`;
     exchangeRates[key] = parseFloat(rate);
-    saveUserData(); triggerAutoSave();
+    markConfigUpdated(); saveUserData(); triggerAutoSave();
     renderExchangeRateSettings();
     if (verboseToast) showToast('汇率已更新', 'success');
 }
@@ -8362,7 +8405,7 @@ function moveCategory(type, idx, dir) {
     var temp = list[idx];
     list[idx] = list[target];
     list[target] = temp;
-    saveUserData(); triggerAutoSave(); renderCategorySettings();
+    markConfigUpdated(); saveUserData(); triggerAutoSave(); renderCategorySettings();
 }
 
 function addCategory(e, type) {
@@ -8371,7 +8414,7 @@ function addCategory(e, type) {
     const val = input.value.trim();
     if (val && !categories[type].includes(val)) {
         categories[type].push(val); input.value = '';
-        saveUserData(); triggerAutoSave(); renderCategorySettings();
+        markConfigUpdated(); saveUserData(); triggerAutoSave(); renderCategorySettings();
         setTimeout(function() { openIconPicker(type, val); }, 100);
     }
 }
@@ -8387,7 +8430,7 @@ function removeCategory(type, cat) {
     transactions.forEach(t => { if (t.type === type && t.category === cat) t.category = '未分类'; });
     if (plannedTransactions) plannedTransactions.forEach(p => { if (p.type === type && p.category === cat) p.category = '未分类'; });
     delete categoryIcons[cat];
-    saveUserData(); triggerAutoSave(); renderCategorySettings();
+    markConfigUpdated(); saveUserData(); triggerAutoSave(); renderCategorySettings();
     displayedTransactionCount = 100; renderAllTransactions(); renderStats();
     if (verboseToast) showToast(`分类 "${cat}" 已删除`, 'success');
 }
@@ -8500,13 +8543,13 @@ function selectIconPickerIcon(icon) {
 
 function applyIconPickerSelection() {
     categoryIcons[_iconPickerCat] = { icon: _iconPickerIcon, color: _iconPickerColor };
-    saveUserData(); triggerAutoSave();
+    markConfigUpdated(); saveUserData(); triggerAutoSave();
     renderCategorySettings();
 }
 
 function resetIconPicker() {
     delete categoryIcons[_iconPickerCat];
-    saveUserData(); triggerAutoSave();
+    markConfigUpdated(); saveUserData(); triggerAutoSave();
     renderCategorySettings();
     bootstrap.Modal.getInstance($('iconPickerModal'))?.hide();
 }
@@ -8519,9 +8562,15 @@ function editCategoryName(type, oldName) {
     if (categories[type].includes(trimmedName)) { alert('该分类名称已存在！'); return; }
     const catIdx = categories[type].indexOf(oldName);
     if (catIdx > -1) categories[type][catIdx] = trimmedName;
-    transactions.forEach(t => { if (t.type === type && t.category === oldName) t.category = trimmedName; });
+    transactions.forEach(t => {
+        if (t.type !== type) return;
+        if (t.category === oldName) t.category = trimmedName;
+        if (t.items) t.items.forEach(it => { if (it.category === oldName) it.category = trimmedName; });
+        // 同步顶层 category（拆分交易顶层是 items[0].category 的缓存）
+        if (t.items && t.items.length > 0) t.category = t.items[0].category;
+    });
     if (plannedTransactions) plannedTransactions.forEach(p => { if (p.type === type && p.category === oldName) p.category = trimmedName; });
-    saveUserData(); triggerAutoSave(); renderCategorySettings();
+    markConfigUpdated(); saveUserData(); triggerAutoSave(); renderCategorySettings();
     displayedTransactionCount = 100; renderAllTransactions(); renderStats();
     if (verboseToast) showToast(`分类已重命名: "${oldName}" → "${trimmedName}"`, 'success');
 }
