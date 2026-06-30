@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.5.0</title>
+    <title>记一笔 v2.5.1</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1377,7 +1377,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.5.0</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.5.1</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2061,7 +2061,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.5.0</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.5.1</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -4023,6 +4023,11 @@ async function syncToDrive(manual = false, forcePush = false) {
                     finalData = mergeData(inMemoryLoadedData, remoteData);
                     inMemoryLoadedData = finalData;
                     _configUpdatedAt = finalData.configUpdatedAt || Date.now();
+                    // 同步配置类变量（分类/图标/汇率/预算），防止需要重新登录才生效
+                    categories    = finalData.categories    || DEFAULT_CATEGORIES;
+                    exchangeRates = finalData.exchangeRates || DEFAULT_RATES;
+                    categoryIcons = finalData.categoryIcons || {};
+                    budgets       = finalData.budgets       || [];
                     accounts = []; transactions = []; plannedTransactions = [];
                     Object.entries(finalData.allUserData || {}).forEach(([u, uData]) => {
                         accounts.push(...(uData.accounts || []).map(a => ({...a, ownerName: u})));
@@ -4033,6 +4038,7 @@ async function syncToDrive(manual = false, forcePush = false) {
                     });
                     filterUserData();
                     loadAllData();
+                    renderCategorySettings();
                 }
             }
             // 无新版本：跳过拉取与合并，直接上传本地数据
@@ -4564,6 +4570,8 @@ function renderAccounts() {
             const bal = calculateBalance(acc.id);
             const col = document.createElement('div');
             col.className = 'account-col';
+            col.dataset.accId = acc.id;
+            col.draggable = true;
             const balClass = amountsHidden ? 'amount-hidden' : (bal < 0 ? 'text-danger' : 'text-success');
             const initial = acc.ownerName.charAt(0).toLowerCase();
             col.innerHTML = `
@@ -4585,6 +4593,101 @@ function renderAccounts() {
     updateSelectOptions();
     // Update currency buttons in stats view to reflect available account currencies
     renderStatsCurrencyButtons();
+    _initAccountDrag();
+}
+
+function _saveAccountOrder() {
+    const order = [];
+    $$('#account-list-container .account-col').forEach(c => {
+        if (c.dataset.accId) order.push(Number(c.dataset.accId));
+    });
+    saveAccountOrder(order);
+    saveUserData();
+    triggerAutoSave();
+}
+
+function _initAccountDrag() {
+    let dragSrc = null;
+    const cols = $$('#account-list-container .account-col');
+    cols.forEach(col => {
+        // ── 桌面：HTML5 drag ──
+        col.addEventListener('dragstart', e => {
+            dragSrc = col;
+            setTimeout(() => col.classList.add('dragging'), 0);
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        col.addEventListener('dragend', () => {
+            col.classList.remove('dragging');
+            $$('#account-list-container .account-col').forEach(c => c.classList.remove('drag-over'));
+            _saveAccountOrder();
+        });
+        col.addEventListener('dragover', e => {
+            e.preventDefault();
+            if (dragSrc && dragSrc !== col) {
+                $$('#account-list-container .account-col').forEach(c => c.classList.remove('drag-over'));
+                col.classList.add('drag-over');
+            }
+        });
+        col.addEventListener('drop', e => {
+            e.preventDefault();
+            if (!dragSrc || dragSrc === col) return;
+            col.classList.remove('drag-over');
+            const parent = col.parentNode;
+            const cols2 = [...parent.children];
+            const srcIdx = cols2.indexOf(dragSrc);
+            const dstIdx = cols2.indexOf(col);
+            if (srcIdx < dstIdx) parent.insertBefore(dragSrc, col.nextSibling);
+            else parent.insertBefore(dragSrc, col);
+        });
+        // ── 手机：touch 长按拖拽 ──
+        let touchTimer = null, isTouchDragging = false, touchClone = null;
+        col.addEventListener('touchstart', e => {
+            touchTimer = setTimeout(() => {
+                isTouchDragging = true;
+                dragSrc = col;
+                col.classList.add('dragging');
+                touchClone = col.cloneNode(true);
+                touchClone.style.cssText = 'position:fixed;opacity:.7;pointer-events:none;z-index:9999;width:' + col.offsetWidth + 'px;';
+                document.body.appendChild(touchClone);
+                const r = col.getBoundingClientRect();
+                touchClone.style.left = r.left + 'px';
+                touchClone.style.top  = r.top  + 'px';
+            }, 400);
+        }, { passive: true });
+        col.addEventListener('touchmove', e => {
+            clearTimeout(touchTimer);
+            if (!isTouchDragging || !touchClone) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            touchClone.style.left = (touch.clientX - col.offsetWidth / 2) + 'px';
+            touchClone.style.top  = (touch.clientY - 30) + 'px';
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const target = el && el.closest('.account-col');
+            $$('#account-list-container .account-col').forEach(c => c.classList.remove('drag-over'));
+            if (target && target !== dragSrc) target.classList.add('drag-over');
+        }, { passive: false });
+        col.addEventListener('touchend', e => {
+            clearTimeout(touchTimer);
+            if (!isTouchDragging) return;
+            isTouchDragging = false;
+            col.classList.remove('dragging');
+            if (touchClone) { touchClone.remove(); touchClone = null; }
+            const touch = e.changedTouches[0];
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const target = el && el.closest('.account-col');
+            $$('#account-list-container .account-col').forEach(c => c.classList.remove('drag-over'));
+            if (target && target !== dragSrc) {
+                const parent = target.parentNode;
+                const cols2 = [...parent.children];
+                const srcIdx = cols2.indexOf(dragSrc);
+                const dstIdx = cols2.indexOf(target);
+                if (srcIdx < dstIdx) parent.insertBefore(dragSrc, target.nextSibling);
+                else parent.insertBefore(dragSrc, target);
+            }
+            _saveAccountOrder();
+            dragSrc = null;
+        });
+    });
 }
 
 function getOrCreateBalanceAdjCategory(type) {
