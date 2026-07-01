@@ -5315,6 +5315,20 @@ function openEditTransaction(id) {
     $('edit-trans-delete-btn').style.display = 'none';
     if (!readOnly) $('edit-trans-delete-btn').style.removeProperty('display');
     $('edit-trans-date').value = t.date;
+    // 查看别人的交易时，需确保对方账户在下拉选项里
+    if (readOnly && t.ownerName !== currentUserName) {
+        const sel = $('edit-trans-account');
+        if (sel && ![...sel.options].find(o => o.value == t.accountId)) {
+            const ownerAcc = accounts.find(a => a.id == t.accountId);
+            if (ownerAcc) {
+                const name = `${getAccountDisplayName(ownerAcc)} (${CURRENCY_SYMBOLS[ownerAcc.currency] || ownerAcc.currency})`;
+                const opt = new Option(name, ownerAcc.id);
+                opt.setAttribute('data-name', name);
+                sel.add(opt);
+                accSelectBuild('edit-trans-account');
+            }
+        }
+    }
     $('edit-trans-account').value = t.accountId; accSelectSync('edit-trans-account');
     $('edit-trans-tags').value = t.tags || '';
     $('edit-trans-desc').value = t.desc || '';
