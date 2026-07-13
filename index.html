@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.5.1</title>
+    <title>记一笔 v2.5.2</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -169,6 +169,11 @@ body {
 .active-view { display: block; }
 #view-transactions.active-view,
 #view-account-detail.active-view { display: flex; flex-direction: column; overflow-y: hidden; }
+
+/* 桌面端交易页恢复滚动（手机端由 #mobile-transaction-list 内部滚动） */
+@media (min-width: 769px) {
+    #view-transactions.active-view { overflow-y: auto; }
+}
 
 /* 账户详情视图 */
 #view-account-detail .excel-table-container { flex: 1; min-height: 0; }
@@ -1377,7 +1382,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.5.1</span>
+        <span class="text-muted" style="font-size:0.7rem;">version 2.5.2</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2061,7 +2066,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.5.1</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.5.2</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -3241,11 +3246,9 @@ function renderArchiveManagementUI() {
     const archivedYears = getArchivedYears();
     let html = '';
     if (archivedYears.length > 0) {
-        html += '<div class="mb-2"><div class="small text-muted fw-bold mb-1">已存档：</div><div class="d-flex flex-wrap gap-1">';
+        html += '<div class="mb-2"><div class="small text-muted fw-bold mb-1">已存档（只读）：</div><div class="d-flex flex-wrap gap-1">';
         archivedYears.forEach(y => {
-            html += `<span class="badge bg-secondary d-inline-flex align-items-center gap-1">${y}年
-                <button class="btn-close btn-close-white" style="font-size:0.5rem;" title="解档" onclick="confirmUnarchive(${y})"></button>
-            </span>`;
+            html += `<button class="btn btn-sm btn-outline-secondary py-0" onclick="loadHistoryYear(${y})"><i class="bi bi-clock-history me-1"></i>${y}年</button>`;
         });
         html += '</div></div>';
     }
@@ -3305,14 +3308,70 @@ async function confirmArchive(year) {
 }
 
 async function archiveYear(year) {
-    showToast(`正在存档 ${year} 年数据…`, 'syncing', 0);
+    showToast(`正在存档 ${year} 年…`, 'syncing', 0);
+
+    // ── 占锁，防止并发同步 ──
+    clearTimeout(driveAutoSaveTimer);
+    while (driveIsSyncing) { await new Promise(r => setTimeout(r, 200)); }
+    driveIsSyncing = true;
+
+    // ── 快照：用于推送失败时回滚 ──
+    const snapTransactions       = transactions.map(t => ({...t}));
+    const snapInMemory           = JSON.parse(JSON.stringify(inMemoryLoadedData));
+
+    const rollback = () => {
+        transactions      = snapTransactions;
+        inMemoryLoadedData = snapInMemory;
+        // 重建 accounts/plannedTransactions 引用（它们由 inMemoryLoadedData 衍生）
+        accounts = []; plannedTransactions = [];
+        Object.entries(inMemoryLoadedData.allUserData || {}).forEach(([u, ud]) => {
+            (ud.accounts || []).forEach(a => accounts.push({...a, ownerName: u}));
+            (ud.plannedTransactions || []).forEach(p => plannedTransactions.push({...p, ownerName: u}));
+        });
+        filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions();
+    };
+
     try {
-        saveUserData();
+        // ── Step 0：先拉取最新云端，合并后再存档，防止覆盖其他设备的新数据 ──
+        if (!offlineMode && GAS_URL) {
+            try {
+                const localVersion = localStorage.getItem('APP_drive_version') || '0';
+                const vResp = await fetch(gasRequestUrl({ action: 'version' }));
+                const remoteVersion = vResp.ok ? (await vResp.text()).trim() : '0';
+                if (remoteVersion !== '0' && remoteVersion !== localVersion) {
+                    const pullResp = await fetch(gasRequestUrl());
+                    if (pullResp.ok) {
+                        const raw = (await pullResp.text()).trim();
+                        if (raw && raw !== 'UNAUTHORIZED') {
+                            let remoteData;
+                            try { remoteData = JSON.parse(raw); }
+                            catch (_) {
+                                if (userPassword) {
+                                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
+                                    remoteData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                                }
+                            }
+                            if (remoteData) {
+                                const merged = mergeData(inMemoryLoadedData, remoteData);
+                                inMemoryLoadedData = merged;
+                                accounts = []; transactions = []; plannedTransactions = [];
+                                Object.entries(merged.allUserData || {}).forEach(([u, ud]) => {
+                                    (ud.accounts || []).forEach(a => accounts.push({...a, ownerName: u}));
+                                    (ud.transactions || []).forEach(t => transactions.push({...t, ownerName: u}));
+                                    (ud.plannedTransactions || []).forEach(p => plannedTransactions.push({...p, ownerName: u}));
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch(e) { console.warn('[archiveYear] 拉取合并失败，继续用本地数据存档:', e); }
+        }
+
         const yearStr = String(year);
         const yearTrans = transactions.filter(t => t.date.startsWith(yearStr) && !t._isBaseline);
-        if (yearTrans.length === 0) { showToast('没有可存档的数据', 'error'); return; }
+        if (yearTrans.length === 0) { showToast('没有可存档的数据', 'warning'); driveIsSyncing = false; return; }
 
-        // 构建存档包
+        // ── Step 1：构建存档包（纯计算，不改内存）──
         const archiveData = {
             _archiveYear: year, _archivedAt: Date.now(),
             users: dataUsers, categories, exchangeRates,
@@ -3325,9 +3384,22 @@ async function archiveYear(year) {
                 plannedTransactions: []
             };
         });
+        const archiveFile = `archive_${year}.enc`;
+        const archiveContent = userPassword
+            ? CryptoJS.AES.encrypt(JSON.stringify(archiveData), userPassword).toString()
+            : JSON.stringify(archiveData);
 
-        // 为每个账户生成期初余额基准交易（净额 = 该年所有交易之和）
+        // ── Step 2：推存档文件（此时主数据未动）──
+        if (!offlineMode && GAS_URL) {
+            const r1 = await fetch(gasRequestUrl({ file: archiveFile }), {
+                method: 'POST', body: archiveContent, headers: { 'Content-Type': 'text/plain' }
+            });
+            if ((await r1.text()).trim() !== 'OK') throw new Error('存档文件推送失败，操作已取消，数据未改动');
+        }
+
+        // ── Step 3：存档文件确认写入后，才修改主数据内存 ──
         const baselineDate = `${year}-12-31`;
+        const removeIds = new Set(yearTrans.map(t => t.id));
         accounts.forEach(acc => {
             const yearSum = yearTrans.filter(t => t.accountId == acc.id)
                 .reduce((s, t) => s + parseFloat(t.amount), 0);
@@ -3336,28 +3408,20 @@ async function archiveYear(year) {
                     id: Date.now() + Math.random(),
                     _isBaseline: true, _archiveYear: year,
                     accountId: acc.id, amount: yearSum,
-                    date: baselineDate,
-                    desc: `${year}年存档基准`,
+                    date: baselineDate, desc: `${year}年存档基准`,
                     ownerName: acc.ownerName,
                     type: yearSum >= 0 ? 'income' : 'expense',
-                    category: '存档基准',
-                    isTransfer: false, tags: '', updatedAt: Date.now()
+                    category: '存档基准', isTransfer: false, tags: '',
+                    updatedAt: Date.now()
                 });
             }
         });
-
-        // 从主数据删除该年原始交易
-        const removeIds = new Set(yearTrans.map(t => t.id));
         transactions = transactions.filter(t => !removeIds.has(t.id));
-        
-        // 【新增代码】记录到删除日志，防止被 mergeData 幽灵复活
         if (!inMemoryLoadedData.deletedLog) inMemoryLoadedData.deletedLog = [];
         const nowTime = Date.now();
         removeIds.forEach(id => {
             inMemoryLoadedData.deletedLog.push({ id: String(id), deletedAt: nowTime, type: 'transaction' });
         });
-
-        // 标记存档年份
         if (!inMemoryLoadedData.archivedYears) inMemoryLoadedData.archivedYears = [];
         if (!inMemoryLoadedData.archivedYears.includes(year)) {
             inMemoryLoadedData.archivedYears.push(year);
@@ -3365,111 +3429,42 @@ async function archiveYear(year) {
         }
         saveUserData();
 
+        // ── Step 4：推主文件，失败则回滚内存并提示重试 ──
         if (!offlineMode && GAS_URL) {
-            // 存档前取消自动同步计时器，并占用 driveIsSyncing 锁
-            // 防止正在进行的 syncToDrive 的 pull-merge-push 覆盖我们的存档推送
-            clearTimeout(driveAutoSaveTimer);
-            while (driveIsSyncing) {
-                await new Promise(r => setTimeout(r, 200)); // 等待当前同步完成
+            const mainContent = userPassword
+                ? CryptoJS.AES.encrypt(JSON.stringify(inMemoryLoadedData), userPassword).toString()
+                : JSON.stringify(inMemoryLoadedData);
+            let mainOk = false;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const r2 = await fetch(gasRequestUrl(), {
+                        method: 'POST', body: mainContent, headers: { 'Content-Type': 'text/plain' }
+                    });
+                    if ((await r2.text()).trim() === 'OK') { mainOk = true; break; }
+                } catch(_) {}
+                if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
             }
-            driveIsSyncing = true;
-            try {
-                // Step A：推存档文件
-                const archiveFile = `archive_${year}.enc`;
-                const archiveContent = userPassword
-                    ? CryptoJS.AES.encrypt(JSON.stringify(archiveData), userPassword).toString()
-                    : JSON.stringify(archiveData);
-                const r1 = await fetch(gasRequestUrl({ file: archiveFile }), {
-                    method: 'POST', body: archiveContent, headers: { 'Content-Type': 'text/plain' }
-                });
-                if ((await r1.text()).trim() !== 'OK') throw new Error('存档文件推送失败');
-
-                // Step B：推 data.enc（含基准交易，不含已存档年份原始交易）
-                const mainContent = userPassword
-                    ? CryptoJS.AES.encrypt(JSON.stringify(inMemoryLoadedData), userPassword).toString()
-                    : JSON.stringify(inMemoryLoadedData);
-                const r2 = await fetch(gasRequestUrl(), {
-                    method: 'POST', body: mainContent, headers: { 'Content-Type': 'text/plain' }
-                });
-                if ((await r2.text()).trim() !== 'OK') throw new Error('主文件推送失败');
-                clearUnsavedFlag();
-            } finally {
-                driveIsSyncing = false;
+            if (!mainOk) {
+                // 主文件推送失败：回滚内存，存档文件已在云端但主文件未改
+                // 下次同步会重新触发存档流程（因为本地仍有该年数据且archivedYears未标记）
+                rollback();
+                throw new Error('主文件推送失败（已自动回滚）。存档文件已上传，请稍后重试');
             }
+            clearUnsavedFlag();
         } else {
             hasUnsavedChanges = true;
         }
 
         filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions(); renderArchiveManagementUI();
-        if (verboseToast) showToast(`${year} 年数据存档成功`, 'success');
+        showToast(`${year} 年数据存档成功`, 'success');
     } catch (err) {
         showToast(`存档失败：${err.message}`, 'error');
+    } finally {
+        driveIsSyncing = false;
     }
 }
 
-async function confirmUnarchive(year) {
-    if (!confirm(`确定解档 ${year} 年的数据？\n该年份原始数据将恢复到主文件中。`)) return;
-    await unarchiveYear(year);
-}
-
-async function unarchiveYear(year) {
-    showToast(`正在解档 ${year} 年数据…`, 'syncing', 0);
-    try {
-        if (offlineMode || !GAS_URL) throw new Error('解档需要网络，请切换到在线模式');
-        const archiveFile = `archive_${year}.enc`;
-        const resp = await fetch(gasRequestUrl({ file: archiveFile }));
-        const raw = (await resp.text()).trim();
-        if (!raw || raw === 'UNAUTHORIZED') throw new Error('无法读取存档文件');
-        let archiveData;
-        try { archiveData = JSON.parse(raw); }
-        catch (_) {
-            if (!userPassword) throw new Error('无法解密存档文件');
-            const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-            archiveData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-        }
-
-        // 【新增代码】先找出要删除的基准交易 ID
-        const baselineIdsToRemove = transactions
-            .filter(t => t._isBaseline && t._archiveYear == year)
-            .map(t => String(t.id));
-        
-        // 删除该年的基准交易
-        transactions = transactions.filter(t => !(t._isBaseline && t._archiveYear == year));
-        
-        // 【新增代码】记录到删除日志
-        if (!inMemoryLoadedData.deletedLog) inMemoryLoadedData.deletedLog = [];
-        const nowTime = Date.now();
-        baselineIdsToRemove.forEach(id => {
-            inMemoryLoadedData.deletedLog.push({ id: id, deletedAt: nowTime, type: 'transaction' });
-        });
-
-        // 将存档交易合并回主数据
-        dataUsers.forEach(u => {
-            const ud = archiveData.allUserData[u];
-            if (ud && ud.transactions) {
-                ud.transactions.forEach(t => {
-                    if (!transactions.find(x => x.id === t.id)) transactions.push({...t, ownerName: u});
-                });
-            }
-        });
-
-        inMemoryLoadedData.archivedYears = getArchivedYears().filter(y => y != year);
-        saveUserData();
-        await syncToDrive(true, true); // forcePush：解档后直接推送，不拉取合并
-
-        // 静默删除 Drive 上的 archive_YYYY.enc（Backup 文件夹的 .bak 保留）
-        try {
-            const delResp = await fetch(gasRequestUrl({ action: 'deleteFile', file: archiveFile }));
-            const delResult = (await delResp.text()).trim();
-            if (delResult !== 'OK') console.warn('[unarchiveYear] deleteFile:', delResult);
-        } catch(e) { console.warn('[unarchiveYear] 删除归档文件失败（非致命）:', e); }
-
-        filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions(); renderArchiveManagementUI();
-        if (verboseToast) showToast(`${year} 年数据解档成功`, 'success');
-    } catch (err) {
-        showToast(`解档失败：${err.message}`, 'error');
-    }
-}
+// 解档功能已移除：历史数据只读，通过历史模式查看
 
 async function loadHistoryYear(year) {
     showToast(`正在加载 ${year} 年存档…`, 'syncing', 0);
