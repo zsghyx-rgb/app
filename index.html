@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v2.5.3</title>
+    <title id="app-title">记一笔 v2.5.4</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1382,7 +1382,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.3</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.4</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2088,7 +2088,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.5.3</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.5.4</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2586,7 +2586,7 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-const APP_VERSION = '2.5.3';
+const APP_VERSION = '2.5.4';
 const $ = id => document.getElementById(id);
 const $$ = selector => document.querySelectorAll(selector);
 
@@ -3899,9 +3899,9 @@ function mergeData(local, remote) {
         return Array.from(map.values());
     };
 
-    // ── 合并删除日志（60天保留期）──
+    // ── 合并删除日志（7天生效窗口：删除记录只在近期生效，避免陈旧记录在未来误删"复活"的数据）──
     const now = Date.now();
-    const cutoff = now - 60 * 24 * 60 * 60 * 1000;
+    const cutoff = now - 7 * 24 * 60 * 60 * 1000;
     const localLog = (local.deletedLog || []);
     const remoteLog = (remote.deletedLog || []);
     const logMap = new Map();
@@ -3948,11 +3948,13 @@ function mergeData(local, remote) {
         ...Object.keys(local.allUserData || {}),
         ...Object.keys((remote && remote.allUserData) || {})
     ]);
+    let _mergedTxnTotal = 0;
     allUsers.forEach(u => {
         const localU = (local.allUserData || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
         const remoteU = ((remote && remote.allUserData) || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
         const mergedTransactions = mergeArray(localU.transactions, remoteU.transactions)
             .filter(t => !deletedIdSet.has(String(t.id))); // 过滤已删除的交易
+        _mergedTxnTotal += mergedTransactions.length;
         // accountOrder：优先保留 local 的，local 没有则用 remote 的
         const mergedOrder = localU.accountOrder || remoteU.accountOrder || undefined;
         merged.allUserData[u] = {
@@ -3963,6 +3965,15 @@ function mergeData(local, remote) {
             ...(mergedOrder ? { accountOrder: mergedOrder } : {})
         };
     });
+
+    // ── 数据完整性统计：供调用方检测"合并后交易数量异常骤降"的情况 ──
+    const localTxnTotal  = Object.values(local.allUserData || {}).reduce((s, u) => s + (u.transactions || []).length, 0);
+    const remoteTxnTotal = Object.values((remote && remote.allUserData) || {}).reduce((s, u) => s + (u.transactions || []).length, 0);
+    merged._mergeStats = {
+        localTxnTotal, remoteTxnTotal,
+        mergedTxnTotal: _mergedTxnTotal,
+        filteredByDeletedLog: mergedDeletedLog.length,
+    };
 
     return merged;
 }
@@ -4048,7 +4059,27 @@ async function syncToDrive(manual = false, forcePush = false) {
                 // ── 步骤 2b：合并 ──
                 if (remoteData) {
                     pulledNewCount = countNewItemsFromRemote(inMemoryLoadedData, remoteData);
-                    finalData = mergeData(inMemoryLoadedData, remoteData);
+                    const mergedResult = mergeData(inMemoryLoadedData, remoteData);
+
+                    // ── 数据完整性熔断：合并后交易数比本地/远端任一方骤降超过 20%，暂停并警告 ──
+                    const stats = mergedResult._mergeStats;
+                    if (stats) {
+                        const maxBefore = Math.max(stats.localTxnTotal, stats.remoteTxnTotal);
+                        const dropRatio = maxBefore > 0 ? (maxBefore - stats.mergedTxnTotal) / maxBefore : 0;
+                        if (maxBefore >= 10 && dropRatio >= 0.2) {
+                            driveIsSyncing = false;
+                            const msg = `检测到数据异常：合并后交易数从 ${maxBefore} 条降至 ${stats.mergedTxnTotal} 条（减少${Math.round(dropRatio*100)}%）。\n\n` +
+                                `为防止数据丢失，本次同步已自动中止，云端数据未被覆盖。\n` +
+                                `本地数据也未被修改，可以继续正常使用。\n\n` +
+                                `建议：请联系技术支持核实，或检查是否有历史存档/分片操作导致此现象。`;
+                            console.error('[syncToDrive] 数据完整性熔断触发', stats);
+                            alert(msg);
+                            showToast('同步已中止：检测到数据异常减少', 'error', 0);
+                            return;
+                        }
+                    }
+
+                    finalData = mergedResult;
                     inMemoryLoadedData = finalData;
                     _configUpdatedAt = finalData.configUpdatedAt || Date.now();
                     // 同步配置类变量（分类/图标/汇率/预算），防止需要重新登录才生效
