@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>记一笔 v2.5.2</title>
+    <title id="app-title">记一笔 v2.5.3</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1382,7 +1382,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;">version 2.5.2</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.3</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1770,6 +1770,11 @@ select.compact-form-control { height: 2.1rem; }
                         <span>数据与同步</span>
                         <i class="bi bi-chevron-right"></i>
                     </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('orphan-attachments')">
+                        <i class="bi bi-paperclip"></i>
+                        <span>清理孤立附件</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
                     <div class="settings-menu-item" onclick="showSettingsSubpage('archive')">
                         <i class="bi bi-archive"></i>
                         <span>数据存档</span>
@@ -1980,6 +1985,23 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
             </div>
 
+            <!-- Sub-page: 清理孤立附件 -->
+            <div id="settings-sub-orphan-attachments" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>清理孤立附件</span>
+                </div>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">扫描 Google Drive 中没有对应交易记录的附件文件，可批量删除以释放空间。</p>
+                        <button class="btn btn-outline-primary w-100 mb-3" onclick="scanOrphanAttachments(this)">
+                            <i class="bi bi-search me-1"></i>开始扫描
+                        </button>
+                        <div id="orphan-attachments-result"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sub-page: 数据存档 -->
             <div id="settings-sub-archive" class="settings-subpage">
                 <div class="subpage-header">
@@ -1991,7 +2013,7 @@ select.compact-form-control { height: 2.1rem; }
                         <i class="bi bi-archive"></i> 数据存档管理
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档数据只读，可解档恢复。</p>
+                        <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档数据不可恢复，只读，不能修改。</p>
                         <div id="archive-management-ui" class="mb-2"></div>
                         <div class="dropdown" id="history-year-btn-group">
                             <button class="btn btn-outline-secondary btn-sm w-100 dropdown-toggle" type="button"
@@ -2066,7 +2088,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.5.2</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.5.3</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2564,6 +2586,7 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
+const APP_VERSION = '2.5.3';
 const $ = id => document.getElementById(id);
 const $$ = selector => document.querySelectorAll(selector);
 
@@ -2881,7 +2904,17 @@ function switchUser() {
     }
 }
 
+function _applyAppVersion() {
+    const titleEl = $('app-title');
+    if (titleEl) titleEl.textContent = `记一笔 v${APP_VERSION}`;
+    const sidebarEl = $('sidebar-version');
+    if (sidebarEl) sidebarEl.textContent = `version ${APP_VERSION}`;
+    const settingsEl = $('settings-version');
+    if (settingsEl) settingsEl.textContent = `v${APP_VERSION}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    _applyAppVersion();
     initOfflineModeUI();
 
     // 在线模式且有已保存的 URL 则自动从 Drive 同步
@@ -3303,7 +3336,7 @@ function checkArchivePrompt() {
 async function confirmArchive(year) {
     const cnt = transactions.filter(t => t.date.startsWith(String(year)) && !t._isBaseline).length;
     if (cnt === 0) { showToast(`${year} 年没有可存档的数据`, 'warning'); return; }
-    if (!confirm(`确定存档 ${year} 年的数据？\n\n共 ${cnt} 条记录将移入只读存档。\n可通过"解档"完整恢复。`)) return;
+    if (!confirm(`确定存档 ${year} 年的数据？\n\n共 ${cnt} 条记录将移入只读存档。\n存档数据不可恢复，只读，不能修改。`)) return;
     await archiveYear(year);
 }
 
@@ -3537,7 +3570,7 @@ async function loadHistoryYear(year) {
         if (fab) fab.classList.add('d-none');
 
         renderAllTransactions(); renderStats();
-        if (verboseToast) showToast(`已加载 ${year} 年存档（只读）`, 'success');
+        showToast(`已加载 ${year} 年存档（只读）`, 'success');
     } catch (err) {
         historyMode = false; historyYear = null;
         showToast(`加载失败：${err.message}`, 'error');
@@ -6681,6 +6714,7 @@ function initMobileSwipeGestures(card, transactionId) {
 }
 
 function getTxnBadge(t) {
+    if (historyMode) return ''; // 历史模式不显示新/更新标签
     try {
         const raw = sessionStorage.getItem('knownTxnMap_' + currentUserName);
         if (!raw) return '';
@@ -8285,7 +8319,146 @@ function showSettingsSubpage(name) {
     if (name === 'password') initPasswordHint();
     if (name === 'ai-config') loadAiConfig();
     if (name === 'planned') renderPlannedTransactions();
+    if (name === 'orphan-attachments') { $('orphan-attachments-result').innerHTML = ''; }
 }
+// ── 清理孤立附件 ────────────────────────────────────────────
+async function scanOrphanAttachments(btn) {
+    if (!GAS_URL) { showToast('请先配置 GAS URL', 'warning'); return; }
+    const result = $('orphan-attachments-result');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>扫描中…';
+    result.innerHTML = '';
+    try {
+        // 收集所有交易里用到的附件 ID
+        const usedIds = new Set();
+        transactions.forEach(t => {
+            if (t.attachmentId) {
+                t.attachmentId.split(',').forEach(id => {
+                    const raw = id.trim().replace(/^pdf:/, '');
+                    if (raw) usedIds.add(raw);
+                });
+            }
+        });
+        // 也扫描所有历史存档里的附件 ID
+        const archivedYears = getArchivedYears();
+        for (const year of archivedYears) {
+            try {
+                const archiveFile = `archive_${year}.enc`;
+                const resp = await fetch(gasRequestUrl({ file: archiveFile }));
+                if (!resp.ok) continue;
+                const raw = (await resp.text()).trim();
+                if (!raw || raw === 'UNAUTHORIZED') continue;
+                let archiveData;
+                try { archiveData = JSON.parse(raw); }
+                catch (_) {
+                    if (!userPassword) continue;
+                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
+                    archiveData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                }
+                Object.values(archiveData.allUserData || {}).forEach(ud => {
+                    (ud.transactions || []).forEach(t => {
+                        if (t.attachmentId) {
+                            t.attachmentId.split(',').forEach(id => {
+                                const r = id.trim().replace(/^pdf:/, '');
+                                if (r) usedIds.add(r);
+                            });
+                        }
+                    });
+                });
+            } catch(_) {}
+        }
+
+        // 拉取 Drive 上的附件列表
+        const listResp = await fetch(gasRequestUrl({ action: 'listAttachments' }));
+        if (!listResp.ok) throw new Error('无法获取附件列表，请确认 GAS 已更新并重新部署');
+        const allFiles = await listResp.json();
+        if (!Array.isArray(allFiles)) throw new Error('GAS 返回格式错误，请确认 GAS 已更新');
+
+        const orphans = allFiles.filter(f => !usedIds.has(f.id));
+
+        if (orphans.length === 0) {
+            result.innerHTML = '<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle me-1"></i>没有发现孤立附件，Drive 很干净！</div>';
+            return;
+        }
+
+        // 渲染孤立附件列表
+        let html = `<div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small text-muted">发现 <b>${orphans.length}</b> 个孤立附件</span>
+            <button class="btn btn-sm btn-danger" onclick="deleteAllOrphans(this)">
+                <i class="bi bi-trash me-1"></i>全部删除
+            </button>
+        </div>`;
+        html += '<div id="orphan-list">';
+        orphans.forEach(f => {
+            const sizeKB = Math.round(f.size / 1024);
+            html += `<div class="d-flex align-items-center gap-2 py-1 border-bottom" data-file-id="${_escHtml(f.id)}">
+                <i class="bi bi-file-earmark text-muted"></i>
+                <span class="flex-grow-1 small text-truncate" title="${_escHtml(f.name)}">${_escHtml(f.name)}</span>
+                <span class="small text-muted flex-shrink-0">${sizeKB}KB</span>
+                <button class="btn btn-sm btn-outline-danger py-0 px-2 flex-shrink-0"
+                    onclick="deleteSingleOrphan(this, '${_escHtml(f.id)}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>`;
+        });
+        html += '</div>';
+        result.innerHTML = html;
+    } catch(err) {
+        result.innerHTML = `<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>${_escHtml(err.message)}</div>`;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-search me-1"></i>重新扫描';
+    }
+}
+
+async function deleteSingleOrphan(btn, fileId) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    try {
+        const resp = await fetch(gasRequestUrl({ action: 'deleteAttachment', fileId }));
+        const text = (await resp.text()).trim();
+        if (text !== 'OK') throw new Error(text);
+        const row = btn.closest('[data-file-id]');
+        if (row) row.remove();
+        // 更新计数
+        const remaining = $$('#orphan-list [data-file-id]').length;
+        const countEl = $('orphan-attachments-result').querySelector('b');
+        if (countEl) countEl.textContent = remaining;
+        if (remaining === 0) {
+            $('orphan-attachments-result').innerHTML = '<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle me-1"></i>所有孤立附件已删除！</div>';
+        }
+    } catch(err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash"></i>';
+        showToast('删除失败：' + err.message, 'error');
+    }
+}
+
+async function deleteAllOrphans(btn) {
+    const rows = $$('#orphan-list [data-file-id]');
+    if (rows.length === 0) return;
+    if (!confirm(`确定删除全部 ${rows.length} 个孤立附件？此操作不可撤销。`)) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>删除中…';
+    let failed = 0;
+    for (const row of rows) {
+        const fileId = row.dataset.fileId;
+        try {
+            const resp = await fetch(gasRequestUrl({ action: 'deleteAttachment', fileId }));
+            const text = (await resp.text()).trim();
+            if (text !== 'OK') throw new Error(text);
+            row.remove();
+        } catch(_) { failed++; }
+    }
+    if (failed === 0) {
+        $('orphan-attachments-result').innerHTML = '<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle me-1"></i>所有孤立附件已删除！</div>';
+    } else {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="bi bi-trash me-1"></i>全部删除`;
+        showToast(`${failed} 个文件删除失败，请重试`, 'warning');
+    }
+}
+
 function saveAiConfig() {
     var key = $('ai-api-key').value.trim();
     if (!key) { showToast('请填写 DeepSeek API Key', 'warning'); return; }
