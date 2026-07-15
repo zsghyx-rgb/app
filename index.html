@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v2.5.5</title>
+    <title id="app-title">记一笔 v2.5.6</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1382,7 +1382,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.5</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.6</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1765,29 +1765,9 @@ select.compact-form-control { height: 2.1rem; }
                         <span>账户与用户</span>
                         <i class="bi bi-chevron-right"></i>
                     </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('data-sync')">
-                        <i class="bi bi-cloud-arrow-up"></i>
-                        <span>数据与同步</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('orphan-attachments')">
-                        <i class="bi bi-paperclip"></i>
-                        <span>清理孤立附件</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('archive')">
-                        <i class="bi bi-archive"></i>
-                        <span>数据存档</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('deleted-log')">
-                        <i class="bi bi-clock-history"></i>
-                        <span>删除日志</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('password')">
-                        <i class="bi bi-key"></i>
-                        <span>数据密码</span>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('advanced')">
+                        <i class="bi bi-gear-wide-connected"></i>
+                        <span>高级功能</span>
                         <i class="bi bi-chevron-right"></i>
                     </div>
                     <div class="settings-menu-item" onclick="showSettingsSubpage('ai-config')">
@@ -1909,10 +1889,45 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
             </div>
 
+            <!-- Sub-page: 高级功能（二级菜单）-->
+            <div id="settings-sub-advanced" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>高级功能</span>
+                </div>
+                <div class="settings-menu-list">
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('data-sync')">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <span>数据与同步</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('orphan-attachments')">
+                        <i class="bi bi-paperclip"></i>
+                        <span>清理孤立附件</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('archive')">
+                        <i class="bi bi-archive"></i>
+                        <span>数据存档</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('deleted-log')">
+                        <i class="bi bi-clock-history"></i>
+                        <span>删除日志</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('password')">
+                        <i class="bi bi-key"></i>
+                        <span>数据密码</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sub-page: 数据与同步 -->
             <div id="settings-sub-data-sync" class="settings-subpage">
                 <div class="subpage-header">
-                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <i class="bi bi-arrow-left" onclick="showSettingsSubpage('advanced')"></i>
                     <span>数据与同步</span>
                 </div>
                 <div class="card shadow-sm mb-3">
@@ -1993,7 +2008,7 @@ select.compact-form-control { height: 2.1rem; }
             <!-- Sub-page: 清理孤立附件 -->
             <div id="settings-sub-orphan-attachments" class="settings-subpage">
                 <div class="subpage-header">
-                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <i class="bi bi-arrow-left" onclick="showSettingsSubpage('advanced')"></i>
                     <span>清理孤立附件</span>
                 </div>
                 <div class="card shadow-sm mb-3">
@@ -2010,7 +2025,7 @@ select.compact-form-control { height: 2.1rem; }
             <!-- Sub-page: 数据存档 -->
             <div id="settings-sub-archive" class="settings-subpage">
                 <div class="subpage-header">
-                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <i class="bi bi-arrow-left" onclick="showSettingsSubpage('advanced')"></i>
                     <span>数据存档</span>
                 </div>
                 <div class="card shadow-sm">
@@ -2036,7 +2051,7 @@ select.compact-form-control { height: 2.1rem; }
             <!-- Sub-page: 删除日志 -->
             <div id="settings-sub-deleted-log" class="settings-subpage">
                 <div class="subpage-header">
-                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <i class="bi bi-arrow-left" onclick="showSettingsSubpage('advanced')"></i>
                     <span>删除日志</span>
                 </div>
                 <div class="card shadow-sm">
@@ -2056,7 +2071,7 @@ select.compact-form-control { height: 2.1rem; }
             <!-- Sub-page: 数据密码 -->
             <div id="settings-sub-password" class="settings-subpage">
                 <div class="subpage-header">
-                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <i class="bi bi-arrow-left" onclick="showSettingsSubpage('advanced')"></i>
                     <span>数据密码</span>
                 </div>
                 <div class="card shadow-sm">
@@ -2113,7 +2128,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.5.5</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.5.6</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2611,7 +2626,7 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-const APP_VERSION = '2.5.5';
+const APP_VERSION = '2.5.6';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（loadFromDrive 中）必须 ≤ DELETED_LOG_RETENTION_DAYS，
