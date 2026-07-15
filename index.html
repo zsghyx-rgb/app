@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v2.5.6</title>
+    <title id="app-title">记一笔 v2.5.7</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1382,7 +1382,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.6</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.7</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1765,6 +1765,11 @@ select.compact-form-control { height: 2.1rem; }
                         <span>账户与用户</span>
                         <i class="bi bi-chevron-right"></i>
                     </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('archive')">
+                        <i class="bi bi-archive"></i>
+                        <span>数据存档</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
                     <div class="settings-menu-item" onclick="showSettingsSubpage('advanced')">
                         <i class="bi bi-gear-wide-connected"></i>
                         <span>高级功能</span>
@@ -1906,11 +1911,6 @@ select.compact-form-control { height: 2.1rem; }
                         <span>清理孤立附件</span>
                         <i class="bi bi-chevron-right"></i>
                     </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('archive')">
-                        <i class="bi bi-archive"></i>
-                        <span>数据存档</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
                     <div class="settings-menu-item" onclick="showSettingsSubpage('deleted-log')">
                         <i class="bi bi-clock-history"></i>
                         <span>删除日志</span>
@@ -2025,7 +2025,7 @@ select.compact-form-control { height: 2.1rem; }
             <!-- Sub-page: 数据存档 -->
             <div id="settings-sub-archive" class="settings-subpage">
                 <div class="subpage-header">
-                    <i class="bi bi-arrow-left" onclick="showSettingsSubpage('advanced')"></i>
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
                     <span>数据存档</span>
                 </div>
                 <div class="card shadow-sm">
@@ -2035,15 +2035,6 @@ select.compact-form-control { height: 2.1rem; }
                     <div class="card-body">
                         <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档数据不可恢复，只读，不能修改。</p>
                         <div id="archive-management-ui" class="mb-2"></div>
-                        <div class="dropdown" id="history-year-btn-group">
-                            <button class="btn btn-outline-secondary btn-sm w-100 dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-clock-history"></i> 查看历史存档
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" id="history-year-dropdown">
-                                <li><span class="dropdown-item text-muted small">暂无存档</span></li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -2128,7 +2119,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.5.6</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.5.7</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2626,7 +2617,7 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-const APP_VERSION = '2.5.6';
+const APP_VERSION = '2.5.7';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（loadFromDrive 中）必须 ≤ DELETED_LOG_RETENTION_DAYS，
@@ -7043,7 +7034,7 @@ function resetAttachmentUI() {
     if (idField) idField.value = '';
 }
 
-async function compressImage(file, maxKB = 200) {
+async function compressImage(file, maxKB = 500) {
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = e => {
@@ -7141,7 +7132,7 @@ async function handleAttachmentSelected(input) {
             fileSizeKB = Math.round(file.size / 1024);
         } else {
             showToast('压缩中…', 'syncing', 0);
-            const compressedFile = await compressImage(file, 200);
+            const compressedFile = await compressImage(file, 500);
             showToast('上传中…', 'syncing', 0);
             base64Data = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -8535,9 +8526,13 @@ async function scanOrphanAttachments(btn) {
         html += '<div id="orphan-list">';
         orphans.forEach(f => {
             const sizeKB = Math.round(f.size / 1024);
+            const isImage = /\.(jpe?g|png|gif|webp|bmp)$/i.test(f.name || '') || /^image\//.test(f.mimeType || '');
+            const nameHtml = isImage
+                ? `<span class="flex-grow-1 small text-truncate text-primary" style="cursor:pointer;text-decoration:underline;" title="点击查看图片：${_escHtml(f.name)}" onclick="viewOrphanAttachmentImage('${_escHtml(f.id)}')">${_escHtml(f.name)}</span>`
+                : `<span class="flex-grow-1 small text-truncate" title="${_escHtml(f.name)}">${_escHtml(f.name)}</span>`;
             html += `<div class="d-flex align-items-center gap-2 py-1 border-bottom" data-file-id="${_escHtml(f.id)}">
-                <i class="bi bi-file-earmark text-muted"></i>
-                <span class="flex-grow-1 small text-truncate" title="${_escHtml(f.name)}">${_escHtml(f.name)}</span>
+                <i class="bi ${isImage ? 'bi-file-earmark-image' : 'bi-file-earmark'} text-muted"></i>
+                ${nameHtml}
                 <span class="small text-muted flex-shrink-0">${sizeKB}KB</span>
                 <button class="btn btn-sm btn-outline-danger py-0 px-2 flex-shrink-0"
                     onclick="deleteSingleOrphan(this, '${_escHtml(f.id)}')">
@@ -8553,6 +8548,11 @@ async function scanOrphanAttachments(btn) {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-search me-1"></i>重新扫描';
     }
+}
+
+function viewOrphanAttachmentImage(fileId) {
+    const url = getDriveAttachmentUrl(fileId);
+    window.open(url, '_blank');
 }
 
 async function deleteSingleOrphan(btn, fileId) {
