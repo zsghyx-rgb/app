@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v2.5.4</title>
+    <title id="app-title">记一笔 v2.5.5</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1382,7 +1382,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.4</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.5</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1780,6 +1780,11 @@ select.compact-form-control { height: 2.1rem; }
                         <span>数据存档</span>
                         <i class="bi bi-chevron-right"></i>
                     </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('deleted-log')">
+                        <i class="bi bi-clock-history"></i>
+                        <span>删除日志</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
                     <div class="settings-menu-item" onclick="showSettingsSubpage('password')">
                         <i class="bi bi-key"></i>
                         <span>数据密码</span>
@@ -2028,6 +2033,26 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
             </div>
 
+            <!-- Sub-page: 删除日志 -->
+            <div id="settings-sub-deleted-log" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>删除日志</span>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clock-history"></i> 删除日志</span>
+                        <button class="btn btn-outline-danger btn-sm py-0" onclick="clearAllDeletedLog()">
+                            <i class="bi bi-trash3"></i> 清除全部
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">记录已删除的交易/账户ID，用于多设备同步时防止已删数据被重新合并回来。条目会在 7 天后自动失效。</p>
+                        <div id="deleted-log-list"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sub-page: 数据密码 -->
             <div id="settings-sub-password" class="settings-subpage">
                 <div class="subpage-header">
@@ -2088,7 +2113,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.5.4</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.5.5</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2586,7 +2611,13 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-const APP_VERSION = '2.5.4';
+const APP_VERSION = '2.5.5';
+
+// ── 数据同步相关日期常量 ──────────────────────────────────────
+// 约束：STALE_CACHE_DAYS（loadFromDrive 中）必须 ≤ DELETED_LOG_RETENTION_DAYS，
+// 建议 ≤ 一半，留安全边际。否则会出现"删除记录已失效但设备缓存还没刷新"的
+// 空窗期，导致已删除的数据在同步时被误判为新数据而复活。
+const DELETED_LOG_RETENTION_DAYS = 14; // deletedLog 条目保留天数（防止已删数据被合并复活）
 const $ = id => document.getElementById(id);
 const $$ = selector => document.querySelectorAll(selector);
 
@@ -3850,6 +3881,7 @@ function clearUnsavedFlag() {
     clearTimeout(_toastMinimizeTimer);
     const el = $('app-toast');
     if (el) { el.classList.remove('minimized'); el.onclick = null; }
+    try { localStorage.setItem('APP_last_sync_time', String(Date.now())); } catch(_) {}
     
     // 清空 localStorage 中所有用户的本地草稿
     const keysToRemove = [];
@@ -3899,9 +3931,9 @@ function mergeData(local, remote) {
         return Array.from(map.values());
     };
 
-    // ── 合并删除日志（7天生效窗口：删除记录只在近期生效，避免陈旧记录在未来误删"复活"的数据）──
+    // ── 合并删除日志（保留窗口见 DELETED_LOG_RETENTION_DAYS：删除记录只在窗口内生效，避免陈旧记录在未来误删"复活"的数据）──
     const now = Date.now();
-    const cutoff = now - 7 * 24 * 60 * 60 * 1000;
+    const cutoff = now - DELETED_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
     const localLog = (local.deletedLog || []);
     const remoteLog = (remote.deletedLog || []);
     const logMap = new Map();
@@ -4153,10 +4185,15 @@ async function loadFromDrive() {
         alert('请先在登录界面填写并保存 GAS URL。'); return;
     }
 
+    // 缓存过期天数：必须 ≤ DELETED_LOG_RETENTION_DAYS，否则会出现"删除记录已失效但缓存还没刷新"的空窗期，导致已删数据复活
+    const STALE_CACHE_DAYS = 7;
     const localRawCache = localStorage.getItem('APP_raw_cache');
+    const lastSyncTime = parseInt(localStorage.getItem('APP_last_sync_time') || '0', 10);
+    const daysSinceSync = lastSyncTime ? (Date.now() - lastSyncTime) / (24 * 60 * 60 * 1000) : Infinity;
+    const cacheIsStale = daysSinceSync > STALE_CACHE_DAYS;
 
-    // ── 离线优先：有本地缓存就立即展示，不等网络 ──
-    if (localRawCache) {
+    // ── 离线优先：有本地缓存且未过期就立即展示，不等网络 ──
+    if (localRawCache && !cacheIsStale) {
         window._driveRawContent = localRawCache;
         try {
             const parsed = JSON.parse(localRawCache);
@@ -4184,8 +4221,13 @@ async function loadFromDrive() {
         return;
     }
 
-    // ── 无缓存：走原有网络加载流程 ──
-    showToast('正在从 Drive 加载数据…', 'syncing', 0);
+    // ── 无缓存 或 缓存已过期（超过 STALE_CACHE_DAYS 天未同步）：强制从云端加载 ──
+    if (cacheIsStale && localRawCache) {
+        console.log(`[loadFromDrive] 本地缓存已 ${daysSinceSync.toFixed(1)} 天未同步，强制从云端拉取最新数据`);
+        showToast(`已 ${Math.floor(daysSinceSync)} 天未同步，正在从云端拉取最新数据…`, 'syncing', 0);
+    } else {
+        showToast('正在从 Drive 加载数据…', 'syncing', 0);
+    }
 
     try {
         const localVersion = localStorage.getItem('APP_drive_version') || '0';
@@ -5345,8 +5387,8 @@ function deleteTransaction(id) {
                 inMemoryLoadedData.deletedLog.push({ id: did, deletedAt: now });
             }
         });
-        // 只保留60天内的日志
-        const cutoff = now - 60 * 24 * 60 * 60 * 1000;
+        // 只保留 DELETED_LOG_RETENTION_DAYS 天内的日志（需与 loadFromDrive 的 STALE_CACHE_DAYS 保持 ≥2倍安全边际）
+        const cutoff = now - DELETED_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
         inMemoryLoadedData.deletedLog = inMemoryLoadedData.deletedLog.filter(e => e.deletedAt > cutoff);
 
         saveUserData(); triggerAutoSave(); filterUserData();
@@ -8351,6 +8393,62 @@ function showSettingsSubpage(name) {
     if (name === 'ai-config') loadAiConfig();
     if (name === 'planned') renderPlannedTransactions();
     if (name === 'orphan-attachments') { $('orphan-attachments-result').innerHTML = ''; }
+    if (name === 'deleted-log') renderDeletedLogUI();
+}
+
+// ── 删除日志管理 ─────────────────────────────────────────────
+function renderDeletedLogUI() {
+    const container = $('deleted-log-list');
+    if (!container) return;
+    const log = (inMemoryLoadedData && inMemoryLoadedData.deletedLog) || [];
+    if (log.length === 0) {
+        container.innerHTML = '<p class="text-muted small mb-0 text-center py-3">暂无删除记录</p>';
+        return;
+    }
+    const sorted = [...log].sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+    const now = Date.now();
+    const cutoff = now - DELETED_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    let html = `<div class="small text-muted mb-2">共 ${sorted.length} 条记录</div>`;
+    sorted.forEach((entry, idx) => {
+        const isExpired = (entry.deletedAt || 0) < cutoff;
+        const dateStr = entry.deletedAt ? new Date(entry.deletedAt).toLocaleString('zh-CN', { hour12: false }) : '未知时间';
+        const typeLabel = entry.type === 'transaction' ? '交易' : (entry.type === 'account' ? '账户' : (entry.type || '未知'));
+        html += `<div class="d-flex align-items-center gap-2 py-1 border-bottom" data-log-idx="${idx}">
+            <span class="badge ${isExpired ? 'bg-secondary' : 'bg-warning text-dark'}" style="font-size:0.65rem;">${isExpired ? '已失效' : '生效中'}</span>
+            <span class="small flex-grow-1 text-truncate">${typeLabel} · ID: ${_escHtml(String(entry.id))}</span>
+            <span class="small text-muted flex-shrink-0">${dateStr}</span>
+            <button class="btn btn-sm btn-outline-danger py-0 px-2 flex-shrink-0" onclick="deleteSingleLogEntry(${idx})">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>`;
+    });
+    container.innerHTML = html;
+    // 把排序后的顺序缓存起来，供单条删除时定位
+    container._sortedLog = sorted;
+}
+
+function deleteSingleLogEntry(idx) {
+    const container = $('deleted-log-list');
+    if (!container || !container._sortedLog) return;
+    const entry = container._sortedLog[idx];
+    if (!entry) return;
+    if (!inMemoryLoadedData.deletedLog) return;
+    inMemoryLoadedData.deletedLog = inMemoryLoadedData.deletedLog.filter(e =>
+        !(String(e.id) === String(entry.id) && e.deletedAt === entry.deletedAt && e.type === entry.type)
+    );
+    saveUserData(); triggerAutoSave();
+    renderDeletedLogUI();
+    showToast('已删除该条记录', 'success');
+}
+
+function clearAllDeletedLog() {
+    const log = (inMemoryLoadedData && inMemoryLoadedData.deletedLog) || [];
+    if (log.length === 0) { showToast('删除日志已经是空的', 'warning'); return; }
+    if (!confirm(`确定清除全部 ${log.length} 条删除记录？\n\n注意：清除后，如果其他设备还带着已删除的旧数据未同步，这些数据可能会在下次同步时被重新合并回来。`)) return;
+    inMemoryLoadedData.deletedLog = [];
+    saveUserData(); triggerAutoSave();
+    renderDeletedLogUI();
+    showToast('已清除全部删除日志', 'success');
 }
 // ── 清理孤立附件 ────────────────────────────────────────────
 async function scanOrphanAttachments(btn) {
