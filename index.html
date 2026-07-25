@@ -1,10 +1,10 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v2.5.7</title>
+    <title id="app-title">记一笔 v2.7.4</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0d6efd">
+    <meta name="theme-color" content="#0891b2"><!-- 夏日海洋主题色，暑假结束后可改回 #0d6efd -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -606,6 +606,7 @@ select.compact-form-control { height: 2.1rem; }
     height: 100dvh;
     max-height: 100dvh;
     margin: auto;
+    touch-action: pan-y;
 }
 #editTransactionModal .modal-content {
     height: 100dvh;
@@ -613,19 +614,28 @@ select.compact-form-control { height: 2.1rem; }
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    touch-action: pan-y;
 }
 #editTransactionModal .modal-body {
     display: flex !important;
     flex-direction: column !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
     flex: 1 !important;
     min-height: 0;
+    padding-top: 6px !important;
+    touch-action: pan-y;
+    overscroll-behavior-x: none;
 }
+/* Tab 栏底部不再单独留白，交由 modal-body 的顶部间距统一控制，
+   使"tab↔金额"的间距与其余卡片间的间距（见 .tm-card margin-bottom）保持一致 */
+#trans-tab-bar { padding-bottom: 0 !important; }
 #edit-transaction-form {
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    touch-action: pan-y;
 }
 /* 手机端：宽度全屏、贴顶、无圆角、铺满全屏高度 */
 @media (max-width: 768px) {
@@ -724,7 +734,7 @@ select.compact-form-control { height: 2.1rem; }
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding-bottom: 4px;
+    padding-bottom: 40px;
     display: flex;
     flex-direction: column;
 }
@@ -970,7 +980,13 @@ select.compact-form-control { height: 2.1rem; }
     font-size: 0.82rem; font-weight: 600;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.transfer-flow-arrow { flex-shrink: 0; color: var(--bs-primary); font-size: 1.3rem; }
+.transfer-flow-arrow {
+    flex-shrink: 0; color: var(--bs-primary); font-size: 1.1rem;
+    background: none; border: none; padding: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; width: 32px; height: 32px;
+}
+.transfer-flow-arrow:active { background: rgba(13,110,253,0.12); }
 
 /* 转账：双金额输入（系统键盘） */
 .transfer-amount-row { display: flex; gap: 8px; margin-bottom: 2px; }
@@ -984,10 +1000,13 @@ select.compact-form-control { height: 2.1rem; }
     min-height: 54px;
 }
 .transfer-amount-field .amt-label { font-size: 0.68rem; color: var(--bs-secondary-color); }
+.transfer-amount-input-row { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; }
+.transfer-amount-field .amount-currency { font-size: 1.1rem; flex-shrink: 0; }
 .transfer-amount-input {
     font-size: 1.3rem;
     max-width: none;
     padding: 2px 0 0;
+    text-align: center;
 }
 
 /* 只读查看模式：禁用新组件的交互 */
@@ -995,10 +1014,152 @@ select.compact-form-control { height: 2.1rem; }
 .trans-modal-v2.view-only .chip-acc-trigger,
 .trans-modal-v2.view-only .chip-date,
 .trans-modal-v2.view-only .chip-split-btn,
-.trans-modal-v2.view-only .transfer-acc-trigger {
+.trans-modal-v2.view-only .transfer-acc-trigger,
+.trans-modal-v2.view-only .transfer-flow-arrow,
+.trans-modal-v2.view-only .tm-acc-trigger,
+.trans-modal-v2.view-only .tm-date-trigger,
+.trans-modal-v2.view-only .tm-camera-btn,
+.trans-modal-v2.view-only .tm-tag-add-btn,
+.trans-modal-v2.view-only .tm-meta-box {
     pointer-events: none;
     opacity: 0.65;
 }
+
+/* ════════════════════════════════════════════════════════════
+   收支/转账弹窗 v3：卡片式布局
+   ════════════════════════════════════════════════════════════ */
+.tm-card {
+    background: var(--bs-tertiary-bg);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+}
+.tm-card-header {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+    margin-bottom: 5px;
+}
+/* 金额卡片 */
+.tm-amount-card { padding: 9px 13px 7px; }
+.tm-amount-label { font-size: 0.72rem; color: var(--bs-secondary-color); margin-bottom: 1px; }
+.tm-amount-card .amount-input-row-v3 { display: flex; align-items: center; gap: 5px; }
+.tm-amount-card .amount-currency { font-size: 1.3rem; font-weight: 700; color: var(--bs-primary); }
+.tm-amount-card .amount-input-v2 {
+    text-align: left;
+    max-width: none;
+    font-size: 1.6rem;
+    padding: 0;
+    color: var(--bs-primary);
+}
+.tm-amount-card.amt-expense .amount-input-v2 { color: #dc3545; }
+.tm-amount-card.amt-income .amount-input-v2 { color: #198754; }
+.tm-transfer-amount-card .transfer-amount-row { margin-bottom: 0; }
+
+/* 行式卡片（账户/日期/备注） */
+.tm-row-card { padding: 0 12px; }
+.tm-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0;
+    cursor: pointer;
+    position: relative;
+}
+.tm-row + .tm-row { border-top: 1px solid var(--bs-border-color); }
+.tm-row-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.86rem; flex-shrink: 0;
+}
+.tm-icon-blue  { background: rgba(13,110,253,0.15); color: #0d6efd; }
+.tm-icon-green { background: rgba(25,135,84,0.15); color: #198754; }
+.tm-row-text { flex: 1; min-width: 0; }
+.tm-row-label { font-size: 0.68rem; color: var(--bs-secondary-color); margin-bottom: 0; line-height: 1.2; }
+.tm-row-value {
+    flex: 1; min-width: 0;
+    font-size: 0.88rem; font-weight: 600; color: var(--bs-body-color);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25;
+}
+.tm-row-chevron { color: var(--bs-secondary-color); font-size: 0.85rem; flex-shrink: 0; }
+.tm-date-input-hidden {
+    position: absolute; inset: 0; opacity: 0; border: none; padding: 0; margin: 0; width: 100%; cursor: pointer;
+}
+.tm-row-card .transfer-flow-row {
+    padding-top: 8px; padding-bottom: 8px; margin-bottom: 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+/* 账户 + 日期 同行显示 */
+.tm-combo-row { display: flex; align-items: center; gap: 10px; }
+.tm-combo-item { flex: 1; min-width: 0; position: relative; }
+.tm-combo-trigger {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; cursor: pointer; position: relative;
+}
+.tm-combo-trigger .tm-row-value { flex: 0 1 auto; }
+
+/* 分类卡片：固定高度约展示 4 行，多余分类滚动查看 */
+.tm-cat-card .cat-grid {
+    max-height: 210px;
+    overflow-y: auto;
+    padding: 2px 2px 2px;
+    gap: 6px 4px;
+}
+.tm-cat-card .cat-icon-circle { width: 40px; height: 40px; font-size: 1rem; }
+.tm-cat-card .cat-grid-item .cat-name { font-size: 0.64rem; }
+.tm-split-btn { width: 26px; height: 26px; border-radius: 8px; font-size: 0.8rem; }
+
+/* 备注行 */
+.tm-desc-row { cursor: text; }
+.tm-row-label-static { font-size: 0.82rem; color: var(--bs-body-color); flex-shrink: 0; }
+.tm-desc-input {
+    flex: 1; border: none; background: transparent; outline: none;
+    text-align: right; font-size: 0.82rem; color: var(--bs-body-color); min-width: 0;
+}
+.tm-desc-input::placeholder { color: var(--bs-secondary-color); }
+
+/* 标签卡片：标题与"+ 标签"按钮、已选标签同排显示，节省纵向空间 */
+.tm-tags-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.tm-tags-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.tm-tag-add-btn {
+    display: inline-flex; align-items: center; gap: 3px;
+    border: 1px solid var(--bs-primary); color: var(--bs-primary);
+    background: transparent; border-radius: 999px; padding: 3px 10px;
+    font-size: 0.74rem; font-weight: 500; flex-shrink: 0;
+}
+.tm-tag-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid var(--bs-border-color); color: var(--bs-secondary-color);
+    border-radius: 999px; padding: 3px 9px; font-size: 0.74rem;
+}
+.tm-tag-pill .tm-tag-remove { cursor: pointer; opacity: 0.6; font-size: 0.7rem; }
+.tm-tag-pill .tm-tag-remove:hover { opacity: 1; color: #dc3545; }
+
+/* 备注 / 标签：各占一整行，样式统一，标签始终显示 */
+.tm-meta-box {
+    flex: 1; min-width: 0; box-sizing: border-box;
+    display: flex; align-items: center; gap: 6px;
+    height: 42px; padding: 0 12px; cursor: pointer;
+}
+.tm-meta-input {
+    flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+    font-size: 0.82rem; color: var(--bs-body-color);
+}
+.tm-meta-input::placeholder { color: var(--bs-secondary-color); }
+.tm-meta-tag-icon { color: var(--bs-secondary-color); font-size: 0.82rem; flex-shrink: 0; }
+
+/* 图片卡片 */
+.tm-image-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.tm-camera-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
+    color: var(--bs-secondary-color); display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+}
+
+/* 底部固定栏：仅保留操作按钮（金额已移至顶部卡片）。顶部内边距缩小，
+   让分隔线贴近按钮；额外的留白空间改由 .trans-scroll-area 的底部内边距承担，
+   这样空白会留在"图片区和分隔线之间"，而不是"分隔线和按钮之间" */
+.trans-amount-bar.tm-footer-bar { padding-top: 10px; }
 
 
 
@@ -1251,6 +1412,132 @@ select.compact-form-control { height: 2.1rem; }
 .cat-sort-item .btn-outline-danger { border-color: transparent; }
 .cat-sort-item .cat-text { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   夏日海洋主题 START —— 暑假限定皮肤（蓝色调 / 波浪 / 气泡）
+   暑假结束后，只需删除从这行到下面 "夏日海洋主题 END" 之间的全部内容，
+   即可恢复到原来的默认深色主题，不影响其他任何功能代码。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 全局主色调：替换为清凉海洋蓝，自动联动全站按钮/选中态/高亮态（登录页、
+   侧边栏与底部tab的选中态、统计页子tab、智能提醒tab、保存按钮等） */
+:root {
+    --bs-primary: #0891b2;
+    --bs-primary-rgb: 8, 145, 178;
+}
+
+/* ── 登录界面：深海渐变背景 + 波浪 + 气泡 ── */
+#login-overlay {
+    background: linear-gradient(160deg, #012a4a 0%, #013a63 30%, #01497c 55%, #2a6f97 80%, #61a5c2 100%);
+    position: fixed;
+    overflow: hidden;
+}
+#login-overlay::before,
+#login-overlay::after {
+    content: "";
+    position: absolute;
+    left: -10%;
+    width: 120%;
+    height: 160px;
+    background-repeat: repeat-x;
+    pointer-events: none;
+}
+#login-overlay::before {
+    bottom: -6px;
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20800%20100%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.18%22%20d%3D%22M0%2C50%20C100%2C10%20200%2C90%20300%2C50%20C400%2C10%20500%2C90%20600%2C50%20C700%2C10%20800%2C90%20800%2C50%20L800%2C100%20L0%2C100%20Z%22%2F%3E%3C%2Fsvg%3E");
+    background-size: 800px 160px;
+    animation: summerWaveDriftSlow 22s linear infinite;
+}
+#login-overlay::after {
+    bottom: -10px;
+    height: 120px;
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20800%20100%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.32%22%20d%3D%22M0%2C60%20C150%2C20%20250%2C100%20400%2C60%20C550%2C20%20650%2C100%20800%2C60%20L800%2C100%20L0%2C100%20Z%22%2F%3E%3C%2Fsvg%3E");
+    background-size: 800px 120px;
+    animation: summerWaveDriftFast 13s linear infinite;
+}
+@keyframes summerWaveDriftSlow {
+    from { background-position-x: 0; }
+    to   { background-position-x: -800px; }
+}
+@keyframes summerWaveDriftFast {
+    from { background-position-x: 0; }
+    to   { background-position-x: 800px; }
+}
+
+/* 登录卡片：磨砂玻璃质感，浮在海面上 */
+#login-overlay .card {
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 8px 32px rgba(1, 42, 74, 0.45);
+    position: relative;
+    z-index: 1;
+}
+#login-overlay .card,
+#login-overlay .card .form-label,
+#login-overlay .card .text-muted,
+#login-overlay .card small { color: #eaf6fb; }
+#login-overlay .card .form-control,
+#login-overlay .card .bg-body-tertiary {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #eaf6fb !important;
+}
+#login-overlay .card .form-control::placeholder { color: rgba(234, 246, 251, 0.6); }
+#login-overlay .brand-title,
+#login-overlay h4.text-primary { color: #7ce0f7 !important; }
+
+/* 漂浮气泡装饰（见 login-overlay 内新增的 .summer-bubbles 容器） */
+.summer-bubbles {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
+}
+.summer-bubbles span {
+    position: absolute;
+    bottom: -60px;
+    display: block;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.15) 70%);
+    animation: summerBubbleRise linear infinite;
+}
+.summer-bubbles span:nth-child(1) { left: 8%;  width: 10px; height: 10px; animation-duration: 9s;  animation-delay: 0s; }
+.summer-bubbles span:nth-child(2) { left: 22%; width: 18px; height: 18px; animation-duration: 12s; animation-delay: 1.5s; }
+.summer-bubbles span:nth-child(3) { left: 45%; width: 9px;  height: 9px;  animation-duration: 8s;  animation-delay: 3s; }
+.summer-bubbles span:nth-child(4) { left: 63%; width: 15px; height: 15px; animation-duration: 11s; animation-delay: 0.8s; }
+.summer-bubbles span:nth-child(5) { left: 80%; width: 12px; height: 12px; animation-duration: 10s; animation-delay: 2.2s; }
+.summer-bubbles span:nth-child(6) { left: 92%; width: 20px; height: 20px; animation-duration: 14s; animation-delay: 4s; }
+@keyframes summerBubbleRise {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 0.9; }
+    100% { transform: translateY(-100vh) translateX(12px); opacity: 0; }
+}
+
+/* ── 侧边栏 / 底部 Tab 栏：海洋渐变 + 选中态发光 ── */
+.sidebar {
+    background: linear-gradient(180deg, #013a63 0%, #01497c 45%, #2a6f97 100%) !important;
+    border-right-color: rgba(255, 255, 255, 0.15) !important;
+}
+.sidebar .brand-title,
+.sidebar .nav-pills .nav-link,
+.sidebar .sidebar-footer .user-name { color: #eaf6fb; }
+.sidebar .sidebar-footer .user-status,
+.sidebar #sidebar-version { color: rgba(234, 246, 251, 0.65) !important; }
+.sidebar .sidebar-footer { border-top-color: rgba(255, 255, 255, 0.15); }
+.nav-pills .nav-link.active {
+    box-shadow: 0 2px 10px rgba(var(--bs-primary-rgb), 0.55);
+}
+@media (max-width: 768px) {
+    .sidebar {
+        background: linear-gradient(90deg, #013a63 0%, #01497c 50%, #2a6f97 100%) !important;
+        box-shadow: 0 -2px 10px rgba(1, 42, 74, 0.35);
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   夏日海洋主题 END
+   ══════════════════════════════════════════════════════════════════════════ */
+
+
 </style>
 </head>
 <body>
@@ -1259,6 +1546,9 @@ select.compact-form-control { height: 2.1rem; }
 <div id="app-toast"></div>
 
 <div id="login-overlay">
+    <!-- 夏日海洋主题装饰：气泡（暑假结束后与上面CSS区块一起删除即可） -->
+    <div class="summer-bubbles" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
 
 
 
@@ -1382,7 +1672,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.5.7</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.7.4</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2053,7 +2343,7 @@ select.compact-form-control { height: 2.1rem; }
                         </button>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-2">记录已删除的交易/账户ID，用于多设备同步时防止已删数据被重新合并回来。条目会在 7 天后自动失效。</p>
+                        <p class="text-muted small mb-2">记录已删除的交易/账户ID，用于多设备同步时防止已删数据被重新合并回来。条目会在 <span id="deleted-log-retention-days-text">30</span> 天后自动失效。</p>
                         <div id="deleted-log-list"></div>
                     </div>
                 </div>
@@ -2119,7 +2409,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.5.7</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v2.7.4</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2340,27 +2630,43 @@ select.compact-form-control { height: 2.1rem; }
                     <input type="hidden" id="edit-trans-type" value="expense">
 
                     <div class="trans-scroll-area">
-                        <!-- 日期 / 账户 / 拆分 chip 行 -->
-                        <div class="trans-chip-row">
-                            <div class="chip-date" onclick="this.querySelector('input').showPicker && this.querySelector('input').showPicker()">
-                                <i class="bi bi-calendar3"></i>
-                                <input type="date" class="chip-date-input" id="edit-trans-date" required="">
+
+                        <!-- 金额卡片 -->
+                        <div class="tm-card tm-amount-card" id="trans-amount-card">
+                            <div class="amount-input-row-v3">
+                                <span class="amount-currency" id="amount-currency-symbol">¥</span>
+                                <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 decimal-input" id="edit-trans-amount" required="">
                             </div>
-                            <div class="acc-select-wrapper chip-acc" id="wrap-edit-trans-account">
-                                <select class="form-select" id="edit-trans-account" required="" style="display:none;"></select>
-                                <div class="acc-select-trigger chip-acc-trigger" id="trigger-edit-trans-account">
-                                    <i class="bi bi-wallet2"></i><span class="acc-trigger-text"></span>
+                        </div>
+
+                        <!-- 账户 / 日期 卡片（同一行） -->
+                        <div class="tm-card tm-row-card">
+                            <div class="tm-combo-row">
+                                <div class="acc-select-wrapper tm-combo-item" id="wrap-edit-trans-account">
+                                    <select class="form-select" id="edit-trans-account" required="" style="display:none;"></select>
+                                    <div class="tm-combo-trigger tm-acc-trigger" id="trigger-edit-trans-account">
+                                        <div class="tm-row-icon tm-icon-blue"><i class="bi bi-credit-card-fill"></i></div>
+                                        <div class="tm-row-value acc-trigger-text"></div>
+                                    </div>
+                                    <div class="acc-select-dropdown" id="dropdown-edit-trans-account"></div>
                                 </div>
-                                <div class="acc-select-dropdown" id="dropdown-edit-trans-account"></div>
+                                <div class="tm-combo-trigger tm-date-trigger" onclick="this.querySelector('input').showPicker && this.querySelector('input').showPicker()">
+                                    <div class="tm-row-icon tm-icon-green"><i class="bi bi-calendar3"></i></div>
+                                    <div class="tm-row-value" id="edit-trans-date-label">今天</div>
+                                    <input type="date" class="tm-date-input-hidden" id="edit-trans-date" required="" onchange="syncDateLabels()">
+                                </div>
                             </div>
-                            <button type="button" id="split-toggle-btn" class="chip-split-btn" title="拆分账单" onclick="handleSplitBtn()">
-                                <i class="bi bi-scissors"></i>
-                            </button>
                         </div>
 
                         <!-- 单笔：类别图标网格 -->
                         <div id="single-item-row">
-                            <div class="cat-grid-section" id="cat-grid-section">
+                            <div class="tm-card tm-cat-card" id="cat-grid-section">
+                                <div class="tm-card-header d-flex justify-content-between align-items-center">
+                                    <span>所有分类</span>
+                                    <button type="button" id="split-toggle-btn" class="chip-split-btn tm-split-btn" title="拆分账单" onclick="handleSplitBtn()">
+                                        <i class="bi bi-scissors"></i>
+                                    </button>
+                                </div>
                                 <select class="form-select" id="edit-trans-category" required="" style="display:none;"></select>
                                 <div class="cat-grid" id="cat-grid-edit-trans-category"></div>
                             </div>
@@ -2382,47 +2688,38 @@ select.compact-form-control { height: 2.1rem; }
                         <!-- 单笔时的标签/备注（拆分时隐藏） -->
                         <div id="single-meta-section">
 
-                            <!-- 标签：折叠式 -->
-                            <div class="mb-2" id="tags-collapse-wrap">
-                                <button type="button" class="btn-expand-field" id="tags-expand-btn" onclick="expandMetaField('tags')">
-                                    <i class="bi bi-plus-sm"></i> 添加标签
-                                </button>
-                                <div id="tags-expanded" style="display:none;">
-                                    <label class="compact-form-label">标签</label>
-                                    <div class="tag-suggest-wrap">
-                                        <input type="text" class="form-control compact-form-control" id="edit-trans-tags"
-                                               placeholder="添加标签…" autocomplete="off"
-                                               onfocus="openTagSuggest(this,'ts-single')"
-                                               onblur="scheduleCloseTagSuggest('ts-single')">
-                                        <ul class="tag-suggest-list" id="ts-single"></ul>
-                                    </div>
-                                </div>
+                            <!-- 备注 -->
+                            <div class="tm-card tm-meta-box" id="desc-collapse-wrap" onclick="$('edit-trans-desc').focus()">
+                                <input type="text" class="tm-meta-input" id="edit-trans-desc"
+                                       oninput="updateDescHint('edit-trans-desc','edit-trans-desc-hint','edit-trans-type','edit-trans-category','edit-trans-account')"
+                                       placeholder="添加备注...">
+                                <i class="bi bi-chevron-right tm-row-chevron"></i>
                             </div>
+                            <div id="edit-trans-desc-hint" style="display:none;align-items:center;gap:6px;margin-top:-2px;margin-bottom:6px;padding:3px 8px;border-radius:5px;background:rgba(var(--bs-primary-rgb),0.08);border:1px solid rgba(var(--bs-primary-rgb),0.2);font-size:0.78rem;"></div>
 
-                            <!-- 备注：默认展开 -->
-                            <div class="mb-2" id="desc-collapse-wrap">
-                                <button type="button" class="btn-expand-field" id="desc-expand-btn" onclick="expandMetaField('desc')" style="display:none;">
-                                    <i class="bi bi-plus-sm"></i> 添加备注
-                                </button>
-                                <div id="desc-expanded">
-                                    <label class="compact-form-label">备注</label>
-                                    <div class="input-group" id="desc-input-group">
-                                        <input type="text" class="form-control compact-form-control" id="edit-trans-desc"
-                                               oninput="updateDescHint('edit-trans-desc','edit-trans-desc-hint','edit-trans-type','edit-trans-category','edit-trans-account')"
-                                               placeholder="添加备注...">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="attachment-btn" style="width: 45px;" onclick="document.getElementById('attachment-file-input').click()">
-                                            <i class="bi bi-image"></i>
-                                        </button>
-                                    </div>
-                                    <div id="edit-trans-desc-hint" style="display:none;align-items:center;gap:6px;margin-top:3px;padding:3px 8px;border-radius:5px;background:rgba(var(--bs-primary-rgb),0.08);border:1px solid rgba(var(--bs-primary-rgb),0.2);font-size:0.78rem;"></div>
+                            <!-- 标签：始终显示，样式与备注框一致，可直接输入或从下拉中选择历史标签 -->
+                            <div class="tm-card tm-meta-box" id="tags-collapse-wrap" onclick="$('edit-trans-tags').focus()">
+                                <i class="bi bi-tag tm-meta-tag-icon"></i>
+                                <div class="tag-suggest-wrap" style="flex:1;min-width:0;display:flex;">
+                                    <input type="text" class="tm-meta-input" id="edit-trans-tags"
+                                           placeholder="添加标签，多个用空格分隔…" autocomplete="off"
+                                           onfocus="openTagSuggest(this,'ts-single')"
+                                           onblur="scheduleCloseTagSuggest('ts-single')">
+                                    <ul class="tag-suggest-list" id="ts-single"></ul>
                                 </div>
                             </div>
                         </div>
 
                         <!-- 附件（单笔和拆分都保留） -->
-                        <div class="mb-2" id="attachment-section" style="display:none;">
+                        <div class="tm-card" id="attachment-section" style="display:none;">
+                            <div class="tm-image-row">
+                                <span class="tm-card-header mb-0">图片</span>
+                                <button type="button" class="tm-camera-btn" onclick="document.getElementById('attachment-file-input').click()">
+                                    <i class="bi bi-camera"></i>
+                                </button>
+                            </div>
                             <input type="file" id="attachment-file-input" accept="image/*,image/heic,image/heif,application/pdf" class="d-none" onchange="handleAttachmentSelected(this)">
-                            <div id="attachment-preview-container" class="d-flex flex-wrap gap-2 mt-2" style="display:none !important;"></div>
+                            <div id="attachment-preview-container" class="d-flex flex-wrap gap-2" style="display:none !important;"></div>
                             <div id="attachment-upload-status" class="small text-muted mt-1" style="display:none;">
                                 <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                                 <span class="ms-1">正在上传图片...</span>
@@ -2431,17 +2728,13 @@ select.compact-form-control { height: 2.1rem; }
                         </div>
                     </div>
 
-                    <!-- 沉浸式金额（吸底，系统键盘输入） -->
-                    <div class="trans-amount-bar" id="trans-amount-bar">
-                        <div class="amount-input-row">
-                            <span class="amount-currency" id="amount-currency-symbol">¥</span>
-                            <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 decimal-input" id="edit-trans-amount" required="">
-                        </div>
+                    <!-- 底部保存栏（金额已移至顶部卡片） -->
+                    <div class="trans-amount-bar tm-footer-bar" id="trans-amount-bar">
                         <div class="trans-action-row">
                             <button type="button" class="btn-delete-immersive" id="edit-trans-delete-btn" onclick="deleteCurrentTransaction()" style="display:none!important;">
                                 <i class="bi bi-trash"></i> 删除
                             </button>
-                            <button type="submit" class="btn-save-immersive" id="edit-trans-submit-btn">保存</button>
+                            <button type="submit" class="btn-save-immersive" id="edit-trans-submit-btn"><i class="bi bi-check-lg"></i> 保存</button>
                         </div>
                     </div>
                 </form>
@@ -2452,63 +2745,76 @@ select.compact-form-control { height: 2.1rem; }
                     <input type="hidden" id="edit-transfer-mode" value="edit">
 
                     <div class="trans-scroll-area">
-                        <div class="trans-chip-row">
-                            <div class="chip-date" onclick="this.querySelector('input').showPicker && this.querySelector('input').showPicker()">
-                                <i class="bi bi-calendar3"></i>
-                                <input type="date" class="chip-date-input" id="edit-transfer-date" required="">
+
+                        <!-- 转账金额卡片 -->
+                        <div class="tm-card tm-amount-card tm-transfer-amount-card">
+                            <div class="transfer-amount-row">
+                                <div class="transfer-amount-field">
+                                    <label class="amt-label">转出金额</label>
+                                    <div class="transfer-amount-input-row">
+                                        <span class="amount-currency" id="transfer-currency-out">¥</span>
+                                        <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-out" oninput="handleEditTransferAmountChange('out')" required="">
+                                    </div>
+                                </div>
+                                <div class="transfer-amount-field">
+                                    <label class="amt-label">转入金额</label>
+                                    <div class="transfer-amount-input-row">
+                                        <span class="amount-currency" id="transfer-currency-in">¥</span>
+                                        <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-in" oninput="handleEditTransferAmountChange('in')" required="">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="transfer-flow-row">
-                            <div class="acc-select-wrapper transfer-acc-card" id="wrap-edit-transfer-from">
-                                <select class="form-select" id="edit-transfer-from" onchange="handleEditTransferAmountChange()" required="" style="display:none;"></select>
-                                <div class="acc-select-trigger transfer-acc-trigger" id="trigger-edit-transfer-from">
-                                    <span class="transfer-acc-label">转出</span>
-                                    <i class="bi bi-credit-card-2-front-fill"></i>
-                                    <span class="acc-trigger-text"></span>
+                        <!-- 转出/转入账户 + 日期 卡片 -->
+                        <div class="tm-card tm-row-card">
+                            <div class="transfer-flow-row">
+                                <div class="acc-select-wrapper transfer-acc-card" id="wrap-edit-transfer-from">
+                                    <select class="form-select" id="edit-transfer-from" onchange="handleEditTransferAmountChange()" required="" style="display:none;"></select>
+                                    <div class="acc-select-trigger transfer-acc-trigger" id="trigger-edit-transfer-from">
+                                        <span class="transfer-acc-label">转出</span>
+                                        <i class="bi bi-credit-card-2-front-fill"></i>
+                                        <span class="acc-trigger-text"></span>
+                                    </div>
+                                    <div class="acc-select-dropdown" id="dropdown-edit-transfer-from"></div>
                                 </div>
-                                <div class="acc-select-dropdown" id="dropdown-edit-transfer-from"></div>
+                                <button type="button" class="transfer-flow-arrow" title="互换转出/转入账户" onclick="swapTransferAccounts()">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                </button>
+                                <div class="acc-select-wrapper transfer-acc-card" id="wrap-edit-transfer-to">
+                                    <select class="form-select" id="edit-transfer-to" onchange="handleEditTransferAmountChange()" required="" style="display:none;"></select>
+                                    <div class="acc-select-trigger transfer-acc-trigger" id="trigger-edit-transfer-to">
+                                        <span class="transfer-acc-label">转入</span>
+                                        <i class="bi bi-credit-card-2-back-fill"></i>
+                                        <span class="acc-trigger-text"></span>
+                                    </div>
+                                    <div class="acc-select-dropdown" id="dropdown-edit-transfer-to"></div>
+                                </div>
                             </div>
-                            <div class="transfer-flow-arrow"><i class="bi bi-arrow-right-circle-fill"></i></div>
-                            <div class="acc-select-wrapper transfer-acc-card" id="wrap-edit-transfer-to">
-                                <select class="form-select" id="edit-transfer-to" onchange="handleEditTransferAmountChange()" required="" style="display:none;"></select>
-                                <div class="acc-select-trigger transfer-acc-trigger" id="trigger-edit-transfer-to">
-                                    <span class="transfer-acc-label">转入</span>
-                                    <i class="bi bi-credit-card-2-back-fill"></i>
-                                    <span class="acc-trigger-text"></span>
-                                </div>
-                                <div class="acc-select-dropdown" id="dropdown-edit-transfer-to"></div>
+                            <div class="tm-row tm-date-trigger" onclick="this.querySelector('input').showPicker && this.querySelector('input').showPicker()">
+                                <div class="tm-row-icon tm-icon-green"><i class="bi bi-calendar3"></i></div>
+                                <div class="tm-row-value" id="edit-transfer-date-label">今天</div>
+                                <i class="bi bi-chevron-right tm-row-chevron"></i>
+                                <input type="date" class="tm-date-input-hidden" id="edit-transfer-date" required="" onchange="syncDateLabels()">
                             </div>
                         </div>
 
-                        <!-- 转账备注：默认展开 -->
-                        <div class="mb-2" id="transfer-desc-collapse-wrap">
-                            <button type="button" class="btn-expand-field" id="transfer-desc-expand-btn" onclick="expandTransferDesc()" style="display:none;">
-                                <i class="bi bi-plus-sm"></i> 添加备注
-                            </button>
-                            <div id="transfer-desc-expanded">
-                                <label class="compact-form-label">备注</label>
-                                <input type="text" class="form-control compact-form-control" id="edit-transfer-desc" placeholder="添加备注...">
+                        <!-- 转账备注 -->
+                        <div class="tm-card tm-row-card" id="transfer-desc-collapse-wrap">
+                            <div class="tm-row tm-desc-row" onclick="$('edit-transfer-desc').focus()">
+                                <span class="tm-row-label-static">备注</span>
+                                <input type="text" class="tm-desc-input" id="edit-transfer-desc" placeholder="添加备注...">
+                                <i class="bi bi-chevron-right tm-row-chevron"></i>
                             </div>
                         </div>
                     </div>
 
-                    <div class="trans-amount-bar" id="transfer-amount-bar">
-                        <div class="transfer-amount-row">
-                            <div class="transfer-amount-field">
-                                <label class="amt-label">转出金额</label>
-                                <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-out" oninput="handleEditTransferAmountChange('out')" required="">
-                            </div>
-                            <div class="transfer-amount-field">
-                                <label class="amt-label">转入金额</label>
-                                <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-in" oninput="handleEditTransferAmountChange('in')" required="">
-                            </div>
-                        </div>
+                    <div class="trans-amount-bar tm-footer-bar" id="transfer-amount-bar">
                         <div class="trans-action-row">
                             <button type="button" class="btn-delete-immersive" id="edit-transfer-delete-btn" onclick="deleteCurrentTransfer()" style="display:none!important;">
                                 <i class="bi bi-trash"></i> 删除
                             </button>
-                            <button type="submit" class="btn-save-immersive" id="edit-transfer-submit-btn">保存</button>
+                            <button type="submit" class="btn-save-immersive" id="edit-transfer-submit-btn"><i class="bi bi-check-lg"></i> 保存</button>
                         </div>
                     </div>
                 </form>
@@ -2617,13 +2923,17 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-const APP_VERSION = '2.5.7';
+const APP_VERSION = '2.7.4';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
-// 约束：STALE_CACHE_DAYS（loadFromDrive 中）必须 ≤ DELETED_LOG_RETENTION_DAYS，
+// 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），
 // 建议 ≤ 一半，留安全边际。否则会出现"删除记录已失效但设备缓存还没刷新"的
 // 空窗期，导致已删除的数据在同步时被误判为新数据而复活。
-const DELETED_LOG_RETENTION_DAYS = 14; // deletedLog 条目保留天数（防止已删数据被合并复活）
+const DELETED_LOG_RETENTION_DAYS = 30; // deletedLog 条目保留天数（防止已删数据被合并复活）
+const STALE_CACHE_DAYS = 10; // 本地缓存过期天数：超过此天数未同步则强制从云端拉取最新数据
+
+// 标签建议下拉：只显示最近 N 天内发生过的交易所带的标签（按交易日期 t.date 判断，而非编辑时间）
+const RECENT_TAGS_WINDOW_DAYS = 180; // 约半年
 const $ = id => document.getElementById(id);
 const $$ = selector => document.querySelectorAll(selector);
 
@@ -2716,6 +3026,7 @@ function gasRequestUrl(options = {}) {
     if (options.file)     params.push(`file=${encodeURIComponent(options.file)}`);
     if (options.fileName) params.push(`fileName=${encodeURIComponent(options.fileName)}`);
     if (options.mimeType) params.push(`mimeType=${encodeURIComponent(options.mimeType)}`);
+    if (options.fileId)   params.push(`fileId=${encodeURIComponent(options.fileId)}`);
     const device = localStorage.getItem('APP_device_name') || guessDeviceName();
     params.push(`device=${encodeURIComponent(device)}`);
     return params.length ? `${GAS_URL}?${params.join('&')}` : GAS_URL;
@@ -2950,8 +3261,16 @@ function _applyAppVersion() {
     if (settingsEl) settingsEl.textContent = `v${APP_VERSION}`;
 }
 
+// 把 DELETED_LOG_RETENTION_DAYS / STALE_CACHE_DAYS 同步到界面文案里，
+// 避免常量改了但说明文字忘了改，导致文案和实际行为不一致
+function _applySyncConstants() {
+    const retentionEl = $('deleted-log-retention-days-text');
+    if (retentionEl) retentionEl.textContent = DELETED_LOG_RETENTION_DAYS;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     _applyAppVersion();
+    _applySyncConstants();
     initOfflineModeUI();
 
     // 在线模式且有已保存的 URL 则自动从 Drive 同步
@@ -4191,8 +4510,7 @@ async function loadFromDrive() {
         alert('请先在登录界面填写并保存 GAS URL。'); return;
     }
 
-    // 缓存过期天数：必须 ≤ DELETED_LOG_RETENTION_DAYS，否则会出现"删除记录已失效但缓存还没刷新"的空窗期，导致已删数据复活
-    const STALE_CACHE_DAYS = 7;
+    // 缓存过期天数：见文件顶部 STALE_CACHE_DAYS（必须 ≤ DELETED_LOG_RETENTION_DAYS，否则会出现"删除记录已失效但缓存还没刷新"的空窗期，导致已删数据复活）
     const localRawCache = localStorage.getItem('APP_raw_cache');
     const lastSyncTime = parseInt(localStorage.getItem('APP_last_sync_time') || '0', 10);
     const daysSinceSync = lastSyncTime ? (Date.now() - lastSyncTime) / (24 * 60 * 60 * 1000) : Infinity;
@@ -5197,7 +5515,29 @@ function switchTransTab(tab, skipReset) {
         if (_inSplitMode) exitSplitMode();
         else _splitData = [];
     }
+    syncDateLabels();
 }
+
+// 日期友好显示："今天"/"昨天"/"明天"/"M月D日"
+function formatTransDateLabel(dateStr) {
+    if (!dateStr) return '选择日期';
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return '选择日期';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((d - today) / 86400000);
+    if (diffDays === 0) return '今天';
+    if (diffDays === -1) return '昨天';
+    if (diffDays === 1) return '明天';
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+function syncDateLabels() {
+    const tEl = $('edit-trans-date-label');
+    if (tEl) tEl.textContent = formatTransDateLabel($('edit-trans-date').value);
+    const fEl = $('edit-transfer-date-label');
+    if (fEl) fEl.textContent = formatTransDateLabel($('edit-transfer-date').value);
+}
+
+// 标签输入框始终显示（不再需要展开/收起逻辑）
 
 // 弹窗标题加用户名
 function _userTitle(base) {
@@ -5337,6 +5677,26 @@ function openNewTransfer() {
 }
 
 
+// 互换转出/转入账户（金额同步互换）
+function swapTransferAccounts() {
+    const fromSel = $('edit-transfer-from');
+    const toSel = $('edit-transfer-to');
+    if (!fromSel || !toSel) return;
+    const tmp = fromSel.value;
+    fromSel.value = toSel.value;
+    toSel.value = tmp;
+    accSelectSync('edit-transfer-from');
+    accSelectSync('edit-transfer-to');
+
+    const outAmtEl = $('edit-transfer-amount-out');
+    const inAmtEl = $('edit-transfer-amount-in');
+    if (outAmtEl && inAmtEl) {
+        const tmpAmt = outAmtEl.value;
+        outAmtEl.value = inAmtEl.value;
+        inAmtEl.value = tmpAmt;
+    }
+}
+
 function handleEditTransferAmountChange(direction) {
     const fromId = $('edit-transfer-from')?.value;
     const toId   = $('edit-transfer-to')?.value;
@@ -5441,9 +5801,7 @@ function openEditTransaction(id) {
     $('edit-trans-desc').value = t.desc || '';
     // 编辑时隐藏 tab bar（固定类型）
     $('trans-tab-bar').style.display = 'none';
-    // 根据已有数据展开折叠字段
     resetMetaFieldsCollapse();
-    expandMetaFieldsForExistingData(t.tags, t.desc);
     switchTransTab(t.type, true);
     // 加载分录
     if (t.items && t.items.length > 1) {
@@ -6408,17 +6766,29 @@ function catGridSync(selectId, gridId) {
 
 // 金额输入框颜色随支出/收入变化
 function updateAmountTypeClass(type) {
-    const bar = $('trans-amount-bar');
-    if (!bar) return;
-    bar.classList.remove('amt-expense', 'amt-income');
-    if (type === 'expense') bar.classList.add('amt-expense');
-    else if (type === 'income') bar.classList.add('amt-income');
+    [$('trans-amount-bar'), $('trans-amount-card')].forEach(el => {
+        if (!el) return;
+        el.classList.remove('amt-expense', 'amt-income');
+        if (type === 'expense') el.classList.add('amt-expense');
+        else if (type === 'income') el.classList.add('amt-income');
+    });
 }
 
 // 金额前的货币符号随所选账户的币种变化
 function updateAmountCurrencySymbol() {
     const accSel = $('edit-trans-account');
     const symEl = $('amount-currency-symbol');
+    if (!accSel || !symEl) return;
+    const acc = accounts.find(a => a.id == accSel.value);
+    symEl.textContent = acc ? (CURRENCY_SYMBOLS[acc.currency] || acc.currency) : '¥';
+}
+
+// 转账 转出/转入 金额前的货币符号随各自所选账户的币种变化
+function updateTransferCurrencySymbol(direction) {
+    const selId = direction === 'out' ? 'edit-transfer-from' : 'edit-transfer-to';
+    const symId = direction === 'out' ? 'transfer-currency-out' : 'transfer-currency-in';
+    const accSel = $(selId);
+    const symEl = $(symId);
     if (!accSel || !symEl) return;
     const acc = accounts.find(a => a.id == accSel.value);
     symEl.textContent = acc ? (CURRENCY_SYMBOLS[acc.currency] || acc.currency) : '¥';
@@ -9345,7 +9715,12 @@ let _tagSuggestCloseTimer = {};
 
 function getRecentTags() {
     const tagSet = new Map();
-    const sorted = [...transactions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    const cutoff = Date.now() - RECENT_TAGS_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    const recent = transactions.filter(t => {
+        const ts = t.date ? new Date(t.date).getTime() : NaN;
+        return !isNaN(ts) && ts >= cutoff;
+    });
+    const sorted = recent.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     for (const t of sorted) {
         if (t.tags && t.tags.trim()) {
             const tag = t.tags.trim();
@@ -10274,6 +10649,8 @@ function accSelectSync(selectId) {
     if (textEl) textEl.textContent = text;
     else trigger.textContent = text;
     if (selectId === 'edit-trans-account') updateAmountCurrencySymbol();
+    else if (selectId === 'edit-transfer-from') updateTransferCurrencySymbol('out');
+    else if (selectId === 'edit-transfer-to') updateTransferCurrencySymbol('in');
 }
 
 function accSelectBuild(selectId) {
