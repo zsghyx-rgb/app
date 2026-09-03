@@ -1,10 +1,10 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v2.7.4</title>
+    <title id="app-title">记一笔 v3.7.5</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0891b2"><!-- 夏日海洋主题色，暑假结束后可改回 #0d6efd -->
+    <meta name="theme-color" content="#0d6efd">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1412,132 +1412,6 @@ select.compact-form-control { height: 2.1rem; }
 .cat-sort-item .btn-outline-danger { border-color: transparent; }
 .cat-sort-item .cat-text { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   夏日海洋主题 START —— 暑假限定皮肤（蓝色调 / 波浪 / 气泡）
-   暑假结束后，只需删除从这行到下面 "夏日海洋主题 END" 之间的全部内容，
-   即可恢复到原来的默认深色主题，不影响其他任何功能代码。
-   ══════════════════════════════════════════════════════════════════════════ */
-
-/* 全局主色调：替换为清凉海洋蓝，自动联动全站按钮/选中态/高亮态（登录页、
-   侧边栏与底部tab的选中态、统计页子tab、智能提醒tab、保存按钮等） */
-:root {
-    --bs-primary: #0891b2;
-    --bs-primary-rgb: 8, 145, 178;
-}
-
-/* ── 登录界面：深海渐变背景 + 波浪 + 气泡 ── */
-#login-overlay {
-    background: linear-gradient(160deg, #012a4a 0%, #013a63 30%, #01497c 55%, #2a6f97 80%, #61a5c2 100%);
-    position: fixed;
-    overflow: hidden;
-}
-#login-overlay::before,
-#login-overlay::after {
-    content: "";
-    position: absolute;
-    left: -10%;
-    width: 120%;
-    height: 160px;
-    background-repeat: repeat-x;
-    pointer-events: none;
-}
-#login-overlay::before {
-    bottom: -6px;
-    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20800%20100%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.18%22%20d%3D%22M0%2C50%20C100%2C10%20200%2C90%20300%2C50%20C400%2C10%20500%2C90%20600%2C50%20C700%2C10%20800%2C90%20800%2C50%20L800%2C100%20L0%2C100%20Z%22%2F%3E%3C%2Fsvg%3E");
-    background-size: 800px 160px;
-    animation: summerWaveDriftSlow 22s linear infinite;
-}
-#login-overlay::after {
-    bottom: -10px;
-    height: 120px;
-    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20800%20100%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.32%22%20d%3D%22M0%2C60%20C150%2C20%20250%2C100%20400%2C60%20C550%2C20%20650%2C100%20800%2C60%20L800%2C100%20L0%2C100%20Z%22%2F%3E%3C%2Fsvg%3E");
-    background-size: 800px 120px;
-    animation: summerWaveDriftFast 13s linear infinite;
-}
-@keyframes summerWaveDriftSlow {
-    from { background-position-x: 0; }
-    to   { background-position-x: -800px; }
-}
-@keyframes summerWaveDriftFast {
-    from { background-position-x: 0; }
-    to   { background-position-x: 800px; }
-}
-
-/* 登录卡片：磨砂玻璃质感，浮在海面上 */
-#login-overlay .card {
-    background: rgba(255, 255, 255, 0.12) !important;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    box-shadow: 0 8px 32px rgba(1, 42, 74, 0.45);
-    position: relative;
-    z-index: 1;
-}
-#login-overlay .card,
-#login-overlay .card .form-label,
-#login-overlay .card .text-muted,
-#login-overlay .card small { color: #eaf6fb; }
-#login-overlay .card .form-control,
-#login-overlay .card .bg-body-tertiary {
-    background: rgba(255, 255, 255, 0.14) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: #eaf6fb !important;
-}
-#login-overlay .card .form-control::placeholder { color: rgba(234, 246, 251, 0.6); }
-#login-overlay .brand-title,
-#login-overlay h4.text-primary { color: #7ce0f7 !important; }
-
-/* 漂浮气泡装饰（见 login-overlay 内新增的 .summer-bubbles 容器） */
-.summer-bubbles {
-    position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
-}
-.summer-bubbles span {
-    position: absolute;
-    bottom: -60px;
-    display: block;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.15) 70%);
-    animation: summerBubbleRise linear infinite;
-}
-.summer-bubbles span:nth-child(1) { left: 8%;  width: 10px; height: 10px; animation-duration: 9s;  animation-delay: 0s; }
-.summer-bubbles span:nth-child(2) { left: 22%; width: 18px; height: 18px; animation-duration: 12s; animation-delay: 1.5s; }
-.summer-bubbles span:nth-child(3) { left: 45%; width: 9px;  height: 9px;  animation-duration: 8s;  animation-delay: 3s; }
-.summer-bubbles span:nth-child(4) { left: 63%; width: 15px; height: 15px; animation-duration: 11s; animation-delay: 0.8s; }
-.summer-bubbles span:nth-child(5) { left: 80%; width: 12px; height: 12px; animation-duration: 10s; animation-delay: 2.2s; }
-.summer-bubbles span:nth-child(6) { left: 92%; width: 20px; height: 20px; animation-duration: 14s; animation-delay: 4s; }
-@keyframes summerBubbleRise {
-    0%   { transform: translateY(0) translateX(0); opacity: 0; }
-    10%  { opacity: 0.9; }
-    100% { transform: translateY(-100vh) translateX(12px); opacity: 0; }
-}
-
-/* ── 侧边栏 / 底部 Tab 栏：海洋渐变 + 选中态发光 ── */
-.sidebar {
-    background: linear-gradient(180deg, #013a63 0%, #01497c 45%, #2a6f97 100%) !important;
-    border-right-color: rgba(255, 255, 255, 0.15) !important;
-}
-.sidebar .brand-title,
-.sidebar .nav-pills .nav-link,
-.sidebar .sidebar-footer .user-name { color: #eaf6fb; }
-.sidebar .sidebar-footer .user-status,
-.sidebar #sidebar-version { color: rgba(234, 246, 251, 0.65) !important; }
-.sidebar .sidebar-footer { border-top-color: rgba(255, 255, 255, 0.15); }
-.nav-pills .nav-link.active {
-    box-shadow: 0 2px 10px rgba(var(--bs-primary-rgb), 0.55);
-}
-@media (max-width: 768px) {
-    .sidebar {
-        background: linear-gradient(90deg, #013a63 0%, #01497c 50%, #2a6f97 100%) !important;
-        box-shadow: 0 -2px 10px rgba(1, 42, 74, 0.35);
-    }
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
-   夏日海洋主题 END
-   ══════════════════════════════════════════════════════════════════════════ */
-
-
 </style>
 </head>
 <body>
@@ -1546,12 +1420,6 @@ select.compact-form-control { height: 2.1rem; }
 <div id="app-toast"></div>
 
 <div id="login-overlay">
-    <!-- 夏日海洋主题装饰：气泡（暑假结束后与上面CSS区块一起删除即可） -->
-    <div class="summer-bubbles" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-
-
-
-
     <div class="card shadow p-3 p-md-4" style="width: 480px; max-width: 95%;">
 
         <!-- 标题栏 + 齿轮 -->
@@ -1672,7 +1540,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 2.7.4</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 3.7.5</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2182,6 +2050,15 @@ select.compact-form-control { height: 2.1rem; }
                         </form>
                     </div>
                 </div>
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-eye-slash"></i> 隐藏账户管理
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">已隐藏的账户不会出现在账户页面和交易页面，可在此处恢复显示。</p>
+                        <div id="hidden-accounts-list"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Sub-page: 高级功能（二级菜单）-->
@@ -2409,7 +2286,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v2.7.4</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v3.7.5</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2546,7 +2423,14 @@ select.compact-form-control { height: 2.1rem; }
                         <label class="compact-form-label">备注</label>
                         <input type="text" class="form-control compact-form-control" id="acc-notes" placeholder="账户备注（可选）">
                     </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="acc-exclude-total">
+                        <label class="form-check-label small" for="acc-exclude-total">不计入总资产/总负债/净值汇总</label>
+                    </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100 mt-2" id="acc-submit-btn">保存</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 d-none" id="acc-hide-btn" onclick="toggleAccountHiddenFromModal()">
+                        <i class="bi bi-eye-slash"></i> 隐藏此账户
+                    </button>
                 </form>
             </div>
         </div>
@@ -2923,7 +2807,7 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-const APP_VERSION = '2.7.4';
+const APP_VERSION = '3.7.5';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），
@@ -4928,6 +4812,8 @@ function renderAccounts() {
 
     let totalAssets = 0, totalLiabilities = 0;
     accounts.forEach(acc => {
+        // 隐藏账户 / 标记为“不计入总资产汇总”的账户，不参与总资产、总负债、净值的计算
+        if (acc.hidden || acc.excludeFromTotal) return;
         const bal = calculateBalance(acc.id);
         const rmbVal = toRmb(bal, acc.currency);
         if (acc.accountType === 'Liability') totalLiabilities += rmbVal;
@@ -4943,7 +4829,8 @@ function renderAccounts() {
         </div>`;
 
     ['Asset', 'Liability', 'Receivable'].forEach(type => {
-        const rawAccs = userAccounts.filter(a => (a.accountType || 'Asset') === type);
+        // 隐藏账户不在账户页面显示
+        const rawAccs = userAccounts.filter(a => (a.accountType || 'Asset') === type && !a.hidden);
         if (rawAccs.length === 0) return;
         const myTypeAccs = sortedUserAccounts(rawAccs);
         const color = type === 'Liability' ? 'danger' : (type === 'Asset' ? 'success' : 'info');
@@ -4957,13 +4844,16 @@ function renderAccounts() {
             col.className = 'account-col';
             col.dataset.accId = acc.id;
             const balClass = amountsHidden ? 'amount-hidden' : (bal < 0 ? 'text-danger' : 'text-success');
+            const excludeBadge = acc.excludeFromTotal
+                ? `<span class="badge bg-secondary" style="font-size:0.6rem;font-weight:normal;" title="不计入总资产/总负债/净值汇总">不计入汇总</span>`
+                : '';
             col.innerHTML = `
                 <div class="card account-card p-3 shadow-sm d-flex flex-row align-items-center gap-1"
                      data-id="${acc.id}" style="cursor:pointer;">
                     <div class="flex-grow-1" onclick="openAccountDetail(${acc.id})">
                         <div class="d-flex justify-content-between align-items-start">
                             <div style="flex:1">
-                                <div class="fw-bold text-truncate">${acc.name} · <span class="fw-normal">${acc.currency}</span></div>
+                                <div class="fw-bold text-truncate">${acc.name} · <span class="fw-normal">${acc.currency}</span> ${excludeBadge}</div>
                                 ${acc.notes ? `<div class="small text-muted text-truncate" style="max-width:140px;" title="${acc.notes}">${acc.notes}</div>` : ''}
                             </div>
                             <div class="text-end">
@@ -4978,7 +4868,7 @@ function renderAccounts() {
         container.appendChild(row);
     });
 
-    const otherAccs = accounts.filter(a => a.ownerName !== currentUserName);
+    const otherAccs = accounts.filter(a => a.ownerName !== currentUserName && !a.hidden);
     if (otherAccs.length > 0) {
         otherContainer.innerHTML = `<h6 class="mt-4 mb-2 text-secondary border-bottom pb-2">其他用户的账户</h6>`;
         const otherRow = document.createElement('div');
@@ -5019,6 +4909,7 @@ function renderAccounts() {
     // Update currency buttons in stats view to reflect available account currencies
     renderStatsCurrencyButtons();
     _initAccountDrag();
+    renderHiddenAccountsList();
 }
 
 function _saveAccountOrder() {
@@ -5176,6 +5067,8 @@ function openNewAccount() {
     $('acc-balance-label').textContent = '初始余额';
     $('acc-balance-hint').classList.add('d-none');
     $('acc-notes').value = '';
+    $('acc-exclude-total').checked = false;
+    $('acc-hide-btn').classList.add('d-none');
     new bootstrap.Modal($('accountModal')).show();
 }
 
@@ -5192,7 +5085,68 @@ function openEditAccount(id) {
     $('acc-balance-label').textContent = '账户余额';
     $('acc-balance-hint').classList.remove('d-none');
     $('acc-notes').value = acc.notes || '';
+    $('acc-exclude-total').checked = !!acc.excludeFromTotal;
+    const hideBtn = $('acc-hide-btn');
+    hideBtn.classList.remove('d-none');
+    hideBtn.innerHTML = acc.hidden
+        ? '<i class="bi bi-eye"></i> 取消隐藏（恢复显示）'
+        : '<i class="bi bi-eye-slash"></i> 隐藏此账户';
     new bootstrap.Modal($('accountModal')).show();
+}
+
+/** 在编辑账户弹窗内点击“隐藏此账户”/“取消隐藏” */
+function toggleAccountHiddenFromModal() {
+    const id = parseInt($('acc-id').value);
+    const acc = accounts.find(a => a.id === id);
+    if (!acc) return;
+    const willHide = !acc.hidden;
+    if (willHide && !confirm(`确定隐藏账户「${acc.name}」？\n隐藏后该账户将不再显示在账户页面和交易页面，但可以在「设置 → 账户与用户 → 隐藏账户管理」中查看并恢复。`)) return;
+    acc.hidden = willHide;
+    acc.updatedAt = Date.now();
+    saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
+    renderAccounts(); displayedTransactionCount = 100; renderAllTransactions();
+    renderHiddenAccountsList();
+    bootstrap.Modal.getInstance($('accountModal'))?.hide();
+    showToast(willHide ? '账户已隐藏' : '账户已恢复显示', 'success');
+    if (willHide && currentDetailAccountId === id) {
+        switchTab('accounts', document.querySelector('.nav-link[onclick*=accounts]'));
+    }
+}
+
+/** 恢复一个隐藏账户（从设置页“隐藏账户管理”列表调用） */
+function restoreHiddenAccount(id) {
+    const acc = accounts.find(a => a.id === id);
+    if (!acc) return;
+    acc.hidden = false;
+    acc.updatedAt = Date.now();
+    saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
+    renderAccounts(); displayedTransactionCount = 100; renderAllTransactions();
+    renderHiddenAccountsList();
+    showToast('账户已恢复显示', 'success');
+}
+
+/** 渲染“设置 → 账户与用户”页面里的隐藏账户管理列表 */
+function renderHiddenAccountsList() {
+    const container = $('hidden-accounts-list');
+    if (!container) return;
+    const hiddenAccs = accounts.filter(a => a.ownerName === currentUserName && a.hidden);
+    if (hiddenAccs.length === 0) {
+        container.innerHTML = '<p class="text-muted small mb-0">暂无隐藏账户</p>';
+        return;
+    }
+    container.innerHTML = hiddenAccs.map(acc => {
+        const bal = calculateBalance(acc.id);
+        const balStr = `${CURRENCY_SYMBOLS[acc.currency] || ''}${formatAmount(bal, acc.currency)}`;
+        return `<div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid var(--bs-border-color);">
+            <div class="flex-grow-1" style="min-width:0;">
+                <div class="fw-bold text-truncate">${_escHtml(acc.name)}</div>
+                <div class="small text-muted">${acc.currency} · ${balStr}</div>
+            </div>
+            <button class="btn btn-sm btn-outline-primary flex-shrink-0" onclick="restoreHiddenAccount(${acc.id})">
+                <i class="bi bi-eye"></i> 恢复
+            </button>
+        </div>`;
+    }).join('');
 }
 
 $('account-form').addEventListener('submit', (e) => {
@@ -5201,6 +5155,7 @@ $('account-form').addEventListener('submit', (e) => {
     const name = $('acc-name').value;
     const balance = roundMoney(parseFloat($('acc-balance').value));
     const notes = $('acc-notes').value.trim();
+    const excludeFromTotal = $('acc-exclude-total').checked;
 
     if (mode === 'add') {
         accounts.push({
@@ -5210,6 +5165,7 @@ $('account-form').addEventListener('submit', (e) => {
             currency: $('acc-currency').value,
             initialBalance: balance,
             notes,
+            excludeFromTotal,
             ownerName: currentUserName,
             updatedAt: Date.now()
         });
@@ -5225,6 +5181,7 @@ $('account-form').addEventListener('submit', (e) => {
             const diff = roundMoney(balance - oldBalance);
             acc.name = name;
             acc.notes = notes;
+            acc.excludeFromTotal = excludeFromTotal;
             acc.updatedAt = Date.now();
             if (Math.abs(diff) > 0.01) {
                 const adjType = diff > 0 ? 'income' : 'expense';
@@ -5632,8 +5589,8 @@ function fillTransferSelects(fromValue, toValue) {
     const fromSelect = $('edit-transfer-from');
     const toSelect = $('edit-transfer-to');
     fromSelect.innerHTML = '';
-    // 转出：只有自己的账户，按手动排序
-    sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName)).forEach(a => {
+    // 转出：只有自己的账户，按手动排序（隐藏账户不可选）
+    sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName && !a.hidden)).forEach(a => {
         const name = `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`;
         const opt = new Option(name, a.id);
         opt.setAttribute('data-name', name);
@@ -5641,9 +5598,9 @@ function fillTransferSelects(fromValue, toValue) {
         fromSelect.add(opt);
     });
     toSelect.innerHTML = '';
-    // 转入：自己的账户（排序）+ 其他用户账户
-    const sortedMine = sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName));
-    const others = accounts.filter(a => a.ownerName !== currentUserName);
+    // 转入：自己的账户（排序）+ 其他用户账户（隐藏账户不可选）
+    const sortedMine = sortedUserAccounts(accounts.filter(a => a.ownerName === currentUserName && !a.hidden));
+    const others = accounts.filter(a => a.ownerName !== currentUserName && !a.hidden);
     [...sortedMine, ...others].forEach(a => {
         const name = `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`;
         const opt = new Option(name, a.id);
@@ -5657,7 +5614,7 @@ function fillTransferSelects(fromValue, toValue) {
     if (toValue) toSelect.value = toValue;
     else {
         const fromId = fromSelect.value;
-        const other = accounts.find(a => a.id != fromId);
+        const other = accounts.find(a => a.id != fromId && !a.hidden);
         if (other) toSelect.value = other.id;
         else if (toSelect.options.length > 1) toSelect.selectedIndex = 1;
     }
@@ -7134,6 +7091,9 @@ function getFilteredTransactions() {
         if (historyMode && !t.date.startsWith(String(historyYear))) return false;
         
         if (t._isBaseline) return false;
+        // 隐藏账户：其名下的交易记录不再显示在交易管理页面
+        const _tAcc = accounts.find(a => a.id == t.accountId);
+        if (_tAcc && _tAcc.hidden) return false;
         if (transactionDisplayMode === 'transactions' && t.isTransfer) return false;
         if (transactionDisplayMode === 'transfers' && !t.isTransfer) return false;
         
@@ -7596,7 +7556,13 @@ if (!confirm('确定删除这张附件吗？')) return;
 
 function applyDescHint(catId, category) {
     const catEl = $(catId);
-    if (catEl) catEl.value = category;
+    if (!catEl) return;
+    catEl.value = category;
+    catEl.dispatchEvent(new Event('change', { bubbles: true }));
+    // 分类下拉是隐藏的 <select>，真正显示给用户的是 .cat-grid 按钮组，
+    // 之前只更新了隐藏 select 的 value 而没有同步可见的按钮高亮，
+    // 导致用户点击“应用”后界面看起来分类并没有变化（实际数据已变但未渲染）。
+    catGridSync(catId, 'cat-grid-' + catId);
 }
 /**
  * 自动校对：基于历史记忆，检测分类与相似备注不一致的交易
@@ -8704,8 +8670,8 @@ function updateSelectOptions() {
         const el = $(id);
         if (!el) return;
         el.innerHTML = '';
-        const myAccs = sortedUserAccounts(userAccounts);
-        const accsToShow = includeOthers ? [...myAccs, ...accounts.filter(a => a.ownerName !== currentUserName)] : myAccs;
+        const myAccs = sortedUserAccounts(userAccounts.filter(a => !a.hidden));
+        const accsToShow = includeOthers ? [...myAccs, ...accounts.filter(a => a.ownerName !== currentUserName && !a.hidden)] : myAccs;
         accsToShow.forEach(a => {
             const name = `${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency] || a.currency})`;
             const opt = new Option(name, a.id);
@@ -8763,7 +8729,7 @@ function showSettingsSubpage(name) {
     if (sub) sub.classList.add('active');
     if (name === 'exchange-rate') renderExchangeRateSettings();
     if (name === 'categories') renderCategorySettings();
-    if (name === 'users') { renderUserManagement(); initPasswordHint(); }
+    if (name === 'users') { renderUserManagement(); initPasswordHint(); renderHiddenAccountsList(); }
     if (name === 'archive') renderArchiveManagementUI();
     if (name === 'password') initPasswordHint();
     if (name === 'ai-config') loadAiConfig();
