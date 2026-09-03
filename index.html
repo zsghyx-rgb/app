@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v3.7.6</title>
+    <title id="app-title">记一笔 v3.7.7</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1550,7 +1550,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 3.7.6</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 3.7.7</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1688,7 +1688,7 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
 
                 <!-- 批量编辑选择状态栏 -->
-                <div id="batch-edit-bar" class="d-flex align-items-center gap-2 mb-2" style="display:none;">
+                <div id="batch-edit-bar" class="d-none align-items-center gap-2 mb-2">
                     <span class="small text-muted flex-grow-1" id="batch-edit-count">已选择 0 笔</span>
                     <button class="btn btn-sm btn-outline-secondary" onclick="cancelBatchEditMode()">取消</button>
                     <button class="btn btn-sm btn-primary" id="batch-edit-apply-btn" onclick="openBatchEditModal()" disabled>批量编辑</button>
@@ -2306,7 +2306,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v3.7.6</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v3.7.7</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2882,7 +2882,7 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-const APP_VERSION = '3.7.6';
+const APP_VERSION = '3.7.7';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），
@@ -7224,7 +7224,8 @@ let batchSelectedType = null; // 'expense' | 'income'，限制只能多选同一
 function toggleBatchEditMode() {
     batchEditMode = !batchEditMode;
     if (!batchEditMode) { batchSelectedIds.clear(); batchSelectedType = null; }
-    $('batch-edit-bar').style.display = batchEditMode ? 'flex' : 'none';
+    $('batch-edit-bar').classList.toggle('d-none', !batchEditMode);
+    $('batch-edit-bar').classList.toggle('d-flex', batchEditMode);
     $('batch-edit-toggle-btn').classList.toggle('btn-primary', batchEditMode);
     $('batch-edit-toggle-btn').classList.toggle('btn-outline-secondary', !batchEditMode);
     updateBatchEditBar();
@@ -7235,7 +7236,8 @@ function cancelBatchEditMode() {
     batchEditMode = false;
     batchSelectedIds.clear();
     batchSelectedType = null;
-    $('batch-edit-bar').style.display = 'none';
+    $('batch-edit-bar').classList.add('d-none');
+    $('batch-edit-bar').classList.remove('d-flex');
     $('batch-edit-toggle-btn').classList.remove('btn-primary');
     $('batch-edit-toggle-btn').classList.add('btn-outline-secondary');
     renderAllTransactions();
