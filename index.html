@@ -147,6 +147,8 @@ body {
 }
 
 .sidebar-footer .user-name { font-size: 0.75rem; font-weight: bold; margin-bottom: 0.2rem; }
+/* 桌面端默认只显示全名，隐藏首字母简写；手机端在下方 @media (max-width:768px) 中反转显示 */
+.user-name-short { display: none; }
 .sidebar-footer .user-status { font-size: 0.65rem; color: var(--bs-secondary); }
 
 .main-content {
@@ -415,6 +417,14 @@ select.compact-form-control { height: 2.1rem; }
     position: relative;
     font-size: 0.85rem;
     user-select: none;
+}
+.mobile-transaction-card.batch-selected {
+    border-color: var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), 0.08);
+}
+.mobile-transaction-card .batch-edit-checkbox {
+    margin-top: 3px;
+    flex-shrink: 0;
 }
 .mobile-transaction-card .card-line-1 {
     display: flex;
@@ -1666,12 +1676,22 @@ select.compact-form-control { height: 2.1rem; }
                 <!-- 标题行：标题 + 搜索 + 筛选 + 新增 -->
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <h4 class="mb-0 flex-grow-1">交易管理</h4>
+                    <button class="btn btn-sm btn-outline-secondary" id="batch-edit-toggle-btn" onclick="toggleBatchEditMode()" title="批量编辑">
+                        <i class="bi bi-check2-square"></i>
+                    </button>
                     <button class="btn btn-sm btn-outline-secondary" id="trans-filter-btn" onclick="toggleTransFilter()" title="搜索与筛选">
                         <i class="bi bi-sliders"></i>
                     </button>
                     <button class="btn btn-sm btn-primary" onclick="openNewTransaction()" title="新增交易">
                         <i class="bi bi-plus-lg"></i>
                     </button>
+                </div>
+
+                <!-- 批量编辑选择状态栏 -->
+                <div id="batch-edit-bar" class="d-flex align-items-center gap-2 mb-2" style="display:none;">
+                    <span class="small text-muted flex-grow-1" id="batch-edit-count">已选择 0 笔</span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="cancelBatchEditMode()">取消</button>
+                    <button class="btn btn-sm btn-primary" id="batch-edit-apply-btn" onclick="openBatchEditModal()" disabled>批量编辑</button>
                 </div>
 
                 <!-- 合并面板：搜索 + 日期 + 用户筛选 -->
@@ -2371,6 +2391,56 @@ select.compact-form-control { height: 2.1rem; }
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100 mt-2" id="planned-submit-btn">保存计划</button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 批量编辑交易 -->
+<div class="modal fade" id="batchEditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">批量编辑交易（<span id="batch-edit-modal-count">0</span> 笔）</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">勾选需要修改的字段并填写新值，未勾选的字段将保持每笔交易原本的值不变。</p>
+
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" id="batch-enable-account" onchange="toggleBatchField('account')">
+                    <label class="form-check-label" for="batch-enable-account">修改账户</label>
+                </div>
+                <select class="form-select form-select-sm mb-1" id="batch-field-account" disabled></select>
+                <p class="text-muted mb-3" style="font-size:0.7rem;">注意：修改账户不会转换金额币种，请确认所选交易与目标账户币种一致</p>
+
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" id="batch-enable-category" onchange="toggleBatchField('category')">
+                    <label class="form-check-label" for="batch-enable-category">修改分类</label>
+                </div>
+                <select class="form-select form-select-sm mb-3" id="batch-field-category" disabled></select>
+
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" id="batch-enable-date" onchange="toggleBatchField('date')">
+                    <label class="form-check-label" for="batch-enable-date">修改日期</label>
+                </div>
+                <input type="date" class="form-control form-control-sm mb-3" id="batch-field-date" disabled>
+
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" id="batch-enable-tags" onchange="toggleBatchField('tags')">
+                    <label class="form-check-label" for="batch-enable-tags">修改标签</label>
+                </div>
+                <input type="text" class="form-control form-control-sm mb-3" id="batch-field-tags" placeholder="标签" disabled>
+
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" id="batch-enable-desc" onchange="toggleBatchField('desc')">
+                    <label class="form-check-label" for="batch-enable-desc">修改备注</label>
+                </div>
+                <input type="text" class="form-control form-control-sm mb-1" id="batch-field-desc" placeholder="备注" disabled>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="submitBatchEdit()">确认修改</button>
             </div>
         </div>
     </div>
@@ -4889,11 +4959,14 @@ function renderAccounts() {
             col.draggable = true;
             const balClass = amountsHidden ? 'amount-hidden' : (bal < 0 ? 'text-danger' : 'text-success');
             const initial = acc.ownerName.charAt(0).toLowerCase();
+            const otherExcludeBadge = acc.excludeFromTotal
+                ? `<span class="badge bg-secondary" style="font-size:0.6rem;font-weight:normal;" title="不计入总资产/总负债/净值汇总">不计入汇总</span>`
+                : '';
             col.innerHTML = `
                 <div class="card account-card account-card-other p-3 shadow-sm">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="fw-bold text-truncate">[${initial}] ${acc.name}</div>
+                            <div class="fw-bold text-truncate">[${initial}] ${acc.name} ${otherExcludeBadge}</div>
                             <div class="small text-muted">${acc.currency}</div>
                         </div>
                         <div class="text-end">
@@ -7137,6 +7210,145 @@ function getTxnBadge(t) {
 function isNewTxn(t) { return getTxnBadge(t) !== ''; }
 const NEW_BADGE = '<em style="font-size:0.68rem;color:#fd7e14;font-style:italic;margin-left:4px;">新数据</em>';
 const UPDATED_BADGE = '<em style="font-size:0.68rem;color:#0d6efd;font-style:italic;margin-left:4px;">已更新</em>';
+
+/* ────────────────── 批量编辑交易 ────────────────── */
+let batchEditMode = false;
+let batchSelectedIds = new Set();
+let batchSelectedType = null; // 'expense' | 'income'，限制只能多选同一类型
+
+function toggleBatchEditMode() {
+    batchEditMode = !batchEditMode;
+    if (!batchEditMode) { batchSelectedIds.clear(); batchSelectedType = null; }
+    $('batch-edit-bar').style.display = batchEditMode ? 'flex' : 'none';
+    $('batch-edit-toggle-btn').classList.toggle('btn-primary', batchEditMode);
+    $('batch-edit-toggle-btn').classList.toggle('btn-outline-secondary', !batchEditMode);
+    updateBatchEditBar();
+    renderAllTransactions();
+}
+
+function cancelBatchEditMode() {
+    batchEditMode = false;
+    batchSelectedIds.clear();
+    batchSelectedType = null;
+    $('batch-edit-bar').style.display = 'none';
+    $('batch-edit-toggle-btn').classList.remove('btn-primary');
+    $('batch-edit-toggle-btn').classList.add('btn-outline-secondary');
+    renderAllTransactions();
+}
+
+function updateBatchEditBar() {
+    const countEl = $('batch-edit-count');
+    if (countEl) countEl.textContent = `已选择 ${batchSelectedIds.size} 笔`;
+    const applyBtn = $('batch-edit-apply-btn');
+    if (applyBtn) applyBtn.disabled = batchSelectedIds.size === 0;
+}
+
+function toggleBatchSelect(id) {
+    if (!batchEditMode) return;
+    const t = transactions.find(x => x.id === id);
+    if (!t) return;
+    const wasSelected = batchSelectedIds.has(id);
+    if (!wasSelected) {
+        // 限制多选只能选同一种类型：支出/收入分开选择，转账不可选（转账不会走到这里，见渲染时的过滤）
+        if (batchSelectedType && t.type !== batchSelectedType) {
+            showToast('批量编辑只能选择同一类型的交易，请先取消已选的' + (batchSelectedType === 'expense' ? '支出' : '收入') + '记录', 'warning');
+            return;
+        }
+        batchSelectedIds.add(id);
+        batchSelectedType = t.type;
+    } else {
+        batchSelectedIds.delete(id);
+        if (batchSelectedIds.size === 0) batchSelectedType = null;
+    }
+    const card = document.querySelector(`.mobile-transaction-card[data-id="${id}"]`);
+    if (card) {
+        const cb = card.querySelector('.batch-edit-checkbox');
+        if (cb) cb.checked = !wasSelected;
+        card.classList.toggle('batch-selected', !wasSelected);
+    }
+    updateBatchEditBar();
+}
+
+function toggleBatchField(field) {
+    const enabled = $('batch-enable-' + field).checked;
+    $('batch-field-' + field).disabled = !enabled;
+}
+
+function openBatchEditModal() {
+    if (batchSelectedIds.size === 0) return;
+    $('batch-edit-modal-count').textContent = batchSelectedIds.size;
+
+    ['account', 'category', 'date', 'tags', 'desc'].forEach(f => {
+        $('batch-enable-' + f).checked = false;
+        toggleBatchField(f);
+    });
+    $('batch-field-tags').value = '';
+    $('batch-field-desc').value = '';
+    $('batch-field-date').value = '';
+
+    // 账户下拉：只显示自己名下未隐藏的账户
+    const accSel = $('batch-field-account');
+    accSel.innerHTML = '';
+    sortedUserAccounts(userAccounts.filter(a => !a.hidden)).forEach(a => {
+        accSel.add(new Option(`${getAccountDisplayName(a)} (${CURRENCY_SYMBOLS[a.currency]})`, a.id));
+    });
+
+    // 分类下拉：根据本次选中交易的统一类型，显示对应的支出/收入分类
+    const catSel = $('batch-field-category');
+    catSel.innerHTML = '';
+    (batchSelectedType === 'income' ? categories.income : categories.expense).forEach(c => catSel.add(new Option(c, c)));
+
+    new bootstrap.Modal($('batchEditModal')).show();
+}
+
+function submitBatchEdit() {
+    if (batchSelectedIds.size === 0) return;
+    const applyAccount = $('batch-enable-account').checked;
+    const applyCategory = $('batch-enable-category').checked;
+    const applyDate = $('batch-enable-date').checked;
+    const applyTags = $('batch-enable-tags').checked;
+    const applyDesc = $('batch-enable-desc').checked;
+
+    if (!applyAccount && !applyCategory && !applyDate && !applyTags && !applyDesc) {
+        showToast('请至少勾选一个要修改的字段', 'warning');
+        return;
+    }
+    if (applyDate && !$('batch-field-date').value) {
+        showToast('请选择日期', 'warning');
+        return;
+    }
+
+    const newAccountId = applyAccount ? parseInt($('batch-field-account').value) : null;
+    const newCategory = applyCategory ? $('batch-field-category').value : null;
+    const newDate = applyDate ? $('batch-field-date').value : null;
+    const newTags = applyTags ? $('batch-field-tags').value.trim() : null;
+    const newDesc = applyDesc ? $('batch-field-desc').value.trim() : null;
+
+    if (!confirm(`确定要批量修改这 ${batchSelectedIds.size} 笔交易吗？此操作不可撤销。`)) return;
+
+    let count = 0;
+    batchSelectedIds.forEach(id => {
+        const t = transactions.find(x => x.id === id);
+        if (!t) return;
+        if (applyAccount && newAccountId) t.accountId = newAccountId;
+        if (applyCategory && newCategory) t.category = newCategory;
+        if (applyDate && newDate) t.date = newDate;
+        if (applyTags) t.tags = newTags;
+        if (applyDesc) t.desc = newDesc;
+        t.updatedAt = Date.now();
+        count++;
+    });
+
+    saveUserData();
+    triggerAutoSave();
+    bootstrap.Modal.getInstance($('batchEditModal'))?.hide();
+    showToast(`已批量修改 ${count} 笔交易`, 'success');
+    cancelBatchEditMode();
+    renderAccounts();
+    renderStats();
+}
+/* ─────────────────────────────────────────────────── */
+
 function renderAllTransactions() {
     _statsDataVersion++; // 交易数据可能已变化，使统计页缓存失效
     const mobileContainer = $('mobile-transaction-cards');
@@ -7178,6 +7390,9 @@ function renderAllTransactions() {
             const finalNote = descClean ? `#${descClean}` : '';
             const attachIcon = t.attachmentId ? ` <a href="${getDriveAttachmentUrl(t.attachmentId)}" target="_blank" onclick="event.stopPropagation()"><i class="bi bi-paperclip" style="color:var(--bs-secondary);font-size:0.75rem;"></i></a>` : '';
 
+            let contentHtml;
+            const isBatchable = !t.isTransfer && !(t.items && t.items.length > 1) && t.ownerName === currentUserName;
+
             if (t.isTransfer && t.type === 'expense') {
                 const accTo = accounts.find(a => a.id == t.relatedAccountId);
                 if (!accTo) return;
@@ -7186,7 +7401,7 @@ function renderAllTransactions() {
                     transactions.find(tx => tx.isTransfer && tx.type === 'income' && tx.date === t.date && tx.relatedAccountId == t.accountId);
                 const amountIn = tIn ? Math.abs(tIn.amount) : Math.abs(t.amount);
                 const isCrossCurrency = acc.currency !== accTo.currency;
- card.innerHTML = `
+ contentHtml = `
     <div class="card-line-1">
         <div class="fw-bold flex-grow-1" style="font-size:0.85rem;">${accDisplayName} <i class="bi bi-arrow-right-short text-primary"></i> ${getAccountDisplayName(accTo)}${getTxnBadge(t)}</div>
         <div class="amount-transfer fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
@@ -7223,7 +7438,7 @@ function renderAllTransactions() {
                     ? t.items[0].category + '等' + (t.items.length - 1) + '项'
                     : (t.category || '');
 
-                card.innerHTML = `
+                contentHtml = `
                     <div class="card-line-1">
                         <span class="category-text">${catDisplay}${tagsHtml}${attachIconHtml}${getTxnBadge(t)}</span>
                         <div class="${amountClass} fw-bold">${CURRENCY_SYMBOLS[acc.currency]}${formatAmount(Math.abs(t.amount), acc.currency)}</div>
@@ -7233,17 +7448,32 @@ function renderAllTransactions() {
                     </div>`;
             }
 
-            if (t.ownerName === currentUserName) {
-                initMobileSwipeGestures(card, t.id);
-} else if (!t.isTransfer) {
-    card.style.opacity = '0.85';
-    card.style.cursor = 'pointer';
-    card.addEventListener('click', () => {
-        openEditTransaction(t.id);
-    });
-} else {
-    card.style.opacity = '0.75';
-}
+            if (batchEditMode && isBatchable) {
+                const checked = batchSelectedIds.has(t.id);
+                card.classList.toggle('batch-selected', checked);
+                card.innerHTML = `<div class="d-flex align-items-start gap-2">
+                    <input type="checkbox" class="form-check-input batch-edit-checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation();toggleBatchSelect(${t.id})">
+                    <div class="flex-grow-1" style="min-width:0;">${contentHtml}</div>
+                </div>`;
+                card.style.cursor = 'pointer';
+                card.addEventListener('click', () => toggleBatchSelect(t.id));
+            } else {
+                card.innerHTML = contentHtml;
+                if (batchEditMode) {
+                    // 批量编辑模式下，转账/拆分交易/他人交易不可勾选，弱化显示并禁用点击
+                    card.style.opacity = '0.5';
+                } else if (t.ownerName === currentUserName) {
+                    initMobileSwipeGestures(card, t.id);
+                } else if (!t.isTransfer) {
+                    card.style.opacity = '0.85';
+                    card.style.cursor = 'pointer';
+                    card.addEventListener('click', () => {
+                        openEditTransaction(t.id);
+                    });
+                } else {
+                    card.style.opacity = '0.75';
+                }
+            }
             mobileContainer.appendChild(card);
         });
     }
