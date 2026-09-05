@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v3.7.7</title>
+    <title id="app-title">记一笔 v3.7.8</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1550,7 +1550,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 3.7.7</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 3.7.8</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2306,7 +2306,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v3.7.7</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v3.7.8</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2882,7 +2882,7 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-const APP_VERSION = '3.7.7';
+const APP_VERSION = '3.7.8';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），
@@ -4433,16 +4433,23 @@ async function syncToDrive(manual = false, forcePush = false) {
             headers: { 'Content-Type': 'text/plain' }
         });
         const text = (await resp.text()).trim();
-        if (text === 'OK') {
+        if (text === 'OK' || text.startsWith('OK:')) {
             clearUnsavedFlag();
-            // 更新本地缓存：版本号 + 加密原文（供下次离线/快速启动使用）
-            try {
-                const vResp = await fetch(gasRequestUrl({ action: 'version' }));
-                if (vResp.ok) {
-                    const v = (await vResp.text()).trim();
-                    if (v !== '0') localStorage.setItem('APP_drive_version', v);
-                }
-            } catch(_) {}
+            // 新版后端会在写入成功时直接把新版本号带回来（"OK:<timestamp>"），
+            // 这样就不用像以前那样再额外发一次 action=version 请求，省一次网络往返。
+            if (text.startsWith('OK:')) {
+                const v = text.slice(3);
+                if (v && v !== '0') localStorage.setItem('APP_drive_version', v);
+            } else {
+                // 兼容尚未更新 .gs 脚本的情况：退回到原来的做法，额外查一次版本号
+                try {
+                    const vResp = await fetch(gasRequestUrl({ action: 'version' }));
+                    if (vResp.ok) {
+                        const v = (await vResp.text()).trim();
+                        if (v !== '0') localStorage.setItem('APP_drive_version', v);
+                    }
+                } catch(_) {}
+            }
             window._driveRawContent = content;
             try { localStorage.setItem('APP_raw_cache', content); } catch(_) {}
             // 同步成功：有新数据时提示条数；无新数据时详细模式提示「已同步」，否则静默关闭
