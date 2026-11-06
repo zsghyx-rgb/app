@@ -2431,6 +2431,18 @@ select.compact-form-control { height: 2.1rem; }
                         <div id="archive-management-ui" class="mb-2"></div>
                     </div>
                 </div>
+                <div class="card shadow-sm mt-2">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-cloud-download"></i> 云端存档文件（找回丢失的存档）
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">如果某年的存档文件还在云端、但上面的「已存档」列表里已经不显示恢复按钮，可以在这里扫描并按文件直接恢复。</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="scanCloudArchives()">
+                            <i class="bi bi-search me-1"></i>扫描云端存档文件
+                        </button>
+                        <div id="cloud-archive-scan-result" class="mt-2"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Sub-page: 数据密码 -->
@@ -4819,31 +4831,39 @@ function exitHistoryMode() {
 
 /**
  * 恢复存档到主数据（data.enc）。
- * 读取 archive_{year}.enc → 解密 → 把交易合并回 inMemoryLoadedData.allUserData →
- * 删掉该年的存档基准行（_isBaseline + _archiveYear=year）→ 从 archivedYears 移除该年 →
- * 保存 + 推送到云端 data.enc。
  *
- * 恢复后所有数据都在主文件里了，可以再走「迁移到 Google 表格」把全部数据一次性转成增量同步。
+ * ⚠️ 关键约定：transactions / accounts 等是「全局变量」，saveUserData() 的作用是
+ * 用这些全局变量**反向覆盖** inMemoryLoadedData.allUserData[u]。
+ * 所以恢复必须先改全局变量，再调 saveUserData()；直接往 inMemoryLoadedData 里 push
+ * 会被随后的 saveUserData() 覆盖掉 —— 这正是上一版「提示成功但数据没回来」的原因。
+ *
+ * 流程：读取 archive_{year}.enc → 解密 → 交易/账户并入全局变量 → 删该年存档基准行 →
+ * 清掉对应的 deletedLog 墓碑 → 移除 archivedYears 标记 → saveUserData() 写回 →
+ * 校验数据确实落盘 → 推送 data.enc。
+ *
+ * @param force true 时跳过「必须在 archivedYears 列表里」的检查，用于恢复
+ *              云端存档文件仍在、但标记已丢失的「孤儿存档」。
  */
-async function restoreArchiveYear(year) {
+async function restoreArchiveYear(year, force = false) {
     if (offlineMode || !GAS_URL) { uiAlert('恢复存档需要在线模式，请先切换到在线'); return; }
     if (!GAS_TOKEN) { uiAlert('未配置 GAS Token，无法读取存档'); return; }
-    if (!inMemoryLoadedData || !userPassword) { uiAlert('请先登录并解密数据后再恢复存档'); return; }
+    if (!inMemoryLoadedData || !userPassword || !currentUser) { uiAlert('请先登录并解密数据后再恢复存档'); return; }
     if (useRows()) { uiAlert('当前是增量同步模式。\n\n恢复存档需要先切回整包模式（GAS 整包），恢复完成后再重新迁移到表格。'); return; }
 
     const archivedYears = getArchivedYears();
-    if (!archivedYears.includes(year)) { showToast(`${year} 年不在已存档列表中`, 'warning'); return; }
+    const isOrphan = !archivedYears.includes(year);
+    if (isOrphan && !force) { showToast(`${year} 年不在已存档列表中`, 'warning'); return; }
 
     const ok = await uiConfirm(
         `恢复 ${year} 年存档到主数据？\n\n` +
+        (isOrphan ? `⚠️ 该年份已不在「已存档」列表中（可能是之前恢复时标记被清除），将从云端存档文件直接恢复。\n\n` : '') +
         `操作内容：\n` +
         `① 从云端读取 archive_${year}.enc 并解密\n` +
         `② 把这一年的交易合并回主数据（data.enc）\n` +
-        `③ 删除该年的「存档基准」行\n` +
-        `④ 从已存档列表中移除 ${year} 年\n` +
+        `③ 删除该年的「存档基准」行，避免余额重复计算\n` +
+        `④ 清除这些交易在删除日志里的墓碑，防止转增量同步后又被删掉\n` +
         `⑤ 推送更新后的主数据到云端\n\n` +
-        `恢复后所有数据都会在主文件里，可以再迁移到 Google 表格增量同步。\n` +
-        `存档文件本身不会被删除（仍可在历史模式查看），直到你手动清理。`,
+        `已存在的交易（相同 ID）会自动跳过，不会重复。`,
         { title: `恢复 ${year} 年存档`, okText: '确认恢复', danger: true }
     );
     if (!ok) return;
@@ -4853,83 +4873,124 @@ async function restoreArchiveYear(year) {
     while (driveIsSyncing) { await new Promise(r => setTimeout(r, 200)); }
     driveIsSyncing = true;
 
-    // 快照（用于回滚）
-    const snapTransactions = transactions.map(t => ({...t}));
-    const snapInMemory = JSON.parse(JSON.stringify(inMemoryLoadedData));
+    // 完整快照（用于任何一步失败时彻底回滚）
+    const snap = {
+        accounts: accounts.map(a => ({...a})),
+        transactions: transactions.map(t => ({...t})),
+        plannedTransactions: plannedTransactions.map(p => ({...p})),
+        dataUsers: [...dataUsers],
+        inMemory: JSON.parse(JSON.stringify(inMemoryLoadedData))
+    };
     const rollback = () => {
-        transactions = snapTransactions;
-        Object.keys(inMemoryLoadedData).forEach(k => { inMemoryLoadedData[k] = snapInMemory[k]; });
+        accounts = snap.accounts;
+        transactions = snap.transactions;
+        plannedTransactions = snap.plannedTransactions;
+        dataUsers = snap.dataUsers;
+        Object.keys(inMemoryLoadedData).forEach(k => { delete inMemoryLoadedData[k]; });
+        Object.keys(snap.inMemory).forEach(k => { inMemoryLoadedData[k] = snap.inMemory[k]; });
+        try { loadAllData(); filterUserData(); } catch (_) {}
     };
 
     try {
         showToast(`正在读取 ${year} 年存档…`, 'syncing', 0);
 
-        // ── Step 1：读取存档文件 ──
+        // ── Step 1：读取并解密存档文件 ──
         const archiveFile = `archive_${year}.enc`;
         const resp = await fetch(gasRequestUrl({ file: archiveFile }));
         const raw = (await resp.text()).trim();
         if (raw === 'UNAUTHORIZED') throw new Error('GAS Token 不正确');
         if (!raw) throw new Error(`云端没有找到存档文件 ${archiveFile}`);
+        if (/^ERROR/i.test(raw)) throw new Error('GAS：' + raw);
 
         let archiveData;
         try { archiveData = JSON.parse(raw); }
         catch (_) {
             const bytes = CryptoJS.AES.decrypt(raw, userPassword);
             const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-            if (!decrypted) throw new Error('存档解密失败：密码可能不正确');
-            archiveData = JSON.parse(decrypted);
+            if (!decrypted) throw new Error('存档解密失败：密码可能不正确（存档是用当时的密码加密的）');
+            try { archiveData = JSON.parse(decrypted); }
+            catch (_) { throw new Error('存档解密后内容格式异常'); }
+        }
+        if (!archiveData || typeof archiveData !== 'object' || !archiveData.allUserData) {
+            throw new Error('存档内容不是有效的数据文件');
         }
 
-        // ── Step 2：把存档交易合并回 inMemoryLoadedData.allUserData ──
-        let restoredCount = 0;
+        // ── Step 2：把存档交易/账户并入「全局变量」──
+        // 注意：必须改全局 transactions/accounts，saveUserData() 才会把它们写回 inMemoryLoadedData。
+        const existingIds = new Set(transactions.map(t => String(t.id)));
+        const restoredIds = new Set();
+        let added = 0, skipped = 0;
         const archiveUsers = archiveData.allUserData || {};
+
         Object.keys(archiveUsers).forEach(u => {
             const ud = archiveUsers[u];
-            if (!ud || !ud.transactions) return;
-            if (!inMemoryLoadedData.allUserData[u]) {
-                inMemoryLoadedData.allUserData[u] = { accounts: ud.accounts || [], transactions: [], plannedTransactions: [] };
-                if (!dataUsers.includes(u)) dataUsers.push(u);
-            }
-            const targetTrans = inMemoryLoadedData.allUserData[u].transactions;
-            // 存档里的交易可能带了 _isArchived 标记，恢复时去掉
-            ud.transactions.forEach(t => {
-                const clean = {...t};
+            if (!ud) return;
+            // 存档里出现的用户如果当前主数据没有，补进 dataUsers（saveUserData 会遍历它）
+            if (!dataUsers.includes(u)) dataUsers.push(u);
+
+            (ud.transactions || []).forEach(t => {
+                const tid = String(t.id);
+                if (existingIds.has(tid)) { skipped++; return; }   // 防重复
+                const clean = {...t, ownerName: u};
                 delete clean._isArchived;
-                targetTrans.push(clean);
-                restoredCount++;
+                clean.updatedAt = Date.now();
+                transactions.push(clean);
+                existingIds.add(tid);
+                restoredIds.add(tid);
+                added++;
             });
-            // 合并账户（存档里可能有当前主数据没有的账户）
+
+            // 合并账户（存档里可能有主数据已删除的账户，恢复交易需要它才能显示余额）
             if (ud.accounts) {
-                const existingIds = new Set(inMemoryLoadedData.allUserData[u].accounts.map(a => String(a.id)));
+                const accIds = new Set(accounts.map(a => String(a.id)));
                 ud.accounts.forEach(a => {
-                    if (!existingIds.has(String(a.id))) inMemoryLoadedData.allUserData[u].accounts.push({...a});
+                    if (!accIds.has(String(a.id))) {
+                        accounts.push({...a, ownerName: u});
+                        accIds.add(String(a.id));
+                    }
                 });
             }
         });
 
-        // ── Step 3：删除该年的存档基准行 ──
-        const beforeCount = inMemoryLoadedData.allUserData[currentUserName] ? inMemoryLoadedData.allUserData[currentUserName].transactions.length : 0;
-        let baselineRemoved = 0;
-        Object.keys(inMemoryLoadedData.allUserData).forEach(u => {
-            const arr = inMemoryLoadedData.allUserData[u].transactions;
-            const before = arr.length;
-            inMemoryLoadedData.allUserData[u].transactions = arr.filter(t =>
-                !(t._isBaseline && t._archiveYear === year)
-            );
-            baselineRemoved += before - inMemoryLoadedData.allUserData[u].transactions.length;
-        });
+        if (added === 0 && skipped === 0) {
+            throw new Error(`存档 ${archiveFile} 里没有找到任何交易，已中止（主数据未改动）`);
+        }
 
-        // ── Step 4：从 archivedYears 移除该年 ──
+        // ── Step 3：删除该年的「存档基准」行 ──
+        const beforeLen = transactions.length;
+        transactions = transactions.filter(t => !(t._isBaseline && t._archiveYear === year));
+        const baselineRemoved = beforeLen - transactions.length;
+
+        // ── Step 4：清除这些交易在 deletedLog 里的墓碑 ──
+        // archiveYear() 存档时会把被移走的交易 id 写进 deletedLog；
+        // 不清除的话，之后转增量同步会把刚恢复的记录又当「已删除」处理。
+        if (inMemoryLoadedData.deletedLog && inMemoryLoadedData.deletedLog.length) {
+            inMemoryLoadedData.deletedLog = inMemoryLoadedData.deletedLog.filter(
+                e => !restoredIds.has(String(e.id))
+            );
+        }
+
+        // ── Step 5：移除 archivedYears 标记 ──
         if (inMemoryLoadedData.archivedYears) {
             inMemoryLoadedData.archivedYears = inMemoryLoadedData.archivedYears.filter(y => y !== year);
         }
 
-        // ── Step 5：同步内存变量并保存 ──
-        saveUserData();      // 把 inMemoryLoadedData 写回 localStorage 和 transactions 全局
-        loadAllData();       // 重建 accounts / transactions / plannedTransactions 等全局
+        // ── Step 6：写回 inMemoryLoadedData，并校验确实落盘 ──
+        saveUserData();     // 用全局 transactions/accounts 覆盖 allUserData
+        const verifyCount = Object.values(inMemoryLoadedData.allUserData || {}).reduce((n, ud) => {
+            return n + (ud.transactions || []).filter(t =>
+                String(t.date || '').startsWith(String(year)) && !t._isBaseline
+            ).length;
+        }, 0);
+        if (verifyCount === 0) {
+            throw new Error('写回后校验失败：主数据里没有该年份的交易，已回滚（请检查存档内容）');
+        }
+
+        // 内存校验通过后再重建全局变量与筛选
+        loadAllData();
         filterUserData();
 
-        // ── Step 6：推送到云端 data.enc ──
+        // ── Step 7：推送到云端 data.enc ──
         if (GAS_URL && !offlineMode) {
             showToast('正在推送主数据到云端…', 'syncing', 0);
             const mainContent = userPassword
@@ -4944,23 +5005,97 @@ async function restoreArchiveYear(year) {
                     const respText = (await r2.text()).trim();
                     if (respText === 'OK' || respText.startsWith('OK:')) { mainOk = true; break; }
                     if (/MIGRATED/.test(respText)) throw new Error('云端已迁移到增量同步，无法写入 data.enc。请先在设置里点「返回整包」再恢复存档');
-                } catch(e) { if (attempt === 3) throw e; }
+                    if (/^ERROR/i.test(respText)) throw new Error('GAS：' + respText);
+                } catch (e) { if (attempt === 3) throw e; }
                 if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
             }
-            if (!mainOk) { rollback(); throw new Error('主数据推送失败，已回滚'); }
+            if (!mainOk) throw new Error('主数据推送失败，已回滚');
             clearUnsavedFlag();
         } else {
-            hasUnsavedChanges = true;
             triggerAutoSave();
         }
 
-        renderArchiveManagementUI(); renderAccounts(); renderAllTransactions(); renderStats();
-        showToast(`已恢复 ${year} 年存档：${restoredCount} 条交易回到主数据，删除了 ${baselineRemoved} 条存档基准行`, 'success', 5000);
+        // 清空交易页的搜索/日期/用户筛选，避免 2024 数据回来了却被过滤挡住看不见
+        try { clearTransactionFilters(); } catch (_) {
+            const fsd = $('filter-start-date'), fed = $('filter-end-date');
+            if (fsd) fsd.value = '';
+            if (fed) fed.value = '';
+            renderAllTransactions();
+        }
+
+        renderArchiveManagementUI(); renderAccounts(); renderStats();
+
+        let msg = `已恢复 ${year} 年：新增 ${added} 条交易`;
+        if (skipped) msg += `，跳过 ${skipped} 条已存在`;
+        if (baselineRemoved) msg += `，删除 ${baselineRemoved} 条存档基准行`;
+        msg += `。主数据中该年共 ${verifyCount} 条`;
+        showToast(msg, 'success', 6000);
     } catch (err) {
         rollback();
-        showToast(`恢复失败：${err.message}`, 'error', 0);
+        const emsg = `恢复失败：${err.message}`;
+        // 关键：清掉上一条可能残留的「已恢复…」成功提示，避免失败被误看成成功
+        const topToast = $('app-toast');
+        if (topToast) {
+            clearTimeout(_toastTimer);
+            topToast.classList.remove('show');
+            topToast.innerHTML = '';
+        }
+        showToast(emsg, 'error', 0);   // 左下角状态条持久显示（带关闭）
+        // 恢复是一次性关键操作，失败必须显式弹层告知原因，不能只靠小状态条
+        uiAlert(
+            `${emsg}\n\n主数据已回滚、未做任何改动；${year} 年的存档标记也已保留，可以重试。`,
+            { title: `${year} 年存档恢复失败`, okText: '我知道了' }
+        ).catch(() => {});
     } finally {
         driveIsSyncing = false;
+    }
+}
+
+/**
+ * 扫描云端实际存在的 archive_*.enc 文件。
+ * 用途：某年份的存档文件还在云端、但主数据里的 archivedYears 标记已经丢了
+ *（例如之前恢复时标记被清除、或手动改过数据），此时设置页不会显示恢复按钮。
+ * 这里直接按文件列出，允许「强制恢复」这些孤儿存档。
+ */
+async function scanCloudArchives() {
+    const box = $('cloud-archive-scan-result');
+    if (!box) return;
+    if (offlineMode || !GAS_URL || !GAS_TOKEN) {
+        box.innerHTML = '<div class="alert alert-warning py-2 small mb-0">需要在线模式，并配置好 GAS URL 与 Token。</div>';
+        return;
+    }
+    box.innerHTML = '<div class="text-muted small">正在扫描…</div>';
+    try {
+        const resp = await fetch(gasRequestUrl({ action: 'list' }));
+        const txt = (await resp.text()).trim();
+        let names;
+        try { names = JSON.parse(txt); } catch (_) { throw new Error('GAS 返回异常：' + txt.slice(0, 80)); }
+        if (!Array.isArray(names)) throw new Error('GAS 返回格式不是数组');
+        const years = names
+            .map(n => { const m = /^archive_(\d{4})\.enc$/.exec(String(n)); return m ? Number(m[1]) : null; })
+            .filter(y => y !== null)
+            .sort((a, b) => b - a);
+        if (years.length === 0) {
+            box.innerHTML = '<div class="alert alert-secondary py-2 small mb-0">云端没有找到 archive_*.enc 存档文件。</div>';
+            return;
+        }
+        const marked = getArchivedYears();
+        let html = `<div class="small text-muted mb-2">云端找到 ${years.length} 个存档文件：</div>`;
+        years.forEach(y => {
+            const orphan = !marked.includes(y);
+            html += `<div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <span class="small"><i class="bi bi-file-earmark-lock me-1"></i>${y} 年
+                    ${orphan ? '<span class="badge bg-warning text-dark ms-1">主数据里无标记</span>' : '<span class="badge bg-secondary ms-1">已存档</span>'}
+                </span>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="loadHistoryYear(${y})">查看</button>
+                <button class="btn btn-sm btn-outline-success py-0 px-2" onclick="restoreArchiveYear(${y}, true)">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>恢复到主数据
+                </button>
+            </div>`;
+        });
+        box.innerHTML = html;
+    } catch (e) {
+        box.innerHTML = `<div class="alert alert-danger py-2 small mb-0">扫描失败：${_escHtml(e.message || String(e))}</div>`;
     }
 }
 
