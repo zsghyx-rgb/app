@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v5.0.1</title>
+    <title id="app-title">记一笔 v5.0.2</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1688,28 +1688,14 @@ select.compact-form-control { height: 2.1rem; }
             </div>
 
 
-            <!-- 更多选项（低频，默认折叠） -->
-            <details class="mt-2" id="login-more-options">
-                <summary class="small text-muted" style="cursor:pointer;"><i class="bi bi-three-dots"></i> 更多选项（操作反馈 / 初始化）</summary>
-                <div class="pt-2">
-            <!-- 同步通知 -->
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="small text-muted">操作反馈</span>
-                <button id="verbose-toast-btn" onclick="toggleVerboseToast()"
-                        class="btn btn-sm btn-outline-secondary"
-                        style="font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;"></button>
-            </div>
-
-            <!-- 初始化 -->
-            <div class="d-flex align-items-center justify-content-between">
+            <!-- 初始化（低频） -->
+            <div class="d-flex align-items-center justify-content-between mt-2">
                 <span class="small text-muted">初始化</span>
                 <button class="btn btn-sm btn-outline-success" onclick="createNewDataFile()"
                         style="font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;">
                     <i class="bi bi-file-earmark-plus"></i> 新建空账本
                 </button>
             </div>
-                </div>
-            </details>
         </div>
 
         <!-- 数据来源 -->
@@ -1751,7 +1737,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.0.1</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.0.2</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2422,7 +2408,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.0.1</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.0.2</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2944,7 +2930,7 @@ const DEFAULT_RATES = { 'EUR_RMB': 7.8, 'USD_RMB': 7.2, 'HKD_RMB': 0.92, 'JPY_RM
 // GAS_URL 不再硬编码，从 localStorage 读取，首次使用时在登录界面填写
 let GAS_URL = localStorage.getItem('APP_gas_url') || '';
 // 详细同步通知开关（默认关闭，减少打扰）
-let verboseToast = localStorage.getItem('APP_verbose_toast') === 'true';
+let verboseToast = true;   // 始终显示详细操作提示（不再提供关闭入口）
 let GAS_TOKEN = localStorage.getItem('APP_gas_token') || '';
 const CURRENCY_SYMBOLS = { 'RMB': '¥', 'EUR': '€', 'USD': '$', 'HKD': 'HK$', 'JPY': '¥', 'GBP': '£' };
 
@@ -2980,6 +2966,10 @@ let driveIsSyncing = false;      // 防并发
 let offlineMode = localStorage.getItem('APP_offline_mode') === 'true'; // 离线模式（只读本机缓存）
 
 let chartInstances = {};
+// 图表缓存：同一份数据再次进入统计页时不再重复计算/重建图表
+let _statsRenderedKey = '';
+let _netWorthCache = null;
+let _statsRenderRaf = 0;
 // 统计页按需计算缓存：当筛选条件、汇率、数据版本均未变化时，跳过重复的过滤与汇总计算
 let _statsDataVersion = 0;
 let _statsCache = null;
@@ -2999,7 +2989,7 @@ let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'a
 
 // 清理已移除功能（AI / 设备昵称 / 旧整包同步）遗留在本机的配置
 ['ai_api_url', 'ai_api_key', 'ai_model', 'APP_device_name', 'APP_backend', 'APP_drive_version'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-const APP_VERSION = '5.0.1';
+const APP_VERSION = '5.0.2';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），
@@ -3666,26 +3656,6 @@ function toggleLoginSettings() {
 function initLoginSettingsUI() {
     initGasUrlUI();
     initGasTokenUI();
-    renderVerboseToastBtn();
-}
-
-function renderVerboseToastBtn() {
-    const btn = $('verbose-toast-btn');
-    if (!btn) return;
-    if (verboseToast) {
-        btn.className = 'btn btn-sm btn-success';
-        btn.innerHTML = '<i class="bi bi-bell-fill"></i> 详细提示：开';
-    } else {
-        btn.className = 'btn btn-sm btn-outline-secondary';
-        btn.innerHTML = '<i class="bi bi-bell-slash"></i> 详细提示：关';
-    }
-    btn.style.cssText = 'font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;';
-}
-
-function toggleVerboseToast() {
-    verboseToast = !verboseToast;
-    localStorage.setItem('APP_verbose_toast', verboseToast ? 'true' : 'false');
-    renderVerboseToastBtn();
 }
 
 function initGasUrlUI() {
@@ -3807,8 +3777,6 @@ function closeLoginSettings() {
     if (panel) panel.style.display = 'none';
     const gear = $('login-settings-gear');
     if (gear) gear.className = 'bi bi-gear';
-    const more = $('login-more-options');
-    if (more) more.open = false;
 }
 
 async function switchUser() {
@@ -7019,22 +6987,22 @@ function getFilteredTransactions() {
     const startDate = $('filter-start-date').value;
     const endDate = $('filter-end-date').value;
     const userFilter = currentUserFilterValue;
+    const accMap = new Map(accounts.map(a => [String(a.id), a]));
 
     return source.filter(t => {
         if (t._isBaseline) return false;
         // 隐藏账户：其名下的交易记录不再显示在交易管理页面
-        const _tAcc = accounts.find(a => a.id == t.accountId);
+        const _tAcc = accMap.get(String(t.accountId));
         if (_tAcc && _tAcc.hidden) return false;
         if (transactionDisplayMode === 'transactions' && t.isTransfer) return false;
         if (transactionDisplayMode === 'transfers' && !t.isTransfer) return false;
-        
+
         if (startDate && t.date < startDate) return false;
         if (endDate && t.date > endDate) return false;
         if (userFilter !== 'all' && t.ownerName !== userFilter) return false;
-        
+
         if (search) {
-            const acc = accounts.find(a => a.id == t.accountId);
-            const accName = acc ? acc.name.toLowerCase() : '';
+            const accName = _tAcc ? _tAcc.name.toLowerCase() : '';
             if (!JSON.stringify(t).toLowerCase().includes(search) && !accName.includes(search)) return false;
         }
         return true;
@@ -7242,8 +7210,9 @@ function renderAllTransactions() {
 
     // 移动端卡片
     if (mobileContainer) {
+        const accMap = new Map(accounts.map(a => [String(a.id), a]));
         displayData.forEach(t => {
-            const acc = accounts.find(a => a.id == t.accountId);
+            const acc = accMap.get(String(t.accountId));
             if (!acc) return;
             if (t.isTransfer && t.type === 'income') return;
 
@@ -7262,7 +7231,7 @@ function renderAllTransactions() {
             const isBatchable = !t.isTransfer && !(t.items && t.items.length > 1) && t.ownerName === currentUserName;
 
             if (t.isTransfer && t.type === 'expense') {
-                const accTo = accounts.find(a => a.id == t.relatedAccountId);
+                const accTo = accMap.get(String(t.relatedAccountId));
                 if (!accTo) return;
                 let tIn = t.transferPairId ?
                     transactions.find(tx => tx.transferPairId === t.transferPairId && tx.type === 'income') :
@@ -7855,6 +7824,7 @@ function switchStatsTab(tab) {
     $(`stats-tab-${tab}`).classList.add('active');
     $(`stats-pane-${tab}`).classList.add('active');
     if (tab === 'budget') renderBudgetPane();
+    else renderStats();
 }
 
 
@@ -7993,6 +7963,10 @@ function switchAssetAggregation(type, el) {
 }
 
 function renderStats() {
+    // 统计页不可见时完全跳过：交易页每次重绘都会调用 renderStats，
+    // 以前即使人不在统计页也会把 6 张图全部重算一遍，这是交易页卡顿的主要来源之一。
+    if (!$('view-stats')?.classList.contains('active-view')) return;
+
     renderStatsCurrencyButtons();
     updateStatsNavUI();
     const start = currentStatsFilter.startDate;
@@ -8005,7 +7979,8 @@ function renderStats() {
     // 按需计算：筛选条件、汇率、数据版本、来源数组长度均未变化时，跳过重复的过滤与汇总计算
     const cacheKey = [
         0, start, end, filterUser, filterCurrency,
-        _statsDataVersion, sourceTrans.length, JSON.stringify(exchangeRates)
+        _statsDataVersion, sourceTrans.length, accounts.length, currentUserName,
+        JSON.stringify(exchangeRates)
     ].join('|');
 
     let filtered, inc, exp;
@@ -8021,10 +7996,11 @@ function renderStats() {
             if (filterUser !== 'all' && t.ownerName !== filterUser) return false;
             return true;
         });
+        const accMap = new Map(accounts.map(a => [String(a.id), a]));
         inc = 0; exp = 0;
         filtered.forEach(t => {
             if (t.isTransfer) return;
-            const acc = accounts.find(a => a.id == t.accountId);
+            const acc = accMap.get(String(t.accountId));
             if (!acc) return;
             let amt = convertAmt(t.amount, acc.currency);
             if (amt > 0) inc += amt; else exp += amt;
@@ -8039,17 +8015,33 @@ function renderStats() {
     $('stat-income-display').innerText = formatAmount(inc, currentStatsFilter.currency);
     $('stat-expense-display').innerText = formatAmount(Math.abs(exp), currentStatsFilter.currency);
     $('stat-net-display').innerText = formatAmount(inc + exp, currentStatsFilter.currency);
+
+    // 概览子页才需要图表；在预算子页时只刷新预算
+    if (!$('stats-pane-overview')?.classList.contains('active')) {
+        if ($('stats-pane-budget')?.classList.contains('active')) renderBudgetPane();
+        return;
+    }
+
+    const sel = $('category-trend-select');
+    if (sel && sel.options.length === 0) {
+        categories.expense.forEach(c => sel.add(new Option(c, c)));
+    }
+
+    // 同一份数据、同一组筛选条件：图表已经是正确的，直接复用，避免切来切去反复重画
+    const chartKey = [cacheKey, sel ? sel.value : ''].join('~');
+    if (_statsRenderedKey === chartKey) {
+        if ($('stats-pane-budget')?.classList.contains('active')) renderBudgetPane();
+        return;
+    }
+
     renderExpenseChart(filtered);
     renderTagChart(filtered);
     renderTrendChart(filtered);
     renderAssetHistoryChart();
     renderCategoryTrendChart(filtered);
     renderTotalExpenseTrendChart(filtered);
-    const sel = $('category-trend-select');
-    if (sel.options.length === 0) {
-        categories.expense.forEach(c => sel.add(new Option(c, c)));
-        if (categories.expense[0]) renderCategoryTrendChart(filtered);
-    }
+    _statsRenderedKey = chartKey;
+
     // 预算子页若当前可见，同步刷新（集中在此处理，避免各个筛选入口各自维护一份遗漏）
     if ($('stats-pane-budget')?.classList.contains('active')) renderBudgetPane();
 }
@@ -8071,9 +8063,10 @@ function showChartDrawer(title, txList) {
         summaryEl.textContent = '';
     } else {
         // 汇总
+        const accMap = new Map(accounts.map(a => [String(a.id), a]));
         let total = 0;
         txList.forEach(t => {
-            const acc = accounts.find(a => a.id == t.accountId);
+            const acc = accMap.get(String(t.accountId));
             if (acc) total += convertAmt(Math.abs(t.amount), acc.currency);
         });
         const currency = currentStatsFilter.currency || 'RMB';
@@ -8087,7 +8080,7 @@ function showChartDrawer(title, txList) {
 
         // ── 卡片 ──
         sorted.forEach(t => {
-                const acc = accounts.find(a => a.id == t.accountId);
+                const acc = accMap.get(String(t.accountId));
                 if (!acc) return;
                 const card = document.createElement('div');
                 card.className = 'mobile-transaction-card';
@@ -8581,13 +8574,28 @@ function expandTxByTag(t, tag) {
 }
 
 // ─────────────────────────────────────────────────────────────
+/** 复用已有图表实例：数据没变时只更新数据，不再 destroy + new Chart */
+function upsertChart(key, canvas, config) {
+    const existing = chartInstances[key];
+    const existingCanvas = existing && existing.ctx && existing.ctx.canvas;
+    if (existing && existingCanvas === canvas) {
+        existing.data = config.data;
+        existing.update('none');
+        return existing;
+    }
+    if (existing) existing.destroy();
+    chartInstances[key] = new Chart(canvas, config);
+    return chartInstances[key];
+}
+
 function renderExpenseChart(data) {
     const ctx = $('expenseCategoryChart');
     if (!ctx) return;
-    if (chartInstances.expense) { chartInstances.expense.destroy(); chartInstances.expense = null; }
+    const accMap = new Map(accounts.map(a => [String(a.id), a]));
     const cats = {};
     data.filter(t => t.amount < 0 && !t.isTransfer).forEach(t => {
-        const acc = accounts.find(a => a.id == t.accountId);
+        const acc = accMap.get(String(t.accountId));
+        if (!acc) return;
         if (t.items && t.items.length > 1) {
             t.items.forEach(it => {
                 const amt = convertAmt(Math.abs(it.amount), acc.currency);
@@ -8599,32 +8607,34 @@ function renderExpenseChart(data) {
         }
     });
     const sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
-    chartInstances.expense = new Chart(ctx, {
+    const chart = upsertChart('expense', ctx, {
         type: 'bar',
         data: { labels: sorted.map(x => x[0]), datasets: [{ label: '支出', data: sorted.map(x => x[1]), backgroundColor: '#dc3545' }] },
         options: {
             indexAxis: 'y', maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true } }, animation: { duration: 500 },
+            scales: { x: { beginAtZero: true } }, animation: { duration: 0 },
             onClick(e, els) {
-                if (!els.length) return;
-                const cat = sorted[els[0].index][0];
-                const txs = data
+                const meta = chartInstances.expense && chartInstances.expense.$meta;
+                if (!meta || !els.length) return;
+                const cat = meta.sorted[els[0].index][0];
+                const txs = meta.data
                     .filter(t => t.amount < 0 && !t.isTransfer)
                     .flatMap(t => expandTxByCategory(t, cat));
                 showChartDrawer(`支出排行 · ${cat}`, txs);
             }
         }
     });
+    chart.$meta = { sorted, data };
 }
 
 function renderTagChart(data) {
     const ctx = $('tagStatsChart');
     if (!ctx) return;
-    if (chartInstances.tags) { chartInstances.tags.destroy(); chartInstances.tags = null; }
+    const accMap = new Map(accounts.map(a => [String(a.id), a]));
     const tags = {};
     data.forEach(t => {
-        const acc = accounts.find(a => a.id == t.accountId);
+        const acc = accMap.get(String(t.accountId));
         if (!acc) return;
         if (t.items && t.items.length > 1) {
             // 拆分交易：每个分录可能有自己的标签，未单独设置则继承整笔的标签
@@ -8641,40 +8651,45 @@ function renderTagChart(data) {
         }
     });
     const sorted = Object.entries(tags).sort((a, b) => b[1] - a[1]);
-    chartInstances.tags = new Chart(ctx, {
+    const chart = upsertChart('tags', ctx, {
         type: 'bar',
         data: { labels: sorted.map(x => x[0]), datasets: [{ label: '金额', data: sorted.map(x => x[1]), backgroundColor: '#0d6efd' }] },
         options: {
             maintainAspectRatio: false, indexAxis: 'y',
             plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true } }, animation: { duration: 500 },
+            scales: { x: { beginAtZero: true } }, animation: { duration: 0 },
             onClick(e, els) {
-                if (!els.length) return;
-                const tag = sorted[els[0].index][0];
-                const txs = data.flatMap(t => expandTxByTag(t, tag));
+                const meta = chartInstances.tags && chartInstances.tags.$meta;
+                if (!meta || !els.length) return;
+                const tag = meta.sorted[els[0].index][0];
+                const txs = meta.data.flatMap(t => expandTxByTag(t, tag));
                 showChartDrawer(`标签统计 · #${tag}`, txs);
             }
         }
     });
+    chart.$meta = { sorted, data };
 }
 
 function renderTrendChart(data) {
     const ctx = $('monthlyTrendChart');
     if (!ctx) return;
-    if (chartInstances.trend) { chartInstances.trend.destroy(); chartInstances.trend = null; }
+    const accMap = new Map(accounts.map(a => [String(a.id), a]));
     const months = {};
     data.forEach(t => {
         if (t.isTransfer) return;
         const m = t.date.substring(0, 7);
         if (!months[m]) months[m] = { inc: 0, exp: 0 };
-        const acc = accounts.find(a => a.id == t.accountId);
+        const acc = accMap.get(String(t.accountId));
+        if (!acc) return;
         let amt = convertAmt(t.amount, acc.currency);
         if (amt > 0) months[m].inc += amt; else months[m].exp += Math.abs(amt);
     });
     const labels = Object.keys(months).sort();
     const canvas = $('monthlyTrendChart');
-    canvas.width = Math.max(labels.length * 60, 400);
-    chartInstances.trend = new Chart(ctx, {
+    const targetW = Math.max(labels.length * 60, 400);
+    if (!chartInstances.trend) canvas.width = targetW;
+    else if (canvas.width !== targetW) { canvas.width = targetW; chartInstances.trend.resize(); }
+    const chart = upsertChart('trend', ctx, {
         type: 'bar',
         data: {
             labels,
@@ -8685,15 +8700,16 @@ function renderTrendChart(data) {
             ]
         },
         options: {
-            maintainAspectRatio: false, plugins: { legend: { display: true } }, animation: { duration: 500 },
+            maintainAspectRatio: false, plugins: { legend: { display: true } }, animation: { duration: 0 },
             onClick(e, els) {
-                if (!els.length) return;
+                const meta = chartInstances.trend && chartInstances.trend.$meta;
+                if (!meta || !els.length) return;
                 const el = els[0];
-                const month = labels[el.index];
+                const month = meta.labels[el.index];
                 const dsLabel = chartInstances.trend.data.datasets[el.datasetIndex].label;
                 if (dsLabel === '结余') return;
                 const isIncome = dsLabel === '收入';
-                const txs = data.filter(t => {
+                const txs = meta.data.filter(t => {
                     if (t.isTransfer) return false;
                     if (!t.date.startsWith(month)) return false;
                     return isIncome ? t.amount > 0 : t.amount < 0;
@@ -8702,58 +8718,98 @@ function renderTrendChart(data) {
             }
         }
     });
+    chart.$meta = { labels, data };
+}
+
+/**
+ * 净资产曲线：从“每个日期 × 每个账户 × 全部交易”改为一次线性扫描。
+ * 原复杂度 O(日期数 × 账户数 × 交易数)，三年数据下可达数千万次比较。
+ */
+function buildNetWorthSeries() {
+    const accMap = new Map(accounts.map(a => [String(a.id), a]));
+    const deltaByDate = new Map();
+    for (let i = 0; i < transactions.length; i++) {
+        const t = transactions[i];
+        const acc = accMap.get(String(t.accountId));
+        if (!acc) continue;
+        const v = toRmb(parseFloat(t.amount) || 0, acc.currency);
+        deltaByDate.set(t.date, (deltaByDate.get(t.date) || 0) + v);
+    }
+    let running = 0;
+    for (let i = 0; i < accounts.length; i++) {
+        running += toRmb(parseFloat(accounts[i].initialBalance) || 0, accounts[i].currency);
+    }
+    const dates = [...deltaByDate.keys()].sort();
+    const raw = new Array(dates.length);
+    for (let i = 0; i < dates.length; i++) {
+        running += deltaByDate.get(dates[i]) || 0;
+        raw[i] = { date: dates[i], value: running };
+    }
+    return raw;
+}
+
+function getNetWorthSeries() {
+    const key = [
+        _statsDataVersion,
+        currentAssetAggregation,
+        JSON.stringify(exchangeRates),
+        accounts.map(a => a.id + ':' + (a.initialBalance ?? 0) + ':' + (a.currency || '')).join('|'),
+        transactions.length,
+        currentUserName
+    ].join('~');
+    if (_netWorthCache && _netWorthCache.key === key) return _netWorthCache;
+
+    const raw = buildNetWorthSeries();
+    let labels, data;
+    if (currentAssetAggregation === 'day') {
+        labels = raw.map(x => x.date);
+        data = raw.map(x => x.value);
+    } else if (currentAssetAggregation === 'week') {
+        const map = {};
+        raw.forEach(x => {
+            const d = new Date(x.date);
+            const ws = new Date(d);
+            ws.setDate(d.getDate() - d.getDay());
+            map[ws.toISOString().split('T')[0]] = x.value;
+        });
+        labels = Object.keys(map).sort();
+        data = labels.map(k => map[k]);
+    } else {
+        const map = {};
+        raw.forEach(x => { map[x.date.substring(0, 7)] = x.value; });
+        labels = Object.keys(map).sort();
+        data = labels.map(k => map[k]);
+    }
+    _netWorthCache = { key, labels, data, raw };
+    return _netWorthCache;
 }
 
 function renderAssetHistoryChart() {
     const ctx = $('assetHistoryChart');
     if (!ctx) return;
-    if (chartInstances.assetHistory) { chartInstances.assetHistory.destroy(); chartInstances.assetHistory = null; }
-    const filteredAccounts = accounts;
-    const filteredTrans = transactions;
-    const dates = [...new Set(filteredTrans.map(t => t.date))].sort();
-    let labels = [], data = [];
-    const calcNetWorth = (d) => {
-        let total = 0;
-        filteredAccounts.forEach(acc => {
-            let bal = parseFloat(acc.initialBalance);
-            filteredTrans.filter(t => t.accountId == acc.id && t.date <= d).forEach(t => bal += parseFloat(t.amount));
-            bal = toRmb(bal, acc.currency);
-            total += bal;
-        });
-        return total;
-    };
-    if (currentAssetAggregation === 'day') {
-        labels = dates; data = dates.map(d => calcNetWorth(d));
-    } else if (currentAssetAggregation === 'week') {
-        const weekMap = {};
-        dates.forEach(d => {
-            const date = new Date(d); const weekStart = new Date(date);
-            weekStart.setDate(date.getDate() - date.getDay());
-            weekMap[weekStart.toISOString().split('T')[0]] = calcNetWorth(d);
-        });
-        labels = Object.keys(weekMap).sort(); data = labels.map(w => weekMap[w]);
-    } else {
-        const monthMap = {};
-        dates.forEach(d => { monthMap[d.substring(0, 7)] = calcNetWorth(d); });
-        labels = Object.keys(monthMap).sort(); data = labels.map(m => monthMap[m]);
-    }
-    chartInstances.assetHistory = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets: [{ label: '净资产', data, borderColor: '#0d6efd', fill: true, backgroundColor: 'rgba(13,110,253,0.1)', tension: 0.4 }] },
-        options: { maintainAspectRatio: false, elements: { point: { radius: 0 } }, plugins: { legend: { display: true } }, animation: { duration: 500 } }
-    });
-}
+    // 图表默认折叠：不可见时不计算，点“显示图表”时再算
+    const wrapper = $('history-chart-wrapper');
+    if (wrapper && wrapper.classList.contains('d-none')) return;
 
+    const series = getNetWorthSeries();
+    const chart = upsertChart('assetHistory', ctx, {
+        type: 'line',
+        data: { labels: series.labels, datasets: [{ label: '净资产', data: series.data, borderColor: '#0d6efd', fill: true, backgroundColor: 'rgba(13,110,253,0.1)', tension: 0.4 }] },
+        options: { maintainAspectRatio: false, elements: { point: { radius: 0 } }, plugins: { legend: { display: true } }, animation: { duration: 0 } }
+    });
+    chart.resize();
+}
 
 function renderCategoryTrendChart(data) {
     const cat = $('category-trend-select').value;
     const ctx = $('categoryTrendChart');
     if (!ctx) return;
-    if (chartInstances.cattrend) { chartInstances.cattrend.destroy(); chartInstances.cattrend = null; }
     if (!cat) return;
+    const accMap = new Map(accounts.map(a => [String(a.id), a]));
     const months = {};
     (data || []).filter(t => t.amount < 0 && !t.isTransfer).forEach(t => {
-        const acc = accounts.find(a => a.id == t.accountId);
+        const acc = accMap.get(String(t.accountId));
+        if (!acc) return;
         const m = t.date.substring(0, 7);
         if (t.items && t.items.length > 1) {
             t.items.filter(it => it.category === cat).forEach(it => {
@@ -8765,52 +8821,61 @@ function renderCategoryTrendChart(data) {
     });
     const labels = Object.keys(months).sort();
     const canvas = $('categoryTrendChart');
-    canvas.width = Math.max(labels.length * 60, 400);
-    chartInstances.cattrend = new Chart(ctx, {
+    const targetW = Math.max(labels.length * 60, 400);
+    if (!chartInstances.cattrend) canvas.width = targetW;
+    else if (canvas.width !== targetW) { canvas.width = targetW; chartInstances.cattrend.resize(); }
+    const chart = upsertChart('cattrend', ctx, {
         type: 'bar',
         data: { labels, datasets: [{ label: cat, data: labels.map(m => months[m]), borderColor: '#fd7e14', backgroundColor: 'rgba(253,126,20,0.5)', fill: true, tension: 0.4 }] },
         options: {
-            maintainAspectRatio: false, plugins: { legend: { display: true } }, animation: { duration: 500 },
+            maintainAspectRatio: false, plugins: { legend: { display: true } }, animation: { duration: 0 },
             onClick(e, els) {
-                if (!els.length) return;
-                const month = labels[els[0].index];
-                const txs = (data || [])
+                const meta = chartInstances.cattrend && chartInstances.cattrend.$meta;
+                if (!meta || !els.length) return;
+                const month = meta.labels[els[0].index];
+                const txs = (meta.data || [])
                     .filter(t => t.amount < 0 && !t.isTransfer && t.date.startsWith(month))
-                    .flatMap(t => expandTxByCategory(t, cat));
-                showChartDrawer(`单类别趋势 · ${cat} · ${month}`, txs);
+                    .flatMap(t => expandTxByCategory(t, meta.cat));
+                showChartDrawer(`单类别趋势 · ${meta.cat} · ${month}`, txs);
             }
         }
     });
+    chart.$meta = { labels, data, cat };
 }
 
 function renderTotalExpenseTrendChart(data) {
     const ctx = $('totalExpenseTrendChart');
     if (!ctx) return;
-    if (chartInstances.totalExpense) { chartInstances.totalExpense.destroy(); chartInstances.totalExpense = null; }
+    const accMap = new Map(accounts.map(a => [String(a.id), a]));
     const months = {};
     (data || []).filter(t => t.amount < 0 && !t.isTransfer).forEach(t => {
+        const acc = accMap.get(String(t.accountId));
+        if (!acc) return;
         const m = t.date.substring(0, 7);
-        const acc = accounts.find(a => a.id == t.accountId);
         let amt = convertAmt(Math.abs(t.amount), acc.currency);
         months[m] = (months[m] || 0) + amt;
     });
     const labels = Object.keys(months).sort();
     const canvas = $('totalExpenseTrendChart');
-    canvas.width = Math.max(labels.length * 60, 400);
-    chartInstances.totalExpense = new Chart(ctx, {
+    const targetW = Math.max(labels.length * 60, 400);
+    if (!chartInstances.totalExpense) canvas.width = targetW;
+    else if (canvas.width !== targetW) { canvas.width = targetW; chartInstances.totalExpense.resize(); }
+    const chart = upsertChart('totalExpense', ctx, {
         type: 'bar',
         data: { labels, datasets: [{ label: '总支出', data: labels.map(m => months[m]), borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.5)', fill: true, tension: 0.4 }] },
         options: {
             maintainAspectRatio: false, plugins: { legend: { display: true } },
-            scales: { y: { beginAtZero: true } }, animation: { duration: 500 },
+            scales: { y: { beginAtZero: true } }, animation: { duration: 0 },
             onClick(e, els) {
-                if (!els.length) return;
-                const month = labels[els[0].index];
-                const txs = (data || []).filter(t => t.amount < 0 && !t.isTransfer && t.date.startsWith(month));
+                const meta = chartInstances.totalExpense && chartInstances.totalExpense.$meta;
+                if (!meta || !els.length) return;
+                const month = meta.labels[els[0].index];
+                const txs = (meta.data || []).filter(t => t.amount < 0 && !t.isTransfer && t.date.startsWith(month));
                 showChartDrawer(`总支出趋势 · ${month}`, txs);
             }
         }
     });
+    chart.$meta = { labels, data };
 }
 
 function updateSelectOptions() {
@@ -8846,6 +8911,7 @@ function updateSelectOptions() {
 }
 
 function switchTab(t, el) {
+    if (t !== 'stats' && _statsRenderRaf) { cancelAnimationFrame(_statsRenderRaf); _statsRenderRaf = 0; }
     ['editTransactionModal','accountModal','plannedModal'].forEach(id => {
         const inst = bootstrap.Modal.getInstance($(id));
         if (inst) inst.hide();
@@ -8867,7 +8933,15 @@ function switchTab(t, el) {
     // 桌面端下始终隐藏悬浮按钮
     if (fab) fab.classList.toggle('d-none', t !== 'transactions' || window.innerWidth > 768);
 
-    if (t === 'stats') { renderStats(); maybeShowInsight(); }
+    if (t === 'stats') {
+        // 先让标签页切换完成并画出一帧，再做图表计算，避免点击时整页卡住
+        if (_statsRenderRaf) cancelAnimationFrame(_statsRenderRaf);
+        _statsRenderRaf = requestAnimationFrame(() => {
+            _statsRenderRaf = 0;
+            renderStats();
+            maybeShowInsight();
+        });
+    }
     if (t === 'settings') { showSettingsMenu(); renderExchangeRateSettings(); initPasswordHint(); renderUserManagement(); }
 }
 
@@ -9579,6 +9653,8 @@ function toggleChartVisibility(wrapperId, btn) {
         wrapper.classList.remove('d-none');
         btn.innerHTML = '<i class="bi bi-eye-slash"></i> 隐藏图表';
         btn.classList.replace('btn-primary', 'btn-outline-secondary');
+        // 资产曲线是计算量最大的一张图，展开时才计算/绘制
+        renderAssetHistoryChart();
     } else {
         wrapper.classList.add('d-none');
         btn.innerHTML = '<i class="bi bi-eye"></i> 显示图表';
