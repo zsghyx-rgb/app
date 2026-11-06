@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v3.11.0</title>
+    <title id="app-title">记一笔 v5.0.0</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -336,8 +336,10 @@ body {
     bottom: 16px;
     transform: translateY(12px);
     width: fit-content;
-    max-width: min(calc(100vw - 20px), 460px);
-    z-index: 1015;                 /* 高于底部导航(1000)和悬浮按钮(1010)，低于弹窗(1055)和抽屉(1061) */
+    max-width: min(calc(100vw - 20px), 420px);
+    /* 提到所有抽屉/弹层之上（chart 1055、backup/insight 1060/1061、ui-sheet 1080/1081、undo 1090），
+       但低于顶部更新提示条(9998)和全屏 toast(9999)，保证同步状态在任何弹窗后都看得见。 */
+    z-index: 1095;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -347,7 +349,13 @@ body {
     font-size: 0.82rem;
     line-height: 1.25;
     border: 1px solid var(--sb-border, var(--bs-border-color));
+    /* 半透明背景：不再用不透明 --bs-body-bg 兜底，避免出现整条全黑/全白的色块。
+       先给一个不透明兜底色，再用 color-mix 覆盖成接近不透明但有透明感的圆角胶囊；
+       支持 backdrop-filter 时再加一层毛玻璃，在弹窗暗色遮罩上也有层次。 */
     background: var(--sb-bg, var(--bs-body-bg));
+    background: color-mix(in srgb, var(--sb-bg, var(--bs-body-bg)) 88%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     color: var(--sb-fg, var(--bs-body-color));
     box-shadow: 0 4px 16px rgba(0,0,0,0.16);
     opacity: 0;
@@ -358,7 +366,7 @@ body {
 #sync-bar .sb-icon { flex: 0 0 auto; display: inline-flex; align-items: center; }
 #sync-bar .sb-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-word; }
 #sync-bar.expanded .sb-text { -webkit-line-clamp: unset; display: block; max-height: 40vh; overflow-y: auto; }
-#sync-bar.expanded { max-width: min(calc(100vw - 20px), 460px); }
+#sync-bar.expanded { max-width: min(calc(100vw - 20px), 420px); }
 #sync-bar .sb-btn, #sync-bar .sb-close {
     flex: 0 0 auto; border: 1px solid currentColor; background: transparent; color: inherit;
     border-radius: 12px; font-size: 0.78rem; font-weight: 600; padding: 3px 12px; cursor: pointer; white-space: nowrap;
@@ -379,12 +387,13 @@ body {
     body.sync-bar-on { padding-bottom: 64px; }
 }
 @media (max-width: 768px) {
-    /* 手机：和交易页的悬浮按钮（52px，右侧 18px）在同一水平线上并排，悬浮按钮位置不动 */
+    /* 手机：和交易页的悬浮按钮（52px，右侧 18px）在同一水平线上并排，悬浮按钮位置不动。
+       max-width 收窄，避免几乎占满整行看起来像「整条全黑/全白」。 */
     #sync-bar:not(.on-login) {
         bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 14px + 6px);
-        max-width: calc(100vw - 10px - 18px - 52px - 10px);
+        max-width: min(calc(100vw - 10px - 18px - 52px - 14px), 360px);
     }
-    #sync-bar:not(.on-login).expanded { max-width: calc(100vw - 20px); }
+    #sync-bar:not(.on-login).expanded { max-width: min(calc(100vw - 20px), 420px); }
     body.sync-bar-on { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 56px); }
 }
 @media (prefers-reduced-motion: reduce) { #sync-bar { transition: none; } }
@@ -1755,7 +1764,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 3.10.2</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.0.0</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -2418,7 +2427,7 @@ select.compact-form-control { height: 2.1rem; }
                         <i class="bi bi-archive"></i> 数据存档管理
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档数据不可恢复，只读，不能修改。</p>
+                        <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档后可在历史模式只读查看，也可点「恢复」把存档数据合并回主文件（data.enc），方便把所有数据放在一起再迁移到 Google 表格增量同步。</p>
                         <div id="archive-management-ui" class="mb-2"></div>
                     </div>
                 </div>
@@ -2458,7 +2467,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v3.10.2</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.0.0</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -3040,7 +3049,7 @@ let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'a
 
 // 清理已移除功能（AI / 设备昵称）遗留在本机的配置
 ['ai_api_url', 'ai_api_key', 'ai_model', 'APP_device_name'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-const APP_VERSION = '3.11.0';
+const APP_VERSION = '5.0.0';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），
@@ -4446,11 +4455,17 @@ function renderArchiveManagementUI() {
     const archivedYears = getArchivedYears();
     let html = '';
     if (archivedYears.length > 0) {
-        html += '<div class="mb-2"><div class="small text-muted fw-bold mb-1">已存档（只读）：</div><div class="d-flex flex-wrap gap-1">';
+        html += '<div class="mb-2"><div class="small text-muted fw-bold mb-1">已存档（只读）：</div>';
         archivedYears.forEach(y => {
-            html += `<button class="btn btn-sm btn-outline-secondary py-0" onclick="loadHistoryYear(${y})"><i class="bi bi-clock-history me-1"></i>${y}年</button>`;
+            html += `<div class="d-flex align-items-center gap-1 mb-1">
+                <button class="btn btn-sm btn-outline-secondary py-0 flex-shrink-0" onclick="loadHistoryYear(${y})"><i class="bi bi-clock-history me-1"></i>${y}年</button>
+                <button class="btn btn-sm btn-outline-success py-0 px-1 flex-shrink-0" onclick="restoreArchiveYear(${y})" title="把这一年的存档数据恢复到主文件">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>恢复
+                </button>
+            </div>`;
         });
-        html += '</div></div>';
+        html += '</div>';
+        html += '<div class="alert alert-info py-2 px-3 small mb-2"><i class="bi bi-info-circle me-1"></i>「恢复」会把存档的交易合并回主数据（data.enc），并删除该年的存档基准行。恢复后即可把所有数据一起迁移到 Google 表格增量同步。</div>';
     }
     if (archivableYears.length > 0) {
         html += '<div class="mb-1"><div class="small text-muted fw-bold mb-1">可存档：</div><div class="d-flex flex-wrap gap-1">';
@@ -4673,16 +4688,21 @@ async function loadHistoryYear(year) {
     showToast(`正在加载 ${year} 年存档…`, 'syncing', 0);
     try {
         if (offlineMode || !GAS_URL) throw new Error('历史模式需要网络，请切换到在线模式');
+        if (!GAS_TOKEN) throw new Error('未配置 GAS Token，无法读取存档（请在连接设置里填写 Token）');
         const archiveFile = `archive_${year}.enc`;
         const resp = await fetch(gasRequestUrl({ file: archiveFile }));
         const raw = (await resp.text()).trim();
-        if (!raw || raw === 'UNAUTHORIZED') throw new Error('无法读取存档文件');
+        if (raw === 'UNAUTHORIZED') throw new Error('GAS Token 不正确，无法读取存档');
+        if (!raw) throw new Error(`云端没有找到存档文件 ${archiveFile}（可能尚未上传，或已被删除）`);
         let archiveData;
         try { archiveData = JSON.parse(raw); }
         catch (_) {
-            if (!userPassword) throw new Error('无法解密存档文件');
+            if (!userPassword) throw new Error('存档是加密的，但当前没有登录密码，无法解密');
             const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-            archiveData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+            const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+            if (!decrypted) throw new Error('存档解密失败：密码可能不正确（存档是用当时的密码加密的，如果后来改过密码，需要用存档时的密码）');
+            try { archiveData = JSON.parse(decrypted); }
+            catch (_) { throw new Error('存档解密后内容格式异常'); }
         }
 
         // 将存档交易存入独立变量，不混入 transactions
@@ -4795,6 +4815,153 @@ function exitHistoryMode() {
     renderAccounts();
     renderStats();
     if (verboseToast) showToast('已退出历史模式', 'info');
+}
+
+/**
+ * 恢复存档到主数据（data.enc）。
+ * 读取 archive_{year}.enc → 解密 → 把交易合并回 inMemoryLoadedData.allUserData →
+ * 删掉该年的存档基准行（_isBaseline + _archiveYear=year）→ 从 archivedYears 移除该年 →
+ * 保存 + 推送到云端 data.enc。
+ *
+ * 恢复后所有数据都在主文件里了，可以再走「迁移到 Google 表格」把全部数据一次性转成增量同步。
+ */
+async function restoreArchiveYear(year) {
+    if (offlineMode || !GAS_URL) { uiAlert('恢复存档需要在线模式，请先切换到在线'); return; }
+    if (!GAS_TOKEN) { uiAlert('未配置 GAS Token，无法读取存档'); return; }
+    if (!inMemoryLoadedData || !userPassword) { uiAlert('请先登录并解密数据后再恢复存档'); return; }
+    if (useRows()) { uiAlert('当前是增量同步模式。\n\n恢复存档需要先切回整包模式（GAS 整包），恢复完成后再重新迁移到表格。'); return; }
+
+    const archivedYears = getArchivedYears();
+    if (!archivedYears.includes(year)) { showToast(`${year} 年不在已存档列表中`, 'warning'); return; }
+
+    const ok = await uiConfirm(
+        `恢复 ${year} 年存档到主数据？\n\n` +
+        `操作内容：\n` +
+        `① 从云端读取 archive_${year}.enc 并解密\n` +
+        `② 把这一年的交易合并回主数据（data.enc）\n` +
+        `③ 删除该年的「存档基准」行\n` +
+        `④ 从已存档列表中移除 ${year} 年\n` +
+        `⑤ 推送更新后的主数据到云端\n\n` +
+        `恢复后所有数据都会在主文件里，可以再迁移到 Google 表格增量同步。\n` +
+        `存档文件本身不会被删除（仍可在历史模式查看），直到你手动清理。`,
+        { title: `恢复 ${year} 年存档`, okText: '确认恢复', danger: true }
+    );
+    if (!ok) return;
+
+    // 占锁
+    clearTimeout(driveAutoSaveTimer);
+    while (driveIsSyncing) { await new Promise(r => setTimeout(r, 200)); }
+    driveIsSyncing = true;
+
+    // 快照（用于回滚）
+    const snapTransactions = transactions.map(t => ({...t}));
+    const snapInMemory = JSON.parse(JSON.stringify(inMemoryLoadedData));
+    const rollback = () => {
+        transactions = snapTransactions;
+        Object.keys(inMemoryLoadedData).forEach(k => { inMemoryLoadedData[k] = snapInMemory[k]; });
+    };
+
+    try {
+        showToast(`正在读取 ${year} 年存档…`, 'syncing', 0);
+
+        // ── Step 1：读取存档文件 ──
+        const archiveFile = `archive_${year}.enc`;
+        const resp = await fetch(gasRequestUrl({ file: archiveFile }));
+        const raw = (await resp.text()).trim();
+        if (raw === 'UNAUTHORIZED') throw new Error('GAS Token 不正确');
+        if (!raw) throw new Error(`云端没有找到存档文件 ${archiveFile}`);
+
+        let archiveData;
+        try { archiveData = JSON.parse(raw); }
+        catch (_) {
+            const bytes = CryptoJS.AES.decrypt(raw, userPassword);
+            const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+            if (!decrypted) throw new Error('存档解密失败：密码可能不正确');
+            archiveData = JSON.parse(decrypted);
+        }
+
+        // ── Step 2：把存档交易合并回 inMemoryLoadedData.allUserData ──
+        let restoredCount = 0;
+        const archiveUsers = archiveData.allUserData || {};
+        Object.keys(archiveUsers).forEach(u => {
+            const ud = archiveUsers[u];
+            if (!ud || !ud.transactions) return;
+            if (!inMemoryLoadedData.allUserData[u]) {
+                inMemoryLoadedData.allUserData[u] = { accounts: ud.accounts || [], transactions: [], plannedTransactions: [] };
+                if (!dataUsers.includes(u)) dataUsers.push(u);
+            }
+            const targetTrans = inMemoryLoadedData.allUserData[u].transactions;
+            // 存档里的交易可能带了 _isArchived 标记，恢复时去掉
+            ud.transactions.forEach(t => {
+                const clean = {...t};
+                delete clean._isArchived;
+                targetTrans.push(clean);
+                restoredCount++;
+            });
+            // 合并账户（存档里可能有当前主数据没有的账户）
+            if (ud.accounts) {
+                const existingIds = new Set(inMemoryLoadedData.allUserData[u].accounts.map(a => String(a.id)));
+                ud.accounts.forEach(a => {
+                    if (!existingIds.has(String(a.id))) inMemoryLoadedData.allUserData[u].accounts.push({...a});
+                });
+            }
+        });
+
+        // ── Step 3：删除该年的存档基准行 ──
+        const beforeCount = inMemoryLoadedData.allUserData[currentUserName] ? inMemoryLoadedData.allUserData[currentUserName].transactions.length : 0;
+        let baselineRemoved = 0;
+        Object.keys(inMemoryLoadedData.allUserData).forEach(u => {
+            const arr = inMemoryLoadedData.allUserData[u].transactions;
+            const before = arr.length;
+            inMemoryLoadedData.allUserData[u].transactions = arr.filter(t =>
+                !(t._isBaseline && t._archiveYear === year)
+            );
+            baselineRemoved += before - inMemoryLoadedData.allUserData[u].transactions.length;
+        });
+
+        // ── Step 4：从 archivedYears 移除该年 ──
+        if (inMemoryLoadedData.archivedYears) {
+            inMemoryLoadedData.archivedYears = inMemoryLoadedData.archivedYears.filter(y => y !== year);
+        }
+
+        // ── Step 5：同步内存变量并保存 ──
+        saveUserData();      // 把 inMemoryLoadedData 写回 localStorage 和 transactions 全局
+        loadAllData();       // 重建 accounts / transactions / plannedTransactions 等全局
+        filterUserData();
+
+        // ── Step 6：推送到云端 data.enc ──
+        if (GAS_URL && !offlineMode) {
+            showToast('正在推送主数据到云端…', 'syncing', 0);
+            const mainContent = userPassword
+                ? CryptoJS.AES.encrypt(JSON.stringify(inMemoryLoadedData), userPassword).toString()
+                : JSON.stringify(inMemoryLoadedData);
+            let mainOk = false;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const r2 = await fetch(gasRequestUrl(), {
+                        method: 'POST', body: mainContent, headers: { 'Content-Type': 'text/plain' }
+                    });
+                    const respText = (await r2.text()).trim();
+                    if (respText === 'OK' || respText.startsWith('OK:')) { mainOk = true; break; }
+                    if (/MIGRATED/.test(respText)) throw new Error('云端已迁移到增量同步，无法写入 data.enc。请先在设置里点「返回整包」再恢复存档');
+                } catch(e) { if (attempt === 3) throw e; }
+                if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
+            }
+            if (!mainOk) { rollback(); throw new Error('主数据推送失败，已回滚'); }
+            clearUnsavedFlag();
+        } else {
+            hasUnsavedChanges = true;
+            triggerAutoSave();
+        }
+
+        renderArchiveManagementUI(); renderAccounts(); renderAllTransactions(); renderStats();
+        showToast(`已恢复 ${year} 年存档：${restoredCount} 条交易回到主数据，删除了 ${baselineRemoved} 条存档基准行`, 'success', 5000);
+    } catch (err) {
+        rollback();
+        showToast(`恢复失败：${err.message}`, 'error', 0);
+    } finally {
+        driveIsSyncing = false;
+    }
 }
 
 /**
@@ -4982,12 +5149,16 @@ function applyToastStyle(el, type) {
  */
 let _uiSheetResolve = null;
 let _uiSheetInputEl = null;      // 非空表示当前是“输入型”弹层（uiPrompt）
+let _uiSheetFields = null;       // 非空表示当前是“多字段表单型”弹层（uiForm）
+let _uiSheetFocusKey = null;     // uiForm 时指定默认聚焦的字段 key
 
 function _uiSheetOpen(opts) {
     const o = Object.assign({
         title: '', message: '', okText: '确定', cancelText: '取消',
         okClass: 'btn-primary', cancel: true, danger: false,
-        input: null            // { placeholder, value, type, maxlength }
+        input: null,            // { placeholder, value, type, maxlength }
+        fields: null,           // 数组：[{ key, label, placeholder, value, type, inputmode, autofocus }]
+        focusKey: null          // fields 模式下默认聚焦的 key
     }, opts || {});
     return new Promise(resolve => {
         const backdrop = $('ui-sheet-backdrop');
@@ -5000,7 +5171,11 @@ function _uiSheetOpen(opts) {
         }
 
         // 同一时间只允许一个弹层：上一个按“取消”结束，避免 Promise 永久悬挂
-        if (_uiSheetResolve) { const prev = _uiSheetResolve; _uiSheetResolve = null; prev(o.input ? null : false); }
+        if (_uiSheetResolve) {
+            const prev = _uiSheetResolve;
+            _uiSheetResolve = null;
+            prev(_uiSheetFields ? null : (o.input ? null : false));
+        }
         _uiSheetResolve = resolve;
 
         $('ui-sheet-title').textContent = o.title || '';
@@ -5008,8 +5183,40 @@ function _uiSheetOpen(opts) {
         bodyEl.textContent = o.message || '';
         actions.innerHTML = '';
         _uiSheetInputEl = null;
+        _uiSheetFields = null;
+        _uiSheetFocusKey = o.focusKey || null;
 
-        if (o.input) {
+        if (o.fields && Array.isArray(o.fields) && o.fields.length) {
+            // 多字段表单模式：返回 { key: value, ... } 或 null（取消）
+            _uiSheetFields = {};
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'margin-top:12px;display:flex;flex-direction:column;gap:10px;';
+            o.fields.forEach(f => {
+                const row = document.createElement('div');
+                const lbl = document.createElement('div');
+                lbl.textContent = f.label || '';
+                lbl.style.cssText = 'font-size:.8rem;color:var(--bs-secondary-color);margin-bottom:2px;';
+                const inp = document.createElement('input');
+                inp.type = f.type || 'text';
+                if (f.inputmode) inp.inputMode = f.inputmode;
+                inp.className = 'form-control';
+                inp.placeholder = f.placeholder || '';
+                inp.value = f.value !== undefined ? f.value : '';
+                inp.autocomplete = 'off';
+                inp.spellcheck = false;
+                if (f.maxlength) inp.maxLength = f.maxlength;
+                inp.style.cssText = 'font-size:1rem;padding:.6rem .8rem;border-radius:12px;';
+                inp.dataset.fieldKey = f.key;
+                inp.addEventListener('keydown', ev => {
+                    if (ev.key === 'Enter') { ev.preventDefault(); _uiSheetClose(true); }
+                });
+                row.appendChild(lbl);
+                row.appendChild(inp);
+                wrap.appendChild(row);
+                _uiSheetFields[f.key] = inp;
+            });
+            bodyEl.appendChild(wrap);
+        } else if (o.input) {
             const wrap = document.createElement('div');
             wrap.style.cssText = 'margin-top:12px;';
             const inp = document.createElement('input');
@@ -5049,7 +5256,13 @@ function _uiSheetOpen(opts) {
         document.body.classList.add('ui-sheet-on');
         setTimeout(() => {
             try {
-                if (_uiSheetInputEl) { _uiSheetInputEl.focus({ preventScroll: true }); _uiSheetInputEl.select(); }
+                if (_uiSheetFields) {
+                    // 多字段表单：默认聚焦 focusKey 指定的字段（没指定就聚焦第一个）
+                    const targetKey = _uiSheetFocusKey || (o.fields[0] && o.fields[0].key);
+                    const el = targetKey ? _uiSheetFields[targetKey] : null;
+                    if (el) { el.focus({ preventScroll: true }); try { el.select(); } catch (_) {} }
+                    else ok.focus({ preventScroll: true });
+                } else if (_uiSheetInputEl) { _uiSheetInputEl.focus({ preventScroll: true }); _uiSheetInputEl.select(); }
                 else ok.focus({ preventScroll: true });
             } catch (_) {}
         }, 130);
@@ -5063,9 +5276,20 @@ function _uiSheetClose(result) {
     document.body.classList.remove('ui-sheet-on');
     const r = _uiSheetResolve;
     const inp = _uiSheetInputEl;
+    const fields = _uiSheetFields;
     _uiSheetResolve = null;
     _uiSheetInputEl = null;
-    if (r) r(inp ? (result ? inp.value : null) : !!result);
+    _uiSheetFields = null;
+    _uiSheetFocusKey = null;
+    if (!r) return;
+    if (fields) {
+        // 多字段表单：取消返回 null，确认返回 { key: value }
+        if (!result) return r(null);
+        const out = {};
+        Object.keys(fields).forEach(k => { out[k] = fields[k].value; });
+        return r(out);
+    }
+    r(inp ? (result ? inp.value : null) : !!result);
 }
 function _uiSheetCancel() { _uiSheetClose(false); }
 
@@ -5077,6 +5301,17 @@ function uiAlert(message, opts) {
 }
 function uiPrompt(message, opts) {
     const o = Object.assign({ message: message, okText: '确定', cancelText: '取消', input: {} }, opts || {});
+    return _uiSheetOpen(o);
+}
+/**
+ * 多字段表单弹层。
+ * @param message  说明文字
+ * @param fields   [{ key, label, placeholder, value, type, inputmode, maxlength }]
+ * @param opts     { title, okText, cancelText, focusKey }
+ * @returns Promise<{key:value}|null>  取消返回 null
+ */
+function uiForm(message, fields, opts) {
+    const o = Object.assign({ message: message, okText: '确定', cancelText: '取消', fields: fields }, opts || {});
     return _uiSheetOpen(o);
 }
 document.addEventListener('keydown', e => {
@@ -8681,30 +8916,47 @@ function applyDescHint(catId, category) {
 }
 /**
  * 自动校对：基于历史记忆，检测分类与相似备注不一致的交易
+ *
+ * 两种问题：
+ *  1. 孤立分类：分类已不在当前分类列表里（被删/改名过）。会根据这批交易的备注，
+ *     用和「新增交易界面识别推荐分类」相同的逻辑（findBestCategoryFromHistory）
+ *     给出一个建议分类，用户可以一键应用，也可以手动输入别的。
+ *  2. 相似备注但分类不一致：同/近似备注历史上大多数都归到 A，这一笔却归到 B，
+ *     给出建议分类，用户确认后一键修改。
  */
 async function checkHistoryCategories() {
     const suspects = [];
 
     // ── 第一步：孤立分类（优先级最高，排在最前）──
     const allValidCats = new Set([...categories.expense, ...categories.income]);
-const orphanTrans = transactions.filter(t =>
-    !t.isTransfer && t.ownerName === currentUserName && !t._isArchived && !t._isBaseline && t.category &&
-    !allValidCats.has(t.category)
-);
-    // 去重：同一个孤立分类只提示一次，让用户选择新分类
+    const orphanTrans = transactions.filter(t =>
+        !t.isTransfer && t.ownerName === currentUserName && !t._isArchived && !t._isBaseline && t.category &&
+        !allValidCats.has(t.category)
+    );
+    // 去重：同一个孤立分类只提示一次
     const orphanGroups = {};
     orphanTrans.forEach(t => {
         if (!orphanGroups[t.category]) orphanGroups[t.category] = [];
         orphanGroups[t.category].push(t);
     });
     Object.entries(orphanGroups).forEach(([orphanCat, txList]) => {
-        suspects.push({ isOrphan: true, orphanCat, txList, t: txList[0], suggested: null });
+        // 给孤立分类算一个建议：对这批交易逐条用备注查历史推荐，
+        // 再按「被推荐的分类」出现次数聚合，取最多的那个作为建议。
+        const type = txList[0].amount > 0 ? 'income' : 'expense';
+        const suggCounts = {};
+        txList.forEach(t => {
+            const r = findBestCategoryFromHistory(t.desc, type);
+            if (r && r.category) suggCounts[r.category] = (suggCounts[r.category] || 0) + 1;
+        });
+        let suggested = null, suggHits = 0;
+        Object.entries(suggCounts).forEach(([c, n]) => { if (n > suggHits) { suggested = c; suggHits = n; } });
+        suspects.push({ isOrphan: true, orphanCat, txList, type, t: txList[0], suggested, suggHits });
     });
 
     // ── 第二步：相似备注但分类不一致 ──
-const myTrans = transactions.filter(t =>
-    !t.isTransfer && !t._isBaseline && t.ownerName === currentUserName && t.desc && !(t.items && t.items.length > 1)
-);
+    const myTrans = transactions.filter(t =>
+        !t.isTransfer && !t._isBaseline && t.ownerName === currentUserName && t.desc && !(t.items && t.items.length > 1)
+    );
     myTrans.forEach(t => {
         const type = t.amount > 0 ? 'income' : 'expense';
         const pool = myTrans.filter(x => x !== t && x.category && !(x.items && x.items.length > 1));
@@ -8720,7 +8972,7 @@ const myTrans = transactions.filter(t =>
         const [bestCat, bestScore] = Object.entries(catScores).sort((a, b) => b[1] - a[1])[0];
         const currentScore = catScores[t.category] || 0;
         if (bestCat !== t.category && bestScore >= 5 && bestScore > currentScore * 1.5) {
-            suspects.push({ isOrphan: false, t, suggested: bestCat, bestScore });
+            suspects.push({ isOrphan: false, t, type, suggested: bestCat, bestScore });
         }
     });
 
@@ -8728,42 +8980,77 @@ const myTrans = transactions.filter(t =>
 
     const orphanCount = suspects.filter(s => s.isOrphan).length;
     const suggCount   = suspects.filter(s => !s.isOrphan).length;
+    const withSugg    = suspects.filter(s => s.suggested).length;
     let summary = `发现 ${suspects.length} 条需处理：`;
     if (orphanCount) summary += `\n⚠️ ${orphanCount} 个孤立分类（不在分类列表中）`;
     if (suggCount)   summary += `\n💡 ${suggCount} 条建议修改`;
+    if (withSugg)    summary += `\n（其中 ${withSugg} 条已根据备注算出建议分类，可一键应用）`;
     if (!(await uiConfirm(summary + '\n\n点「开始处理」后逐条确认。', { title: '分类历史校对', okText: '开始处理' }))) return;
 
     let updated = 0;
     for (let i = 0; i < suspects.length; i++) {
         const s = suspects[i];
-        let ok = false;
 
         if (s.isOrphan) {
-            // 孤立分类：提示选择新分类
-            const type = s.txList[0].amount > 0 ? 'income' : 'expense';
-            const validList = (type === 'expense' ? categories.expense : categories.income).join('、');
-            const newCat = await uiPrompt(
-                `【${i + 1}/${suspects.length}】孤立分类\n\n` +
-                `分类名称：「${s.orphanCat}」（已不在分类列表中）\n` +
-                `涉及交易：${s.txList.length} 条\n\n` +
-                `请输入新分类名称：\n${validList}\n\n` +
-                `留空跳过，输入分类名后点确定修改。`,
-                { title: '修正孤立分类', okText: '修改', input: { value: s.orphanCat } }
-            );
-            if (newCat && newCat.trim() && newCat.trim() !== s.orphanCat) {
-                s.txList.forEach(t => { t.category = newCat.trim(); });
-                updated += s.txList.length;
+            // 孤立分类：有建议就先问「改为建议分类？」；没有建议或用户拒绝就退回手动输入
+            const validList = (s.type === 'expense' ? categories.expense : categories.income).join('、');
+            let applied = false;
+
+            if (s.suggested) {
+                const useSugg = await uiConfirm(
+                    `【${i + 1}/${suspects.length}】孤立分类\n\n` +
+                    `分类名称：「${s.orphanCat}」（已不在分类列表中）\n` +
+                    `涉及交易：${s.txList.length} 条\n` +
+                    (s.suggHits ? `备注识别：${s.suggHits} 条交易备注指向「${s.suggested}」\n` : '') +
+                    `\n💡 建议改为：「${s.suggested}」`,
+                    { title: '修正孤立分类', okText: `改为「${s.suggested}」`, cancelText: '手动输入' }
+                );
+                if (useSugg) {
+                    s.txList.forEach(t => { t.category = s.suggested; });
+                    updated += s.txList.length;
+                    applied = true;
+                }
+            }
+
+            if (!applied) {
+                // 手动输入：预填建议（若有）或原分类名
+                const newCat = await uiPrompt(
+                    `【${i + 1}/${suspects.length}】孤立分类\n\n` +
+                    `分类名称：「${s.orphanCat}」（已不在分类列表中）\n` +
+                    `涉及交易：${s.txList.length} 条\n\n` +
+                    `可选分类：\n${validList}\n\n` +
+                    `输入分类名后点确定修改，留空跳过。`,
+                    { title: '修正孤立分类', okText: '修改', input: { value: s.suggested || s.orphanCat } }
+                );
+                if (newCat && newCat.trim() && newCat.trim() !== s.orphanCat) {
+                    s.txList.forEach(t => { t.category = newCat.trim(); });
+                    updated += s.txList.length;
+                }
             }
         } else {
             const typeLabel = s.t.amount > 0 ? '收入' : '支出';
-            ok = await uiConfirm(
+            // 给三个选择：改为建议分类 / 手动输入 / 跳过
+            const useSugg = await uiConfirm(
                 `【${i + 1}/${suspects.length}】分类建议\n\n` +
                 `日期：${s.t.date}\n备注：${s.t.desc}\n` +
                 `金额：${Math.abs(s.t.amount)} (${typeLabel})\n\n` +
-                `当前分类：${s.t.category}\n历史建议：${s.suggested}`,
-                { title: '分类建议', okText: '改为建议分类', cancelText: '跳过' }
+                `当前分类：${s.t.category}\n` +
+                `💡 建议改为：${s.suggested}` +
+                (s.bestScore ? `\n（历史相似备注 ${s.bestScore} 分指向此分类）` : ''),
+                { title: '分类建议', okText: `改为「${s.suggested}」`, cancelText: '手动输入' }
             );
-            if (ok) { s.t.category = s.suggested; updated++; }
+            if (useSugg) {
+                s.t.category = s.suggested; updated++;
+            } else {
+                // 手动输入：预填建议分类
+                const manual = await uiPrompt(
+                    `备注：${s.t.desc}\n当前分类：${s.t.category}\n\n输入新的分类名（留空跳过）：`,
+                    { title: '手动修改分类', okText: '修改', cancelText: '跳过', input: { value: s.suggested } }
+                );
+                if (manual && manual.trim()) {
+                    s.t.category = manual.trim(); updated++;
+                }
+            }
         }
 
         if (i > 0 && i % 10 === 0 && i < suspects.length - 1) {
@@ -9905,7 +10192,9 @@ async function scanOrphanAttachments(btn) {
                 catch (_) {
                     if (!userPassword) continue;
                     const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-                    archiveData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+                    if (!decrypted) continue;          // 解密失败（密码不匹配等）：跳过该存档
+                    try { archiveData = JSON.parse(decrypted); } catch (_) { continue; }
                 }
                 Object.values(archiveData.allUserData || {}).forEach(ud => {
                     (ud.transactions || []).forEach(t => {
@@ -10707,18 +10996,26 @@ async function manualGeneratePlanned(id) {
     if (!plan) return;
     const today = new Date().toISOString().split('T')[0];
     const nextDate = getNextGenerationDate(plan);
-    let promptMessage = `立即生成交易「${plan.name}」\n\n`;
-    if (nextDate) promptMessage += `计划下次生成日期：${nextDate}\n`;
-    promptMessage += `今天：${today}`;
-    if (plan.lastGenerated) promptMessage += `\n上次生成：${plan.lastGenerated}`;
-    promptMessage += `\n\n请输入交易日期（YYYY-MM-DD）：`;
-    const targetDate = await uiPrompt(promptMessage, { title: '按计划生成交易', okText: '生成', input: { value: today, placeholder: 'YYYY-MM-DD' } });
-    if (!targetDate) return;
+    let msg = `立即生成交易「${plan.name}」\n\n`;
+    if (nextDate) msg += `计划下次生成日期：${nextDate}\n`;
+    msg += `今天：${today}`;
+    if (plan.lastGenerated) msg += `\n上次生成：${plan.lastGenerated}`;
+
+    // 用多字段表单：日期 + 金额。默认输入法聚焦在日期框（focusKey='date'），
+    // 金额预填计划金额，用户可改。
+    const vals = await uiForm(msg, [
+        { key: 'date',   label: '交易日期（YYYY-MM-DD）', value: today, placeholder: 'YYYY-MM-DD', type: 'text', inputmode: 'numeric' },
+        { key: 'amount', label: '金额（可修改）', value: String(Math.abs(plan.amount)), placeholder: '金额', type: 'number', inputmode: 'decimal' }
+    ], { title: '按计划生成交易', okText: '生成', focusKey: 'date' });
+    if (!vals) return;
+    const targetDate = (vals.date || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) { uiAlert('日期格式错误！请使用 YYYY-MM-DD 格式'); return; }
-    generateTransactionFromPlan(plan, targetDate);
+    const amtRaw = parseFloat(vals.amount);
+    if (!isFinite(amtRaw) || amtRaw <= 0) { uiAlert('金额必须大于 0'); return; }
+    generateTransactionFromPlan(plan, targetDate, amtRaw);
 }
 
-async function generateTransactionFromPlan(plan, targetDate) {
+async function generateTransactionFromPlan(plan, targetDate, amountOverride) {
     const acc = accounts.find(a => a.id == plan.accountId);
     if (!acc) return;
     if (plan.lastGenerated === targetDate) { uiAlert(`计划 "${plan.name}" 在 ${targetDate} 已经生成过交易了！`); return; }
@@ -10727,7 +11024,11 @@ async function generateTransactionFromPlan(plan, targetDate) {
         const ok = await uiConfirm(`警告：${targetDate} 已存在来自此计划的交易！是否仍要生成新交易？（不推荐）`, { okText: '仍然生成', cancelText: '取消' });
         if (!ok) return;
     }
-    const amount = plan.type === 'expense' ? -Math.abs(plan.amount) : Math.abs(plan.amount);
+    // 优先用调用方传入的金额（来自表单），否则回退到计划金额
+    const baseAmt = (amountOverride !== undefined && isFinite(amountOverride) && amountOverride > 0)
+        ? Math.abs(amountOverride)
+        : Math.abs(plan.amount);
+    const amount = plan.type === 'expense' ? -baseAmt : baseAmt;
     transactions.unshift({
         id: Date.now() + Math.random(), date: targetDate, type: plan.type,
         accountId: plan.accountId, amount, category: plan.category,
