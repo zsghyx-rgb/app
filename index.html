@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN" data-bs-theme="dark"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title id="app-title">记一笔 v5.0.0</title>
+    <title id="app-title">记一笔 v5.0.1</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -1688,22 +1688,6 @@ select.compact-form-control { height: 2.1rem; }
             </div>
 
 
-            <!-- 同步方式：由云端当前状态决定显示哪个按钮 -->
-            <div class="border rounded p-2 mb-2 mt-2">
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                    <span class="small fw-bold"><i class="bi bi-table"></i> 同步方式</span>
-                    <span id="sheet-mode-badge" class="badge bg-secondary" style="font-size:0.65rem;">查询中</span>
-                </div>
-                <div id="sync-mode-server-line" class="small mb-2">正在查询云端同步方式…</div>
-                <div class="d-flex gap-1 flex-wrap">
-                    <button class="btn btn-sm btn-primary" type="button" id="mode-migrate-btn" style="display:none;" onclick="incMigrateNow()">迁移到 Google 表格（增量同步）</button>
-                    <button class="btn btn-sm btn-outline-danger" type="button" id="rows-back-gas-btn" style="display:none;" onclick="incUseGasMode()">返回 GAS 整包</button>
-                    <button class="btn btn-sm btn-warning" type="button" id="mode-align-btn" style="display:none;" onclick="incAlignMode()">与云端一致并重新加载</button>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" id="mode-retry-btn" style="display:none;" onclick="refreshSyncModeUI()">重试</button>
-                </div>
-                <div class="form-text">云端是整包时才显示“迁移”（迁移前请先登录并解密数据）；云端已是表格时只显示“返回整包”。</div>
-            </div>
-
             <!-- 更多选项（低频，默认折叠） -->
             <details class="mt-2" id="login-more-options">
                 <summary class="small text-muted" style="cursor:pointer;"><i class="bi bi-three-dots"></i> 更多选项（操作反馈 / 初始化）</summary>
@@ -1721,22 +1705,25 @@ select.compact-form-control { height: 2.1rem; }
                 <span class="small text-muted">初始化</span>
                 <button class="btn btn-sm btn-outline-success" onclick="createNewDataFile()"
                         style="font-size:0.75rem;padding:0.25rem 0.75rem;min-width:110px;text-align:center;">
-                    <i class="bi bi-file-earmark-plus"></i> 新建数据文件
+                    <i class="bi bi-file-earmark-plus"></i> 新建空账本
                 </button>
             </div>
                 </div>
             </details>
         </div>
 
-        <!-- 选择数据文件 -->
+        <!-- 数据来源 -->
         <div class="mb-3">
-            <label class="form-label small text-muted fw-bold mb-2" id="select-file-label">选择数据文件</label>
+            <label class="form-label small text-muted fw-bold mb-2" id="select-file-label">数据来源</label>
             <div id="offline-file-bar">
-                <input type="file" class="form-control form-control-sm" id="data-import-file" accept=".enc,.json,.txt" onchange="onFileSelected()">
+                <div class="small text-muted mb-1"><i class="bi bi-hdd"></i> 离线模式：使用本机缓存，不会连接云端。</div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="loadFromDrive()">
+                    <i class="bi bi-hdd"></i> 载入本地缓存
+                </button>
             </div>
             <div id="online-drive-bar" style="display:none;">
                 <button class="btn btn-outline-primary btn-sm" onclick="loadFromDrive()">
-                    <i class="bi bi-cloud-arrow-down"></i> 重新加载
+                    <i class="bi bi-cloud-arrow-down"></i> 从 Google 表格加载
                 </button>
             </div>
             <div id="file-status" class="form-text mt-1" style="display:none;"></div>
@@ -1747,13 +1734,13 @@ select.compact-form-control { height: 2.1rem; }
             <label class="form-label small text-muted fw-bold">输入密码</label>
             <div class="input-group input-group-sm">
                 <input type="text" id="login-username-hint" name="username" autocomplete="username" style="display:none;" aria-hidden="true">
-                <input type="password" class="form-control" id="login-password" name="password" placeholder="输入数据文件密码" autocomplete="current-password" onkeydown="if(event.key==='Enter') decryptAndLoadData()">
+                <input type="password" class="form-control" id="login-password" name="password" placeholder="输入数据密码" autocomplete="current-password" onkeydown="if(event.key==='Enter') decryptAndLoadData()">
                 <button class="btn btn-primary" type="button" onclick="decryptAndLoadData()">
-                    <i class="bi bi-unlock"></i> 解密
+                    <i class="bi bi-unlock"></i> 登录
                 </button>
             </div>
             <div id="password-error" class="text-danger small mt-1 d-none">
-                <i class="bi bi-x-circle"></i> 密码错误或文件格式不正确
+                <i class="bi bi-x-circle"></i> 密码错误或数据无法解密
             </div>
         </div>
 
@@ -1764,7 +1751,7 @@ select.compact-form-control { height: 2.1rem; }
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.0.0</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.0.1</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -1823,10 +1810,6 @@ select.compact-form-control { height: 2.1rem; }
 
     <div class="main-content">
         <!-- 历史模式横幅 -->
-        <div id="history-mode-banner" class="d-none alert alert-warning mb-0 py-2 px-3 d-flex align-items-center justify-content-between flex-shrink-0" style="border-radius:0;border-left:none;border-right:none;border-top:none;z-index:10;">
-            <span><i class="bi bi-archive-fill me-1"></i>历史模式：<strong id="history-year-label"></strong> 年（只读）</span>
-            <button class="btn btn-sm btn-outline-secondary py-0" onclick="exitHistoryMode()"><i class="bi bi-x-lg"></i> 退出</button>
-        </div>
         <div id="view-accounts" class="view-section">
             <div class="page-sticky-header d-flex justify-content-between align-items-center pt-1">
                 <h4 class="mb-0">我的资产</h4>
@@ -2097,11 +2080,6 @@ select.compact-form-control { height: 2.1rem; }
                                         </div>
                                     </div>
                                 </div>
-                                <div id="history-chart-archive-notice" class="d-none alert alert-warning py-2 px-3 mb-2" style="font-size:0.85rem;">
-                                    <i class="bi bi-archive me-1"></i>
-                                    <span id="history-chart-archive-text"></span>
-                                    <a href="#" class="ms-2" onclick="switchTab('settings', document.querySelector('[onclick*=settings]')); return false;">前往设置查看存档</a>
-                                </div>
                                 <div id="history-chart-wrapper" class="d-none" style="height:350px;">
                                     <canvas id="assetHistoryChart"></canvas>
                                 </div>
@@ -2163,11 +2141,6 @@ select.compact-form-control { height: 2.1rem; }
                     <div class="settings-menu-item" onclick="showSettingsSubpage('users')">
                         <i class="bi bi-people"></i>
                         <span>账户与用户</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('archive')">
-                        <i class="bi bi-archive"></i>
-                        <span>数据存档</span>
                         <i class="bi bi-chevron-right"></i>
                     </div>
                     <div class="settings-menu-item" onclick="showSettingsSubpage('advanced')">
@@ -2334,17 +2307,14 @@ select.compact-form-control { height: 2.1rem; }
                     <div class="card-body">
                         <p class="text-muted small mb-3">
                             <i class="bi bi-info-circle"></i>
-                            数据保存在本地，导出加密文件时输入密码，导入时使用相同密码解密。
+                            数据保存在 Google 表格中，每条记录由本机加密后上传；本机保留加密缓存，以便离线查看。
                         </p>
                         <div id="offline-mode-badge" class="alert alert-warning py-1 px-2 small mb-2" style="display:none;">
                             <i class="bi bi-wifi-off"></i> 当前为 <strong>离线模式</strong>，自动同步已关闭。手动点击下方按钮可主动同步。
                         </div>
                         <div class="d-grid gap-2">
                             <button class="btn btn-primary" onclick="syncToDrive(true)">
-                                <i class="bi bi-cloud-upload"></i> 保存到 Google Drive
-                            </button>
-                            <button class="btn btn-warning" onclick="exportEncData()">
-                                <i class="bi bi-shield-lock"></i> 导出本地文件
+                                <i class="bi bi-cloud-upload"></i> 立即同步到 Google 表格
                             </button>
                             <button class="btn btn-outline-secondary btn-sm" onclick="purgeCloudDeletedRows(this)">
                                 <i class="bi bi-eraser"></i> 清理云端表格中的已删除行
@@ -2357,10 +2327,12 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-transparent fw-bold">
-                        <i class="bi bi-clock-history"></i> 云端备份浏览
+                        <i class="bi bi-clock-history"></i> 云端备份（Google 表格副本）
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-2">查看 Drive 历史备份，与当前数据对比差异，或从备份恢复。</p>
+                        <p class="text-muted small mb-2">
+                            云端每日自动保留最近 30 份表格副本，每周保留最近 12 份。备份内容与线上数据一致，可直接在 Google 表格中打开；也可在这里与当前数据对比或恢复。
+                        </p>
                         <button class="btn btn-outline-secondary btn-sm w-100 mb-2" onclick="loadBackupList()">
                             <i class="bi bi-arrow-clockwise"></i> 读取备份列表
                         </button>
@@ -2369,7 +2341,7 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-transparent fw-bold">
-                        <i class="bi bi-file-earmark-code"></i> 高级导出 / 导入
+                        <i class="bi bi-file-earmark-code"></i> 导出数据
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
@@ -2416,23 +2388,6 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
             </div>
 
-            <!-- Sub-page: 数据存档 -->
-            <div id="settings-sub-archive" class="settings-subpage">
-                <div class="subpage-header">
-                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
-                    <span>数据存档</span>
-                </div>
-                <div class="card shadow-sm">
-                    <div class="card-header bg-transparent fw-bold">
-                        <i class="bi bi-archive"></i> 数据存档管理
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted small mb-2">将历史年份数据存档，减少主文件大小，提升同步速度。存档后可在历史模式只读查看，也可点「恢复」把存档数据合并回主文件（data.enc），方便把所有数据放在一起再迁移到 Google 表格增量同步。</p>
-                        <div id="archive-management-ui" class="mb-2"></div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Sub-page: 数据密码 -->
             <div id="settings-sub-password" class="settings-subpage">
                 <div class="subpage-header">
@@ -2441,12 +2396,12 @@ select.compact-form-control { height: 2.1rem; }
                 </div>
                 <div class="card shadow-sm">
                     <div class="card-header bg-transparent fw-bold">
-                        <i class="bi bi-key"></i> 数据文件密码
+                        <i class="bi bi-key"></i> 数据密码
                     </div>
                     <div class="card-body">
                         <p class="text-muted small mb-3">
                             <i class="bi bi-info-circle"></i>
-                            修改密码后，需要重新导出加密文件才会生效。
+                            修改后会立即用新密码重新加密云端表格中的所有数据；其他设备下次同步时需要输入新密码。
                         </p>
                         <div>
                             <div class="text-muted small mb-3" id="pwd-status-hint"></div>
@@ -2467,7 +2422,7 @@ select.compact-form-control { height: 2.1rem; }
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.0.0</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.0.1</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -2949,7 +2904,7 @@ select.compact-form-control { height: 2.1rem; }
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <div class="modal-header py-2">
-                <h5 class="modal-title fs-6"><i class="bi bi-key-fill"></i> 修改数据文件密码</h5>
+                <h5 class="modal-title fs-6"><i class="bi bi-key-fill"></i> 修改数据密码</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -3022,12 +2977,7 @@ let _barOkUntil = 0;             // “已同步”短暂显示到什么时候
 let _barOkText = '';             // 状态条在“已同步”状态下显示的文字（如“已同步 3 条新数据”）
 let _barKey = '';                // 上次渲染的状态指纹（没变化就不动 DOM）
 let driveIsSyncing = false;      // 防并发
-let offlineMode = localStorage.getItem('APP_offline_mode') === 'true'; // 离线模式
-
-let historyMode = false;          // 当前是否处于历史模式
-let historyYear = null;           // 当前历史模式加载的年份
-let historyTransactions = [];     // 历史模式专属交易数组（不与 transactions 混合）
-let historyPrevFilters = null;    // 历史模式进入前的日期筛选状态
+let offlineMode = localStorage.getItem('APP_offline_mode') === 'true'; // 离线模式（只读本机缓存）
 
 let chartInstances = {};
 // 统计页按需计算缓存：当筛选条件、汇率、数据版本均未变化时，跳过重复的过滤与汇总计算
@@ -3047,9 +2997,9 @@ let currentAssetAggregation = 'month';
 let transactionDisplayMode = localStorage.getItem('APP_trans_display_mode') || 'all';
 let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'all';
 
-// 清理已移除功能（AI / 设备昵称）遗留在本机的配置
-['ai_api_url', 'ai_api_key', 'ai_model', 'APP_device_name'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-const APP_VERSION = '5.0.0';
+// 清理已移除功能（AI / 设备昵称 / 旧整包同步）遗留在本机的配置
+['ai_api_url', 'ai_api_key', 'ai_model', 'APP_device_name', 'APP_backend', 'APP_drive_version'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+const APP_VERSION = '5.0.1';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），
@@ -3152,11 +3102,6 @@ function formatAmount(amt, currency) {
 const INC_PUSH_BATCH = 200;
 const INC_KIND_LIST = { acc: 'accounts', txn: 'transactions', plan: 'plannedTransactions' };
 
-// BACKEND：'gas' = 原来的整包加密文件；'sheet' = GAS + Google 表格逐条增量
-let BACKEND = localStorage.getItem('APP_backend') === 'sheet' ? 'sheet' : 'gas';
-
-function useSheet() { return BACKEND === 'sheet' && !!GAS_URL; }
-function useRows() { return useSheet(); }   // 是否使用逐条增量同步
 function cloudConfigured() { return !!GAS_URL; }
 
 /* ── GAS（Google 表格）传输层 ── */
@@ -3175,33 +3120,9 @@ async function sheetCall(params, body) {
     return j;
 }
 
-/**
- * 打开 App 时先问一下服务器“现在用哪种同步方式”，让多台设备保持一致：
- * 一台设备迁移到增量同步后，其他设备下次打开会自动跟着切换，不会再去同步旧的 data.enc。
- * 服务器还没升级到新版 Code.gs（不认识 mode 动作）时静默忽略，保持当前方式。
- */
-async function incCheckServerMode() {
-    if (!GAS_URL) return;
-    try {
-        const r = await sheetCall({ action: 'mode' });
-        const srv = r && r.mode === 'sheet' ? 'sheet' : 'gas';
-        if (srv !== BACKEND) {
-            BACKEND = srv;
-            localStorage.setItem('APP_backend', srv);
-            localStorage.removeItem('APP_sb_state'); // 另一种后端的同步进度不能沿用，重新做一次完整比对
-            showToast(srv === 'sheet' ? '云端已切换为增量同步，本机已自动跟随' : '云端已切回整包同步，本机已自动跟随', 'info', 4000);
-        }
-    } catch (_) {}
-}
-
-/** 告诉服务器当前的同步方式（迁移成功 / 切回时调用），让其他设备跟随 */
-async function incSetServerMode(mode) {
-    return sheetCall({}, { action: 'setMode', mode });
-}
-
-/** 每天第一次同步后，让服务端做一份快照备份（失败不影响同步） */
+/** 每天第一次同步后，让服务端做一份表格副本备份（失败不影响同步） */
 function incEnsureBackup() {
-    return sheetCall({ action: 'ensureSnapshot' }).catch(() => {});
+    return sheetCall({ action: 'ensureBackup' }).catch(() => {});
 }
 
 /* ── 加解密 / 签名 ── */
@@ -3264,8 +3185,7 @@ function incConfigPayload(d) {
         exchangeRates: d.exchangeRates || null,
         budgets: d.budgets || [],
         categoryIcons: d.categoryIcons || {},
-        configUpdatedAt: d.configUpdatedAt || 0,
-        archivedYears: d.archivedYears || []
+        configUpdatedAt: d.configUpdatedAt || 0
     };
 }
 
@@ -3323,7 +3243,6 @@ function incApplyConfig(data, cfg) {
     data.budgets = cfg.budgets || [];
     data.categoryIcons = cfg.categoryIcons || {};
     data.configUpdatedAt = cfg.configUpdatedAt || 0;
-    data.archivedYears = Array.from(new Set([...(data.archivedYears || []), ...(cfg.archivedYears || [])])).sort((a, b) => a - b);
     (data.users || []).forEach(u => incEnsureUserSlot(data, u));
 }
 
@@ -3487,7 +3406,8 @@ async function incSyncCore(options = {}) {
     // 1) 拉取
     // 拉取与写入都在 GAS 的同一把锁里，不会乱序，所以直接从上次的序号往后拉即可
     const rows = await incPullRows(state.lastSeq);
-    const applied = incApplyRows(data, incDecryptRows(rows, userPassword), state);
+    const pullPw = options.pullPassword || userPassword;
+    const applied = incApplyRows(data, incDecryptRows(rows, pullPw), state);
     summary.newItems += applied.newItems;
     summary.changed += applied.changed;
     summary.configChanged = applied.configChanged;
@@ -3523,7 +3443,7 @@ async function incSyncCore(options = {}) {
     // 5) 被服务端拒绝的（云端有更新版本/已删除）：按 id 取回后再合并一次
     if (up.rejected.length) {
         const again = await incPullByIds(up.rejected);
-        const a2 = incApplyRows(data, incDecryptRows(again, userPassword), state);
+        const a2 = incApplyRows(data, incDecryptRows(again, pullPw), state);
         summary.newItems += a2.newItems;
         summary.changed += a2.changed;
         summary.configChanged = summary.configChanged || a2.configChanged;
@@ -3574,8 +3494,8 @@ function incRefreshAfterMerge(summary) {
 /** 手动 / 自动同步入口（对应原 syncToDrive） */
 async function incSync(manual = false, forcePush = false) {
     if (!currentUser) return;
-    if (historyMode) { if (manual) showToast('历史模式下不允许同步', 'warning'); return; }
-    if (!userPassword) { if (manual) uiAlert('增量同步需要加密密码，请使用加密数据文件登录。'); return; }
+    if (offlineMode) { if (manual) showToast('离线模式下不会同步，请切换到在线模式', 'warning'); return; }
+    if (!userPassword) { if (manual) uiAlert('需要加密密码才能同步，请重新登录。'); return; }
     if (driveIsSyncing) return;
     driveIsSyncing = true;
     showToast('同步中…', 'syncing', 0);
@@ -3629,7 +3549,7 @@ async function incBackgroundSync() {
 /* ── 首次加载（本机没有缓存）：输入密码 → 全量拉取 → 解密 ── */
 function incAssemble(rows, pw) {
     const dec = incDecryptRows(rows, pw);
-    const data = { users: [], allUserData: {}, categories: null, exchangeRates: null, budgets: [], categoryIcons: {}, configUpdatedAt: 0, archivedYears: [], deletedLog: [] };
+    const data = { users: [], allUserData: {}, categories: null, exchangeRates: null, budgets: [], categoryIcons: {}, configUpdatedAt: 0, deletedLog: [] };
     const state = { lastSeq: 0, synced: {} };
     let hasConfig = false;
     dec.sort((a, b) => a.row.seq - b.row.seq).forEach(({ row, rec }) => {
@@ -3653,7 +3573,7 @@ async function incInitialLoad(password) {
         showToast('正在从 Google 表格加载…', 'syncing', 0);
         userPassword = password;
         const rows = await incPullRows(0);
-        if (!rows.length) throw new Error('云端还没有数据。请先用 GAS 整包方式登录，再在“连接设置”里执行“迁移”');
+        if (!rows.length) throw new Error('云端还没有数据。请先在连接设置里点「新建空账本」初始化');
         const { data, state, hasConfig } = incAssemble(rows, password);
         if (!hasConfig) throw new Error('云端数据缺少配置记录，无法加载');
         inMemoryLoadedData = data;
@@ -3673,15 +3593,14 @@ async function incInitialLoad(password) {
     }
 }
 
-/* ── 备份（服务端每天自动快照一份，保留 30 天） ── */
+/* ── 备份（服务端每天/每周生成 Google 表格副本） ── */
 async function incListBackups() {
-    return (await sheetCall({ action: 'listSnapshots' })).map(x => ({ name: x.name, createdAt: x.createdAt, size: x.size }));
+    return (await sheetCall({ action: 'listBackups' })).map(x => ({ name: x.name, createdAt: x.createdAt, size: x.size, kind: x.kind }));
 }
 async function incReadBackup(name) {
-    const r = await fetch(gasRequestUrl({ action: 'readSnapshot', file: name }));
-    const t = (await r.text()).trim();
-    if (!t) throw new Error('备份不存在');
-    return incAssemble(JSON.parse(t), userPassword).data;
+    const rows = await sheetCall({ action: 'readBackup', file: name });
+    if (!Array.isArray(rows)) throw new Error('备份不存在或格式异常');
+    return incAssemble(rows, userPassword).data;
 }
 
 /* INC-END */
@@ -3703,105 +3622,6 @@ function gasRequestUrl(options = {}) {
 
 
 
-/* ───────── 同步方式设置（登录页） ───────── */
-function initSyncModeUI() { refreshSyncModeUI(); }
-
-/** 向云端查询当前同步方式并刷新面板：整包 → 只显示“迁移到表格”；表格 → 只显示“返回整包” */
-async function refreshSyncModeUI() {
-    const line = $('sync-mode-server-line');
-    if (!line) return;
-    const show = (id, on) => { const el = $(id); if (el) el.style.display = on ? '' : 'none'; };
-    ['mode-migrate-btn', 'rows-back-gas-btn', 'mode-align-btn', 'mode-retry-btn'].forEach(id => show(id, false));
-    const badge = $('sheet-mode-badge');
-    const setBadge = (text, cls) => { if (badge) { badge.textContent = text; badge.className = 'badge ' + cls; } };
-    if (!GAS_URL || !GAS_TOKEN) {
-        line.textContent = '请先填写并保存 GAS URL 与 Token，才能查询云端的同步方式。';
-        setBadge('未连接', 'bg-secondary');
-        return;
-    }
-    line.textContent = '正在查询云端同步方式…';
-    setBadge('查询中', 'bg-secondary');
-    let srv = null, err = '';
-    try {
-        const r = await sheetCall({ action: 'mode' });
-        srv = r && r.mode === 'sheet' ? 'sheet' : 'gas';
-    } catch (e) { err = e.message || String(e); }
-    if (srv === null) {
-        line.innerHTML = '⚠ 无法读取云端同步方式。<br><span class="text-muted">可能是 GAS 脚本还是旧版（请部署新版 Code.gs 并“新建版本”），或 Token / 网络有问题。<br>详情：' + _escHtml(err.slice(0, 120)) + '</span>';
-        setBadge('读取失败', 'bg-warning text-dark');
-        show('mode-retry-btn', true);
-        return;
-    }
-    const local = useSheet() ? 'sheet' : 'gas';
-    const name = m => (m === 'sheet' ? 'Google 表格（增量同步）' : '整包文件 data.enc');
-    line.innerHTML = `云端当前：<b>${name(srv)}</b><br><span class="text-muted">本机当前：${name(local)}</span>`;
-    setBadge(srv === 'sheet' ? '表格增量' : '整包文件', srv === 'sheet' ? 'bg-success' : 'bg-secondary');
-    if (srv !== local) {
-        line.innerHTML += '<br><span class="text-danger">本机与云端不一致，请点下面的按钮对齐。</span>';
-        show('mode-align-btn', true);
-        return;
-    }
-    if (srv === 'gas') show('mode-migrate-btn', true);   // 云端是整包 → 只提供“迁移到表格”
-    else show('rows-back-gas-btn', true);                // 云端是表格 → 只提供“返回整包”
-}
-
-/** 让本机与云端的同步方式一致，并按新方式重新加载 */
-async function incAlignMode() {
-    await incCheckServerMode();
-    await refreshSyncModeUI();
-    loadFromDrive();
-}
-
-async function incMigrateNow() {
-    if (!GAS_URL) { uiAlert('请先在上方填写并保存 GAS URL / Token'); return; }
-    if (!inMemoryLoadedData || !userPassword) { uiAlert('请先用 GAS 整包方式加载并解密数据（输入密码后看到用户选择按钮），再点“迁移”。'); return; }
-    if (BACKEND !== 'gas' && !(await uiConfirm('当前已在使用增量同步。再次迁移会把本机数据与云端合并（较新的修改为准）。\n\n继续？', { title: '再次迁移', okText: '继续' }))) return;
-    if (!(await uiConfirm('将把当前数据逐条加密上传到 Google 表格，并校验。\n原有 GAS 整包数据不会被改动或删除，可随时切回。\n\n继续？', { title: '迁移到 Google 表格', okText: '开始迁移' }))) return;
-    const prev = BACKEND;
-    BACKEND = 'sheet'; // 让传输层使用增量同步
-    try {
-        showToast('正在连接 GAS…', 'syncing', 0);
-        const existing = await incPullRows(0);
-        if (existing.length && !(await uiConfirm('云端表格里已经有数据。继续将与当前数据合并（以较新的修改为准）。\n\n继续？', { title: '云端已有数据', okText: '合并继续' }))) { BACKEND = prev; showToast('已取消迁移', 'info', 2000); return; }
-
-        showToast('正在上传…', 'syncing', 0);
-        const s = await incSyncCore({ manual: true, freshState: true, force: true });
-        if (s.aborted) throw new Error(s.aborted);
-        incRefreshAfterMerge(s);
-
-        showToast('正在校验…', 'syncing', 0);
-        const rows = await incPullRows(0);
-        const dec = incDecryptRows(rows, userPassword);
-        const local = incCollectLocal(inMemoryLoadedData);
-        const remoteMap = new Map();
-        dec.forEach(({ row, rec }) => { if (!row.deleted) remoteMap.set(String(row.id), rec); });
-        let bad = 0;
-        local.forEach((item, id) => { const r = remoteMap.get(id); if (!r || incSig(r) !== incSig(item.payload)) bad++; });
-        if (bad) throw new Error(`校验发现 ${bad} 条记录与本地不一致，已中止，未切换。请重试或联系我。`);
-
-        incPersistLocal(s.state, true);
-        localStorage.setItem('APP_backend', 'sheet');
-        refreshSyncModeUI();
-        let notified = true;
-        try { await incSetServerMode('sheet'); } catch (_) { notified = false; }
-        if (notified) showToast(`迁移完成：${local.size} 条记录已校验一致。其他设备下次打开会自动切换到增量同步`, 'success', 8000);
-        else uiAlert(`数据已迁移（${local.size} 条已校验一致），但没能通知云端切换，所以其他设备目前不会自动切换，仍会继续写旧的 data.enc！\n\n请先在 Apps Script 里部署新版 Code.gs（部署 → 管理部署 → 编辑 → 新版本），然后回到这里再点一次“迁移”。`);
-    } catch (e) {
-        BACKEND = prev;
-        showToast('迁移失败：' + e.message, 'error', 0);
-    }
-}
-
-async function incUseGasMode() {
-    const ok = await uiConfirm('切回 GAS 整包模式？\n\n注意：增量模式之后的修改不会自动回到整包文件，整包文件里是切换前的旧数据。', { title: '切回整包模式', okText: '切回并重新加载', danger: true });
-    if (!ok) return;
-    incSetServerMode('gas').catch(() => {}).finally(() => {   // 同时通知云端，其他设备也会跟着切回
-        BACKEND = 'gas'; localStorage.setItem('APP_backend', 'gas');
-        localStorage.removeItem('APP_sb_state'); localStorage.removeItem('APP_raw_cache');
-        location.reload();
-    });
-}
-
 /**
  * 清理云端表格里“已删除”标记的残留行。
  * 增量同步采用软删除（tombstone）：删除后云端那一行会保留并标记 deleted，
@@ -3809,7 +3629,6 @@ async function incUseGasMode() {
  * 这里向服务端请求物理清理（需要 Code.gs 支持 action=purgeDeleted）。
  */
 async function purgeCloudDeletedRows(btn) {
-    if (!useRows()) { uiAlert('当前是整包同步模式，云端表格里没有逐条记录，无需清理。'); return; }
     if (!GAS_URL) { showToast('请先在连接设置里配置 GAS URL', 'warning'); return; }
     const ok = await uiConfirm('将从云端表格中物理删除所有带“已删除”标记的行。\n\n已经同步过删除操作的设备不受影响；尚未同步的设备下次打开会照常合并。继续？', { title: '清理云端已删除行', okText: '开始清理' });
     if (!ok) return;
@@ -3845,7 +3664,6 @@ function toggleLoginSettings() {
 }
 
 function initLoginSettingsUI() {
-    initSyncModeUI();
     initGasUrlUI();
     initGasTokenUI();
     renderVerboseToastBtn();
@@ -3898,8 +3716,7 @@ function saveGasUrl() {
     localStorage.setItem('APP_gas_url', val);
     GAS_URL = val;
     initGasUrlUI();
-    refreshSyncModeUI();
-    if (GAS_TOKEN) loadFromDrive();   // 还没填 Token 时不加载（否则会先以“无令牌”去请求，并错过云端同步方式的检查）
+    if (GAS_TOKEN && !offlineMode) loadFromDrive();
 }
 
 function initGasTokenUI() {
@@ -3927,89 +3744,59 @@ function saveGasToken() {
     localStorage.setItem('APP_gas_token', val);
     GAS_TOKEN = val;
     initGasTokenUI();
-    refreshSyncModeUI();
-    if (GAS_URL && !offlineMode) loadFromDrive();   // URL 和 Token 都齐了：立刻按云端当前的同步方式加载
+    if (GAS_URL && !offlineMode) loadFromDrive();   // URL 和 Token 都齐了：立刻加载
 }
 
 function initOfflineModeUI() {
     const btn = $('offline-mode-btn');
     const offlineBar = $('offline-file-bar');
     const onlineBar = $('online-drive-bar');
+    if (!btn) return;
     if (offlineMode) {
         btn.className = 'btn btn-sm btn-warning';
         btn.innerHTML = '<i class="bi bi-wifi-off"></i> 离线模式';
-        offlineBar.style.display = '';
-        onlineBar.style.display = 'none';
-        const lbl = $('select-file-label');
-        if (lbl) lbl.style.display = '';
+        if (offlineBar) offlineBar.style.display = '';
+        if (onlineBar) onlineBar.style.display = 'none';
     } else {
         btn.className = 'btn btn-sm btn-outline-secondary';
         btn.innerHTML = '<i class="bi bi-wifi"></i> 在线模式';
-        offlineBar.style.display = 'none';
-        onlineBar.style.display = '';
-        const lbl = $('select-file-label');
-        if (lbl) lbl.style.display = 'none';
+        if (offlineBar) offlineBar.style.display = 'none';
+        if (onlineBar) onlineBar.style.display = '';
     }
     // 更新应用内状态指示
     const statusEl = $('sync-mode-status');
     if (statusEl) statusEl.textContent = offlineMode ? '离线模式' : '在线模式';
-
-    // 离线模式且还没选文件：先不显示密码框，避免用户对着空密码框无从下手
-    if (offlineMode) {
-        const fi = $('data-import-file');
-        if (!fi || !fi.files || !fi.files.length) {
-            const ps = $('password-section');
-            if (ps) ps.style.display = 'none';
-        }
-    }
 }
 
 function toggleOfflineMode() {
     offlineMode = !offlineMode;
     localStorage.setItem('APP_offline_mode', offlineMode ? 'true' : 'false');
     initOfflineModeUI();
-    if (!offlineMode && cloudConfigured()) {
-        // 回到在线模式：清掉之前选的本地文件，否则输密码时会优先去解那个旧文件
-        const fi = $('data-import-file');
-        if (fi) fi.value = '';
-        window._driveMode = false;
-        window._driveRawContent = null;
+
+    // 切换数据来源时先清空当前会话，再从缓存或云端重新加载
+    window._driveMode = false;
+    window._driveRawContent = null;
+    window._incPendingInitial = false;
+    window._pendingBackgroundSync = false;
+    inMemoryLoadedData = null;
+    _configUpdatedAt = Date.now();
+    userPassword = ''; dataUsers = [];
+    accounts = []; transactions = []; plannedTransactions = [];
+    userAccounts = []; userTransactions = []; userPlannedTransactions = [];
+    const pwdInput = $('login-password');
+    if (pwdInput) pwdInput.value = '';
+    const errEl = $('password-error');
+    if (errEl) errEl.classList.add('d-none');
+    $('user-buttons').innerHTML = '';
+    $('user-section').style.display = 'none';
+    $('password-section').style.display = 'none';
+
+    if (offlineMode) {
+        showToast('已切换离线模式：将使用本机缓存', 'info', 3000);
         loadFromDrive();
-    } else if (offlineMode) {
-        // 切换到离线模式：清除所有网络缓存，防止下次误用旧云端数据
-        localStorage.removeItem('APP_raw_cache');
-        localStorage.removeItem('APP_drive_version');
-        // 同时清除所有本地草稿
-        const draftKeys = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && k.startsWith('APP_local_draft_')) draftKeys.push(k);
-        }
-        draftKeys.forEach(k => localStorage.removeItem(k));
-        // 清空内存数据，强制手动选文件
-        inMemoryLoadedData = null;
-        _configUpdatedAt = Date.now();
-        userPassword = ''; dataUsers = [];
-        accounts = []; transactions = []; plannedTransactions = [];
-        userAccounts = []; userTransactions = []; userPlannedTransactions = [];
-
-        /* ★ 关键修复：上一次“云端加密缓存 / 增量首次加载”留下的待处理状态必须一起清掉。
-         * 以前这里没清，导致切到离线模式后选 .enc 文件、输密码时，
-         * decryptAndLoadData 仍然走“解密云端缓存”的分支，永远解不出本地文件里的内容
-         * ——表现就是“离线模式下打不开 .enc”。 */
-        window._driveMode = false;
-        window._driveRawContent = null;
-        window._incPendingInitial = false;
-
-        const fileInput = $('data-import-file');
-        if (fileInput) fileInput.value = '';
-        const pwdInput = $('login-password');
-        if (pwdInput) pwdInput.value = '';
-        $('password-error').classList.add('d-none');
-        $('user-buttons').innerHTML = '';
-        $('user-section').style.display = 'none';
-        $('password-section').style.display = 'none';
-        showToast('已切换离线模式，本地缓存已清除，请选择本地数据文件（.enc）并输入密码', 'warning', 4000);
+    } else if (cloudConfigured()) {
+        showToast('已切换在线模式', 'info', 2000);
+        loadFromDrive();
     }
 }
 
@@ -4067,88 +3854,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /**
- * 用户选择文件后触发
+ * 使用密码解密缓存或从云端加载
  */
-function onFileSelected() {
-    const file = $('data-import-file').files[0];
-    if (!file) return;
-
-    /* 用户主动选了本地文件 → 一定以这个文件为准。
-     * 清掉“云端加密缓存 / 增量首次加载”的待处理标记，否则离线模式下
-     * 输入密码后会去解云端缓存而不是这个 .enc 文件（表现为“打不开 enc”）。 */
-    window._driveMode = false;
-    window._driveRawContent = null;
-    window._incPendingInitial = false;
-
-    if (verboseToast) showToast(`已选择：${file.name}`, 'info', 2000);
-    const usernameHint = $('login-username-hint');
-    if (usernameHint) usernameHint.value = file.name;
-    $('password-error').classList.add('d-none');
-    $('user-section').style.display = 'none';
-    $('user-buttons').innerHTML = '';
-
-    // JSON明文文件：直接尝试解析
-    if (file.name.toLowerCase().endsWith('.json')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                userPassword = '';
-                inMemoryLoadedData = data;
-                categories = data.categories || DEFAULT_CATEGORIES;
-                exchangeRates = data.exchangeRates || DEFAULT_RATES;
-                _configUpdatedAt = data.configUpdatedAt || Date.now();
-                onDataLoaded();
-                $('password-section').style.display = 'none';
-            } catch(err) {
-                // 可能是加密后的json，显示密码框
-                $('password-section').style.display = 'block';
-                showToast('文件读取失败，请输入密码解密', 'warning', 0);
-            }
-        };
-        reader.readAsText(file);
-    } else {
-        // .enc 文件：需要密码
-        const pwdInput = $('login-password');
-        if (pwdInput) { pwdInput.value = ''; }
-        $('password-section').style.display = 'block';
-        if (pwdInput) setTimeout(() => pwdInput.focus(), 50);
-    }
-}
-
-/**
- * 使用密码解密文件
- */
-function decryptAndLoadData() {
+async function decryptAndLoadData() {
     const password = $('login-password').value;
     if (!password) { uiAlert('请输入密码'); return; }
 
-    /* 来源优先级（这是“离线模式打不开 .enc”的修复点）：
-     *   ① 用户在登录页手动选中的本地文件 —— 永远最优先，离线模式下必然走这里；
-     *   ② 增量同步首次加载（需要联网拉取）；
-     *   ③ 云端缓存暂存的加密内容（在线模式自动加载时才有）。
-     * 旧代码把 ②③ 放在 ① 前面，且切换离线模式时没清这两个标记，
-     * 于是离线选文件输密码后仍然去解云端缓存 → 一直提示密码错误。 */
-    const pickedFile = $('data-import-file') && $('data-import-file').files[0];
-    if (pickedFile) {
-        window._driveMode = false;
-        window._driveRawContent = null;
-        window._incPendingInitial = false;
-    } else if (window._incPendingInitial) {
-        // 增量同步首次加载：拉取 → 解密
+    if (window._incPendingInitial) {
+        // 本机没有可用缓存：从 Google 表格全量拉取 → 解密
         incInitialLoad(password);
         return;
-    } else if (window._driveMode && window._driveRawContent) {
-        // 云端缓存暂存的加密内容（见下方分支）
-    } else {
-        // 没有文件也没有云端内容
-        $('password-section').style.display = 'block';
-        uiAlert('请先选择本地数据文件（.enc），或在连接设置里确认已连接云端。');
-        return;
     }
-
-    // 来源：Drive 暂存内容 or 本地文件
     if (window._driveMode && window._driveRawContent) {
+        // 本机缓存（加密）→ 解密
         const raw = window._driveRawContent;
         try {
             let data = null;
@@ -4156,11 +3874,23 @@ function decryptAndLoadData() {
                 const bytes = CryptoJS.AES.decrypt(raw, password);
                 const str = bytes.toString(CryptoJS.enc.Utf8);
                 if (str) data = JSON.parse(str);
-            } catch(_) {}
-            if (!data) try { data = JSON.parse(raw); } catch(_) {}
+            } catch (_) {}
             if (!data) {
                 $('password-error').classList.remove('d-none');
-                $('password-error').textContent = '❌ 密码错误或文件格式不正确';
+                $('password-error').textContent = '❌ 密码错误或缓存数据损坏';
+                // 离线模式不连接云端，也不清空本机缓存
+                if (offlineMode) return;
+                const reload = await uiConfirm(
+                    '本机缓存无法用这个密码解密。\n\n如果密码已在其他设备上修改，可以清除本机缓存，直接从 Google 表格用新密码重新加载。\n\n云端数据不会被删除。',
+                    { title: '缓存无法解密', okText: '清除缓存并重载', cancelText: '取消' }
+                );
+                if (reload) {
+                    localStorage.removeItem('APP_raw_cache');
+                    localStorage.removeItem('APP_sb_state');
+                    window._driveMode = false;
+                    window._driveRawContent = null;
+                    incInitialLoad(password);
+                }
                 return;
             }
             userPassword = password;
@@ -4169,56 +3899,19 @@ function decryptAndLoadData() {
             exchangeRates = data.exchangeRates || DEFAULT_RATES;
             _configUpdatedAt = data.configUpdatedAt || Date.now();
             $('password-error').classList.add('d-none');
-            if (verboseToast) showToast('Drive 数据解密成功，请选择用户', 'success', 3000);
+            if (verboseToast) showToast('缓存解密成功，请选择用户', 'success', 3000);
             window._driveMode = false;
             window._driveRawContent = null;
             onDataLoaded();
-        } catch(e) {
+        } catch (e) {
             $('password-error').classList.remove('d-none');
             $('password-error').textContent = '❌ 解析失败：' + e.message;
         }
         return;
     }
 
-    // 本地文件来源（原有逻辑）
-    const file = $('data-import-file').files[0];
-    if (!file) { uiAlert('请先选择文件'); return; }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            let data = null;
-            // 尝试解密
-            try {
-                const bytes = CryptoJS.AES.decrypt(e.target.result, password);
-                const str = bytes.toString(CryptoJS.enc.Utf8);
-                if (str) data = JSON.parse(str);
-            } catch(err) {}
-
-            // 尝试明文JSON
-            if (!data) {
-                try { data = JSON.parse(e.target.result); } catch(err) {}
-            }
-
-            if (!data) {
-                $('password-error').classList.remove('d-none');
-                $('password-error').textContent = '❌ 密码错误或文件格式不正确';
-                return;
-            }
-
-            userPassword = password;
-            inMemoryLoadedData = data;
-            categories = data.categories || DEFAULT_CATEGORIES;
-            exchangeRates = data.exchangeRates || DEFAULT_RATES;
-            _configUpdatedAt = data.configUpdatedAt || Date.now();
-            $('password-error').classList.add('d-none');
-            onDataLoaded();
-        } catch(e) {
-            $('password-error').classList.remove('d-none');
-            $('password-error').textContent = '❌ 解析失败：' + e.message;
-        }
-    };
-    reader.readAsText(file);
+    $('password-section').style.display = 'block';
+    uiAlert('请先在连接设置里确认已配置 GAS，然后点击「从 Google 表格加载」。');
 }
 
 /**
@@ -4260,7 +3953,7 @@ function onDataLoaded() {
     const container = $('user-buttons');
     container.innerHTML = '';
     if (dataUsers.length === 0) {
-        container.innerHTML = '<span class="text-danger small">数据文件中没有用户，请新建文件。</span>';
+        container.innerHTML = '<span class="text-danger small">账本中没有用户，请新建空账本。</span>';
         return;
     }
     dataUsers.forEach(name => {
@@ -4282,16 +3975,32 @@ function onDataLoaded() {
 }
 
 /**
- * 新建数据文件
+ * 新建空账本（首次使用或云端还没有数据时）
  */
 async function createNewDataFile() {
-    const usersInput = await uiPrompt('输入用户名（多个用英文逗号分隔）：', { title: '新建数据文件', input: { value: 'abc,def', placeholder: 'abc,def' } });
+    if (offlineMode) { uiAlert('离线模式下不能新建空账本，请先切换到在线模式。'); return; }
+    // 现在所有数据都在同一张 records 表格里，“空账本”只用于首次初始化。
+    // 云端已有数据时绝不能再建空账本，否则同步会用大量删除覆盖现有数据。
+    if (cloudConfigured()) {
+        try {
+            const r = await sheetCall({ action: 'pull', since: 0, limit: 1 });
+            if (r && Array.isArray(r.rows) && r.rows.length > 0) {
+                uiAlert('云端已经有账本数据，不能在这里新建空账本。\n\n如果确实要重新开始，请先在 Google 表格中备份并清空 records 表格。');
+                return;
+            }
+        } catch (e) {
+            uiAlert('无法检查云端数据：' + e.message + '\n\n请确认网络和 GAS 配置后再试。');
+            return;
+        }
+    }
+
+    const usersInput = await uiPrompt('输入用户名（多个用英文逗号分隔）：', { title: '新建空账本', input: { value: 'abc,def', placeholder: 'abc,def' } });
     if (!usersInput) return;
 
     const users = usersInput.split(',').map(u => u.trim()).filter(u => u.length > 0);
     if (users.length === 0) { uiAlert('至少需要一个用户'); return; }
 
-    const pwd = await uiPrompt('设置数据文件加密密码：', { title: '设置密码', input: { type: 'password', placeholder: '至少 8 位' } });
+    const pwd = await uiPrompt('设置数据加密密码：', { title: '设置密码', input: { type: 'password', placeholder: '至少 8 位' } });
     if (!pwd) return;
     const pwdConfirm = await uiPrompt('再次确认密码：', { title: '确认密码', input: { type: 'password' } });
     if (pwd !== pwdConfirm) { uiAlert('两次密码不一致，请重试'); return; }
@@ -4315,7 +4024,8 @@ async function createNewDataFile() {
     userPassword = pwd;
     dataUsers = users;
 
-    if (verboseToast) showToast('新数据文件已创建，请选择用户', 'success', 3000);
+    if (verboseToast) showToast('空账本已创建，请选择用户', 'success', 3000);
+    window._pendingBackgroundSync = true;   // 登录后自动把空账本写入云端
     $('password-section').style.display = 'none';
     onDataLoaded();
 }
@@ -4324,7 +4034,7 @@ async function createNewDataFile() {
  * 用户登录
  */
 function loginWithUser(name) {
-    if (!inMemoryLoadedData) { uiAlert('请先加载数据文件'); return; }
+    if (!inMemoryLoadedData) { uiAlert('请先加载账本数据'); return; }
 
     currentUser = { name: name };
     currentUserName = name;
@@ -4362,9 +4072,6 @@ function loginWithUser(name) {
 
     // 检查是否有本地未同步草稿，有则合并恢复
     checkAndRestoreDraft(name);
-
-    // 检查是否需要提示存档
-    checkArchivePrompt();
 
     // 离线优先：后台静默同步（有新版本时合并刷新UI）
     setTimeout(() => backgroundSyncAfterLogin(), 300);
@@ -4430,539 +4137,6 @@ function checkAndRestoreDraft(userName) {
     }
 }
 
-
-function getArchivableYears() {
-    const currentYear = new Date().getFullYear();
-    const years = new Set();
-    transactions.forEach(t => {
-        if (!t._isBaseline) { // 已无需检查 _isArchived，transactions 中不再含存档数据
-            const y = parseInt(t.date.substring(0, 4));
-            if (y < currentYear) years.add(y);
-        }
-    });
-    const archived = getArchivedYears();
-    return [...years].filter(y => !archived.includes(y)).sort();
-}
-
-function getArchivedYears() {
-    return (inMemoryLoadedData && inMemoryLoadedData.archivedYears) || [];
-}
-
-function renderArchiveManagementUI() {
-    const el = $('archive-management-ui');
-    if (!el) return;
-    const archivableYears = getArchivableYears();
-    const archivedYears = getArchivedYears();
-    let html = '';
-    if (archivedYears.length > 0) {
-        html += '<div class="mb-2"><div class="small text-muted fw-bold mb-1">已存档（只读）：</div>';
-        archivedYears.forEach(y => {
-            html += `<div class="d-flex align-items-center gap-1 mb-1">
-                <button class="btn btn-sm btn-outline-secondary py-0 flex-shrink-0" onclick="loadHistoryYear(${y})"><i class="bi bi-clock-history me-1"></i>${y}年</button>
-                <button class="btn btn-sm btn-outline-success py-0 px-1 flex-shrink-0" onclick="restoreArchiveYear(${y})" title="把这一年的存档数据恢复到主文件">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>恢复
-                </button>
-            </div>`;
-        });
-        html += '</div>';
-        html += '<div class="alert alert-info py-2 px-3 small mb-2"><i class="bi bi-info-circle me-1"></i>「恢复」会把存档的交易合并回主数据（data.enc），并删除该年的存档基准行。恢复后即可把所有数据一起迁移到 Google 表格增量同步。</div>';
-    }
-    if (archivableYears.length > 0) {
-        html += '<div class="mb-1"><div class="small text-muted fw-bold mb-1">可存档：</div><div class="d-flex flex-wrap gap-1">';
-        archivableYears.forEach(y => {
-            html += `<button class="btn btn-sm btn-outline-primary py-0" onclick="confirmArchive(${y})">${y}年</button>`;
-        });
-        html += '</div></div>';
-    }
-    if (archivableYears.length === 0 && archivedYears.length === 0) {
-        html = '<p class="text-muted small mb-2">暂无可存档的历史年份数据</p>';
-    }
-    el.innerHTML = html;
-    
-    // 同步更新「查看历史存档」下拉菜单
-    const dropdown = $('history-year-dropdown');
-    if (dropdown) {
-        const archivedYears = getArchivedYears();
-        if (archivedYears.length === 0) {
-            dropdown.innerHTML = '<li><span class="dropdown-item text-muted small">暂无存档</span></li>';
-        } else {
-            dropdown.innerHTML = archivedYears.map(y =>
-                `<li><a class="dropdown-item" href="#" onclick="event.preventDefault(); loadHistoryYear(${y})">
-                    <i class="bi bi-archive me-1"></i>${y} 年
-                </a></li>`
-            ).join('');
-        }
-    }
-}
-
-function checkArchivePrompt() {
-    if (useRows()) return; // 逐条增量同步模式无需存档
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    if (now.getMonth() + 1 < 2 || now.getMonth() + 1 > 3) return; // 只在2-3月提示
-    const lastYear = currentYear - 1;
-    const archivedYears = getArchivedYears();
-    if (archivedYears.includes(lastYear)) return;
-    const hasLastYearData = transactions.some(t => t.date.startsWith(String(lastYear)) && !t._isBaseline);
-    if (!hasLastYearData) return;
-    const promptKey = `APP_archive_prompt_${lastYear}`;
-    if (localStorage.getItem(promptKey)) return;
-    localStorage.setItem(promptKey, '1');
-    setTimeout(async () => {
-        const cnt = transactions.filter(t => t.date.startsWith(String(lastYear)) && !t._isBaseline).length;
-        const ok = await uiConfirm(`建议存档 ${lastYear} 年数据\n\n共 ${cnt} 条记录，存档后可显著减少每次同步的数据量。\n\n现在存档吗？（可在设置页随时操作）`, { title: '年度存档建议', okText: '现在存档' });
-        if (ok) {
-            confirmArchive(lastYear);
-        }
-    }, 2500);
-}
-
-async function confirmArchive(year) {
-    if (useRows()) { uiAlert('增量同步模式下数据按条同步，不再需要按年存档。\n（已有的历史存档仍可在历史模式中查看，需要保留 GAS 连接。）'); return; }
-    const cnt = transactions.filter(t => t.date.startsWith(String(year)) && !t._isBaseline).length;
-    if (cnt === 0) { showToast(`${year} 年没有可存档的数据`, 'warning'); return; }
-    if (!(await uiConfirm(`确定存档 ${year} 年的数据？\n\n共 ${cnt} 条记录将移入只读存档。\n存档数据不可恢复，只读，不能修改。`, { title: `${year} 年数据存档`, okText: '确认存档', danger: true }))) return;
-    await archiveYear(year);
-}
-
-async function archiveYear(year) {
-    showToast(`正在存档 ${year} 年…`, 'syncing', 0);
-
-    // ── 占锁，防止并发同步 ──
-    clearTimeout(driveAutoSaveTimer);
-    while (driveIsSyncing) { await new Promise(r => setTimeout(r, 200)); }
-    driveIsSyncing = true;
-
-    // ── 快照：用于推送失败时回滚 ──
-    const snapTransactions       = transactions.map(t => ({...t}));
-    const snapInMemory           = JSON.parse(JSON.stringify(inMemoryLoadedData));
-
-    const rollback = () => {
-        transactions      = snapTransactions;
-        inMemoryLoadedData = snapInMemory;
-        // 重建 accounts/plannedTransactions 引用（它们由 inMemoryLoadedData 衍生）
-        accounts = []; plannedTransactions = [];
-        Object.entries(inMemoryLoadedData.allUserData || {}).forEach(([u, ud]) => {
-            (ud.accounts || []).forEach(a => accounts.push({...a, ownerName: u}));
-            (ud.plannedTransactions || []).forEach(p => plannedTransactions.push({...p, ownerName: u}));
-        });
-        filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions();
-    };
-
-    try {
-        // ── Step 0：先拉取最新云端，合并后再存档，防止覆盖其他设备的新数据 ──
-        if (!offlineMode && GAS_URL) {
-            try {
-                const localVersion = localStorage.getItem('APP_drive_version') || '0';
-                const vResp = await fetch(gasRequestUrl({ action: 'version' }));
-                const remoteVersion = vResp.ok ? (await vResp.text()).trim() : '0';
-                if (remoteVersion !== '0' && remoteVersion !== localVersion) {
-                    const pullResp = await fetch(gasRequestUrl());
-                    if (pullResp.ok) {
-                        const raw = (await pullResp.text()).trim();
-                        if (raw && raw !== 'UNAUTHORIZED') {
-                            let remoteData;
-                            try { remoteData = JSON.parse(raw); }
-                            catch (_) {
-                                if (userPassword) {
-                                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-                                    remoteData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-                                }
-                            }
-                            if (remoteData) {
-                                const merged = mergeData(inMemoryLoadedData, remoteData);
-                                inMemoryLoadedData = merged;
-                                accounts = []; transactions = []; plannedTransactions = [];
-                                Object.entries(merged.allUserData || {}).forEach(([u, ud]) => {
-                                    (ud.accounts || []).forEach(a => accounts.push({...a, ownerName: u}));
-                                    (ud.transactions || []).forEach(t => transactions.push({...t, ownerName: u}));
-                                    (ud.plannedTransactions || []).forEach(p => plannedTransactions.push({...p, ownerName: u}));
-                                });
-                            }
-                        }
-                    }
-                }
-            } catch(e) { console.warn('[archiveYear] 拉取合并失败，继续用本地数据存档:', e); }
-        }
-
-        const yearStr = String(year);
-        const yearTrans = transactions.filter(t => t.date.startsWith(yearStr) && !t._isBaseline);
-        if (yearTrans.length === 0) { showToast('没有可存档的数据', 'warning'); driveIsSyncing = false; return; }
-
-        // ── Step 1：构建存档包（纯计算，不改内存）──
-        const archiveData = {
-            _archiveYear: year, _archivedAt: Date.now(),
-            users: dataUsers, categories, exchangeRates,
-            allUserData: {}
-        };
-        dataUsers.forEach(u => {
-            archiveData.allUserData[u] = {
-                accounts: accounts.filter(a => a.ownerName === u).map(a => ({...a})),
-                transactions: yearTrans.filter(t => t.ownerName === u),
-                plannedTransactions: []
-            };
-        });
-        const archiveFile = `archive_${year}.enc`;
-        const archiveContent = userPassword
-            ? CryptoJS.AES.encrypt(JSON.stringify(archiveData), userPassword).toString()
-            : JSON.stringify(archiveData);
-
-        // ── Step 2：推存档文件（此时主数据未动）──
-        if (!offlineMode && GAS_URL) {
-            const r1 = await fetch(gasRequestUrl({ file: archiveFile }), {
-                method: 'POST', body: archiveContent, headers: { 'Content-Type': 'text/plain' }
-            });
-            if ((await r1.text()).trim() !== 'OK') throw new Error('存档文件推送失败，操作已取消，数据未改动');
-        }
-
-        // ── Step 3：存档文件确认写入后，才修改主数据内存 ──
-        const baselineDate = `${year}-12-31`;
-        const removeIds = new Set(yearTrans.map(t => t.id));
-        accounts.forEach(acc => {
-            const yearSum = yearTrans.filter(t => t.accountId == acc.id)
-                .reduce((s, t) => s + parseFloat(t.amount), 0);
-            if (yearSum !== 0) {
-                transactions.push({
-                    id: Date.now() + Math.random(),
-                    _isBaseline: true, _archiveYear: year,
-                    accountId: acc.id, amount: yearSum,
-                    date: baselineDate, desc: `${year}年存档基准`,
-                    ownerName: acc.ownerName,
-                    type: yearSum >= 0 ? 'income' : 'expense',
-                    category: '存档基准', isTransfer: false, tags: '',
-                    updatedAt: Date.now()
-                });
-            }
-        });
-        transactions = transactions.filter(t => !removeIds.has(t.id));
-        if (!inMemoryLoadedData.deletedLog) inMemoryLoadedData.deletedLog = [];
-        const nowTime = Date.now();
-        removeIds.forEach(id => {
-            inMemoryLoadedData.deletedLog.push({ id: String(id), deletedAt: nowTime, type: 'transaction' });
-        });
-        if (!inMemoryLoadedData.archivedYears) inMemoryLoadedData.archivedYears = [];
-        if (!inMemoryLoadedData.archivedYears.includes(year)) {
-            inMemoryLoadedData.archivedYears.push(year);
-            inMemoryLoadedData.archivedYears.sort((a, b) => a - b);
-        }
-        saveUserData();
-
-        // ── Step 4：推主文件，失败则回滚内存并提示重试 ──
-        if (!offlineMode && GAS_URL) {
-            const mainContent = userPassword
-                ? CryptoJS.AES.encrypt(JSON.stringify(inMemoryLoadedData), userPassword).toString()
-                : JSON.stringify(inMemoryLoadedData);
-            let mainOk = false;
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                    const r2 = await fetch(gasRequestUrl(), {
-                        method: 'POST', body: mainContent, headers: { 'Content-Type': 'text/plain' }
-                    });
-                    if ((await r2.text()).trim() === 'OK') { mainOk = true; break; }
-                } catch(_) {}
-                if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
-            }
-            if (!mainOk) {
-                // 主文件推送失败：回滚内存，存档文件已在云端但主文件未改
-                // 下次同步会重新触发存档流程（因为本地仍有该年数据且archivedYears未标记）
-                rollback();
-                throw new Error('主文件推送失败（已自动回滚）。存档文件已上传，请稍后重试');
-            }
-            clearUnsavedFlag();
-        } else {
-            hasUnsavedChanges = true;
-        }
-
-        filterUserData(); loadAllData(); renderAccounts(); renderAllTransactions(); renderArchiveManagementUI();
-        showToast(`${year} 年数据存档成功`, 'success');
-    } catch (err) {
-        showToast(`存档失败：${err.message}`, 'error');
-    } finally {
-        driveIsSyncing = false;
-    }
-}
-
-// 解档功能已移除：历史数据只读，通过历史模式查看
-
-async function loadHistoryYear(year) {
-    showToast(`正在加载 ${year} 年存档…`, 'syncing', 0);
-    try {
-        if (offlineMode || !GAS_URL) throw new Error('历史模式需要网络，请切换到在线模式');
-        if (!GAS_TOKEN) throw new Error('未配置 GAS Token，无法读取存档（请在连接设置里填写 Token）');
-        const archiveFile = `archive_${year}.enc`;
-        const resp = await fetch(gasRequestUrl({ file: archiveFile }));
-        const raw = (await resp.text()).trim();
-        if (raw === 'UNAUTHORIZED') throw new Error('GAS Token 不正确，无法读取存档');
-        if (!raw) throw new Error(`云端没有找到存档文件 ${archiveFile}（可能尚未上传，或已被删除）`);
-        let archiveData;
-        try { archiveData = JSON.parse(raw); }
-        catch (_) {
-            if (!userPassword) throw new Error('存档是加密的，但当前没有登录密码，无法解密');
-            const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-            const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-            if (!decrypted) throw new Error('存档解密失败：密码可能不正确（存档是用当时的密码加密的，如果后来改过密码，需要用存档时的密码）');
-            try { archiveData = JSON.parse(decrypted); }
-            catch (_) { throw new Error('存档解密后内容格式异常'); }
-        }
-
-        // 将存档交易存入独立变量，不混入 transactions
-        historyTransactions = [];
-        dataUsers.forEach(u => {
-            const ud = archiveData.allUserData[u];
-            if (ud && ud.transactions) {
-                ud.transactions.forEach(t => historyTransactions.push({...t, ownerName: u, _isArchived: true}));
-            }
-        });
-
-        // 进入历史模式前保存当前日期筛选，供退出时还原
-        historyPrevFilters = {
-            transStart:    $('filter-start-date')?.value || '',
-            transEnd:      $('filter-end-date')?.value   || '',
-            statsStart:    $('stats-start-date')?.value  || '',
-            statsEnd:      $('stats-end-date')?.value    || '',
-            statsNavMode,
-            statsNavYear,
-            statsNavMonth,
-        };
-
-        historyMode = true;
-        historyYear = year;
-        filterUserData();
-
-        // 锁定日期范围为该存档年份全年，同时设置 min/max 防止用户选出界
-        const yStart = `${year}-01-01`, yEnd = `${year}-12-31`;
-        const fsd = $('filter-start-date');
-        const fed = $('filter-end-date');
-        const ssd = $('stats-start-date');
-        const sed = $('stats-end-date');
-        if (fsd) { fsd.value = yStart; fsd.min = yStart; fsd.max = yEnd; }
-        if (fed) { fed.value = yEnd;   fed.min = yStart; fed.max = yEnd; }
-        if (ssd) { ssd.value = yStart; ssd.min = yStart; ssd.max = yEnd; currentStatsFilter.startDate = yStart; }
-        if (sed) { sed.value = yEnd;   sed.min = yStart; sed.max = yEnd; currentStatsFilter.endDate   = yEnd; }
-        applyTransactionFilter();
-        // 显示历史模式横幅
-        const banner = $('history-mode-banner');
-        if (banner) { banner.classList.remove('d-none'); $('history-year-label').textContent = year; }
-        // 隐藏快速日期筛选按钮组
-        ['quick-date-filter-group', 'trans-custom-toggle', 'trans-filter-btn',
-         'quick-stats-filter-group-1', 'stats-month-nav', 'stats-custom-toggle', 'stats-filter-btn']
-            .forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
-        // 隐藏账户导航按钮
-        const navAccounts = $('nav-btn-accounts');
-        if (navAccounts) navAccounts.style.display = 'none';
-        // 如果当前正在账户页，自动跳回交易页
-        const activeView = document.querySelector('.view-section.active-view');
-        if (activeView && activeView.id === 'view-accounts') {
-            switchTab('transactions', document.querySelector('.nav-link[onclick*="transactions"]'));
-        }
-        // 隐藏悬浮新增按钮
-        const fab = $('mobile-fab-group');
-        if (fab) fab.classList.add('d-none');
-
-        renderAllTransactions(); renderStats();
-        showToast(`已加载 ${year} 年存档（只读）`, 'success');
-    } catch (err) {
-        historyMode = false; historyYear = null;
-        showToast(`加载失败：${err.message}`, 'error');
-    }
-}
-
-function exitHistoryMode() {
-    if (!historyMode) return;
-
-    // 清空历史交易独立变量
-    historyTransactions = [];
-    historyMode = false;
-    historyYear = null;
-
-    const banner = $('history-mode-banner');
-    if (banner) banner.classList.add('d-none');
-
-    // 解除日期 min/max 限制
-    ['filter-start-date', 'filter-end-date', 'stats-start-date', 'stats-end-date'].forEach(id => {
-        const el = $(id);
-        if (el) { el.removeAttribute('min'); el.removeAttribute('max'); }
-    });
-
-    // 还原进入历史模式前的日期筛选
-    if (historyPrevFilters) {
-        const fsd = $('filter-start-date');
-        const fed = $('filter-end-date');
-        const ssd = $('stats-start-date');
-        const sed = $('stats-end-date');
-        if (fsd) fsd.value = historyPrevFilters.transStart;
-        if (fed) fed.value = historyPrevFilters.transEnd;
-        if (ssd) { ssd.value = historyPrevFilters.statsStart; currentStatsFilter.startDate = historyPrevFilters.statsStart; }
-        if (sed) { sed.value = historyPrevFilters.statsEnd;   currentStatsFilter.endDate   = historyPrevFilters.statsEnd; }
-        // 退出历史模式后恢复月导航状态
-        statsNavMode  = historyPrevFilters.statsNavMode || 'month';
-        statsNavYear  = historyPrevFilters.statsNavYear  || new Date().getFullYear();
-        statsNavMonth = historyPrevFilters.statsNavMonth != null ? historyPrevFilters.statsNavMonth : new Date().getMonth();
-        historyPrevFilters = null;
-        updateStatsNavUI();
-        applyTransactionFilter();
-    }
-
-    // 恢复账户导航按钮
-    const navAccounts = $('nav-btn-accounts');
-    if (navAccounts) navAccounts.style.display = '';
-    // 恢复快速日期筛选按钮组
-    ['quick-date-filter-group', 'trans-custom-toggle', 'trans-filter-btn',
-     'quick-stats-filter-group-1', 'stats-month-nav', 'stats-custom-toggle', 'stats-filter-btn']
-        .forEach(id => { const el = $(id); if (el) el.style.display = ''; });
-    filterUserData();
-    renderAllTransactions();
-    renderAccounts();
-    renderStats();
-    if (verboseToast) showToast('已退出历史模式', 'info');
-}
-
-/**
- * 恢复存档到主数据（data.enc）。
- * 读取 archive_{year}.enc → 解密 → 把交易合并回 inMemoryLoadedData.allUserData →
- * 删掉该年的存档基准行（_isBaseline + _archiveYear=year）→ 从 archivedYears 移除该年 →
- * 保存 + 推送到云端 data.enc。
- *
- * 恢复后所有数据都在主文件里了，可以再走「迁移到 Google 表格」把全部数据一次性转成增量同步。
- */
-async function restoreArchiveYear(year) {
-    if (offlineMode || !GAS_URL) { uiAlert('恢复存档需要在线模式，请先切换到在线'); return; }
-    if (!GAS_TOKEN) { uiAlert('未配置 GAS Token，无法读取存档'); return; }
-    if (!inMemoryLoadedData || !userPassword) { uiAlert('请先登录并解密数据后再恢复存档'); return; }
-    if (useRows()) { uiAlert('当前是增量同步模式。\n\n恢复存档需要先切回整包模式（GAS 整包），恢复完成后再重新迁移到表格。'); return; }
-
-    const archivedYears = getArchivedYears();
-    if (!archivedYears.includes(year)) { showToast(`${year} 年不在已存档列表中`, 'warning'); return; }
-
-    const ok = await uiConfirm(
-        `恢复 ${year} 年存档到主数据？\n\n` +
-        `操作内容：\n` +
-        `① 从云端读取 archive_${year}.enc 并解密\n` +
-        `② 把这一年的交易合并回主数据（data.enc）\n` +
-        `③ 删除该年的「存档基准」行\n` +
-        `④ 从已存档列表中移除 ${year} 年\n` +
-        `⑤ 推送更新后的主数据到云端\n\n` +
-        `恢复后所有数据都会在主文件里，可以再迁移到 Google 表格增量同步。\n` +
-        `存档文件本身不会被删除（仍可在历史模式查看），直到你手动清理。`,
-        { title: `恢复 ${year} 年存档`, okText: '确认恢复', danger: true }
-    );
-    if (!ok) return;
-
-    // 占锁
-    clearTimeout(driveAutoSaveTimer);
-    while (driveIsSyncing) { await new Promise(r => setTimeout(r, 200)); }
-    driveIsSyncing = true;
-
-    // 快照（用于回滚）
-    const snapTransactions = transactions.map(t => ({...t}));
-    const snapInMemory = JSON.parse(JSON.stringify(inMemoryLoadedData));
-    const rollback = () => {
-        transactions = snapTransactions;
-        Object.keys(inMemoryLoadedData).forEach(k => { inMemoryLoadedData[k] = snapInMemory[k]; });
-    };
-
-    try {
-        showToast(`正在读取 ${year} 年存档…`, 'syncing', 0);
-
-        // ── Step 1：读取存档文件 ──
-        const archiveFile = `archive_${year}.enc`;
-        const resp = await fetch(gasRequestUrl({ file: archiveFile }));
-        const raw = (await resp.text()).trim();
-        if (raw === 'UNAUTHORIZED') throw new Error('GAS Token 不正确');
-        if (!raw) throw new Error(`云端没有找到存档文件 ${archiveFile}`);
-
-        let archiveData;
-        try { archiveData = JSON.parse(raw); }
-        catch (_) {
-            const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-            const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-            if (!decrypted) throw new Error('存档解密失败：密码可能不正确');
-            archiveData = JSON.parse(decrypted);
-        }
-
-        // ── Step 2：把存档交易合并回 inMemoryLoadedData.allUserData ──
-        let restoredCount = 0;
-        const archiveUsers = archiveData.allUserData || {};
-        Object.keys(archiveUsers).forEach(u => {
-            const ud = archiveUsers[u];
-            if (!ud || !ud.transactions) return;
-            if (!inMemoryLoadedData.allUserData[u]) {
-                inMemoryLoadedData.allUserData[u] = { accounts: ud.accounts || [], transactions: [], plannedTransactions: [] };
-                if (!dataUsers.includes(u)) dataUsers.push(u);
-            }
-            const targetTrans = inMemoryLoadedData.allUserData[u].transactions;
-            // 存档里的交易可能带了 _isArchived 标记，恢复时去掉
-            ud.transactions.forEach(t => {
-                const clean = {...t};
-                delete clean._isArchived;
-                targetTrans.push(clean);
-                restoredCount++;
-            });
-            // 合并账户（存档里可能有当前主数据没有的账户）
-            if (ud.accounts) {
-                const existingIds = new Set(inMemoryLoadedData.allUserData[u].accounts.map(a => String(a.id)));
-                ud.accounts.forEach(a => {
-                    if (!existingIds.has(String(a.id))) inMemoryLoadedData.allUserData[u].accounts.push({...a});
-                });
-            }
-        });
-
-        // ── Step 3：删除该年的存档基准行 ──
-        const beforeCount = inMemoryLoadedData.allUserData[currentUserName] ? inMemoryLoadedData.allUserData[currentUserName].transactions.length : 0;
-        let baselineRemoved = 0;
-        Object.keys(inMemoryLoadedData.allUserData).forEach(u => {
-            const arr = inMemoryLoadedData.allUserData[u].transactions;
-            const before = arr.length;
-            inMemoryLoadedData.allUserData[u].transactions = arr.filter(t =>
-                !(t._isBaseline && t._archiveYear === year)
-            );
-            baselineRemoved += before - inMemoryLoadedData.allUserData[u].transactions.length;
-        });
-
-        // ── Step 4：从 archivedYears 移除该年 ──
-        if (inMemoryLoadedData.archivedYears) {
-            inMemoryLoadedData.archivedYears = inMemoryLoadedData.archivedYears.filter(y => y !== year);
-        }
-
-        // ── Step 5：同步内存变量并保存 ──
-        saveUserData();      // 把 inMemoryLoadedData 写回 localStorage 和 transactions 全局
-        loadAllData();       // 重建 accounts / transactions / plannedTransactions 等全局
-        filterUserData();
-
-        // ── Step 6：推送到云端 data.enc ──
-        if (GAS_URL && !offlineMode) {
-            showToast('正在推送主数据到云端…', 'syncing', 0);
-            const mainContent = userPassword
-                ? CryptoJS.AES.encrypt(JSON.stringify(inMemoryLoadedData), userPassword).toString()
-                : JSON.stringify(inMemoryLoadedData);
-            let mainOk = false;
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                    const r2 = await fetch(gasRequestUrl(), {
-                        method: 'POST', body: mainContent, headers: { 'Content-Type': 'text/plain' }
-                    });
-                    const respText = (await r2.text()).trim();
-                    if (respText === 'OK' || respText.startsWith('OK:')) { mainOk = true; break; }
-                    if (/MIGRATED/.test(respText)) throw new Error('云端已迁移到增量同步，无法写入 data.enc。请先在设置里点「返回整包」再恢复存档');
-                } catch(e) { if (attempt === 3) throw e; }
-                if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
-            }
-            if (!mainOk) { rollback(); throw new Error('主数据推送失败，已回滚'); }
-            clearUnsavedFlag();
-        } else {
-            hasUnsavedChanges = true;
-            triggerAutoSave();
-        }
-
-        renderArchiveManagementUI(); renderAccounts(); renderAllTransactions(); renderStats();
-        showToast(`已恢复 ${year} 年存档：${restoredCount} 条交易回到主数据，删除了 ${baselineRemoved} 条存档基准行`, 'success', 5000);
-    } catch (err) {
-        rollback();
-        showToast(`恢复失败：${err.message}`, 'error', 0);
-    } finally {
-        driveIsSyncing = false;
-    }
-}
 
 /**
  * 登出
@@ -5065,7 +4239,7 @@ function saveUserData() {
         const prevOrder = (inMemoryLoadedData.allUserData[u] || {}).accountOrder;
         inMemoryLoadedData.allUserData[u] = {
             accounts: accounts.filter(a => a.ownerName === u),
-            transactions: transactions.filter(t => t.ownerName === u), // transactions 中已不含 _isArchived 条目
+            transactions: transactions.filter(t => t.ownerName === u),
             plannedTransactions: plannedTransactions.filter(p => p.ownerName === u),
             ...(prevOrder ? { accountOrder: prevOrder } : {})
         };
@@ -5104,16 +4278,9 @@ function sortedUserAccounts(accs) {
 }
 
 function filterUserData() {
-    if (historyMode) {
-        // 历史模式：交易来自独立的 historyTransactions，不读 transactions
-        userAccounts = accounts.filter(a => a.ownerName === currentUserName);
-        userTransactions = historyTransactions.filter(t => t.ownerName === currentUserName);
-        userPlannedTransactions = []; // 历史模式不显示计划交易
-    } else {
-        userAccounts = accounts.filter(a => a.ownerName === currentUserName);
-        userTransactions = transactions.filter(t => t.ownerName === currentUserName);
-        userPlannedTransactions = plannedTransactions.filter(p => p.ownerName === currentUserName);
-    }
+    userAccounts = accounts.filter(a => a.ownerName === currentUserName);
+    userTransactions = transactions.filter(t => t.ownerName === currentUserName);
+    userPlannedTransactions = plannedTransactions.filter(p => p.ownerName === currentUserName);
 }
 
 
@@ -5370,7 +4537,6 @@ function _buildDraftPayload() {
         budgets: budgets,
         categoryIcons: categoryIcons,
         configUpdatedAt: _configUpdatedAt,
-        archivedYears: inMemoryLoadedData.archivedYears || [],
         deletedLog: inMemoryLoadedData.deletedLog || [],
         allUserData: { [currentUserName]: ud }
     };
@@ -5379,7 +4545,7 @@ function _buildDraftPayload() {
 function flushDraftNow() {
     if (_draftTimer) { clearTimeout(_draftTimer); _draftTimer = null; }
     if (!hasUnsavedChanges) return;                       // 没有改动就不写，避免同步后又凭空生成“未同步草稿”
-    if (!currentUserName || historyMode || !inMemoryLoadedData) return;
+    if (!currentUserName || !inMemoryLoadedData) return;
     try {
         saveUserData();
         localStorage.setItem(`APP_local_draft_${currentUserName}`, JSON.stringify(_buildDraftPayload()));
@@ -5393,7 +4559,6 @@ function scheduleDraftSave() {
 }
 
 function triggerAutoSave() {
-    if (historyMode) return; // 历史模式下不触发任何保存
     hasUnsavedChanges = true;
     if (currentUserName) {
         saveUserData();        // 内存立即生效（渲染、同步都读内存）
@@ -5477,10 +4642,6 @@ function mergeData(local, remote) {
         categories: local.categories,
         exchangeRates: local.exchangeRates,
         deletedLog: mergedDeletedLog,
-        archivedYears: Array.from(new Set([
-            ...(local.archivedYears || []),
-            ...(remote.archivedYears || [])
-        ])).sort((a, b) => a - b),
         allUserData: {}
     };
 
@@ -5538,462 +4699,79 @@ function mergeData(local, remote) {
 }
 
 /**
- * 统计远端相比本地新增了多少条记录（交易 + 账户）
- */
-function countNewItemsFromRemote(local, remote) {
-    let count = 0;
-    const allUsers = new Set([
-        ...Object.keys(local.allUserData || {}),
-        ...Object.keys((remote && remote.allUserData) || {})
-    ]);
-    allUsers.forEach(u => {
-        const localU = (local.allUserData || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
-        const remoteU = ((remote && remote.allUserData) || {})[u] || { accounts: [], transactions: [], plannedTransactions: [] };
-        const localTxIds  = new Set((localU.transactions || []).map(t => String(t.id)));
-        const localAccIds = new Set((localU.accounts    || []).map(a => String(a.id)));
-        (remoteU.transactions || []).forEach(t => { if (!localTxIds.has(String(t.id)))  count++; });
-        (remoteU.accounts    || []).forEach(a => { if (!localAccIds.has(String(a.id))) count++; });
-    });
-    return count;
-}
-
-/**
- * 将当前数据同步到 Google Drive (data.enc)
- * 推送前先拉取远端最新，合并后再推送，避免覆盖其他设备的修改
- * @param {boolean} manual - 手动触发时显示更明显的提示
+ * 同步到 Google 表格（保留原调用入口，实际全部走逐条增量同步）
  */
 async function syncToDrive(manual = false, forcePush = false) {
-    if (!currentUser) return;
-    if (historyMode) {
-        if (manual) showToast('历史模式下不允许同步', 'warning');
-        return;
-    }
-    // 整包模式下每次同步前先确认云端有没有已迁移到增量同步（别的设备可能刚迁移过）
-    if (!useRows() && GAS_URL && !offlineMode) await incCheckServerMode();
-    if (useRows()) return incSync(manual, forcePush);
-    if (!GAS_URL) {
-        if (manual) uiAlert('请先在登录界面填写并保存 GAS URL。');
-        return;
-    }
-    if (driveIsSyncing) return;
-    driveIsSyncing = true;
-
-    showToast('同步中…', 'syncing', 0);
-    saveUserData();
-
-    try {
-        let finalData = inMemoryLoadedData;
-        let pulledNewCount = 0; // 本次从云端拉取到的新增条数
-
-        if (!forcePush) {
-            // ── 步骤 1：核对版本号 ──
-            const localVersion = localStorage.getItem('APP_drive_version') || '0';
-            let remoteVersion = '0';
-            try {
-                const vResp = await fetch(gasRequestUrl({ action: 'version' }));
-                if (vResp.ok) remoteVersion = (await vResp.text()).trim();
-            } catch (_) { }
-
-            const hasNewVersion = remoteVersion !== '0' && remoteVersion !== localVersion;
-
-            if (hasNewVersion) {
-                // ── 步骤 2a：有新版本 → 拉取网盘数据 ──
-                let remoteData = null;
-                try {
-                    const pullResp = await fetch(gasRequestUrl());
-                    if (pullResp.ok) {
-                        const raw = (await pullResp.text()).trim();
-                        if (raw && raw !== 'UNAUTHORIZED') {
-                            try {
-                                remoteData = JSON.parse(raw);
-                            } catch (_) {
-                                if (userPassword) {
-                                    try {
-                                        const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-                                        remoteData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-                                    } catch (_) { }
-                                }
-                            }
-                        }
-                    }
-                } catch (_) { }
-
-                // ── 步骤 2b：合并 ──
-                if (remoteData) {
-                    pulledNewCount = countNewItemsFromRemote(inMemoryLoadedData, remoteData);
-                    const mergedResult = mergeData(inMemoryLoadedData, remoteData);
-
-                    // ── 数据完整性熔断：合并后交易数比本地/远端任一方骤降超过 20%，暂停并警告 ──
-                    const stats = mergedResult._mergeStats;
-                    if (stats) {
-                        const maxBefore = Math.max(stats.localTxnTotal, stats.remoteTxnTotal);
-                        const dropRatio = maxBefore > 0 ? (maxBefore - stats.mergedTxnTotal) / maxBefore : 0;
-                        if (maxBefore >= 10 && dropRatio >= 0.2) {
-                            driveIsSyncing = false;
-                            const msg = `检测到数据异常：合并后交易数从 ${maxBefore} 条降至 ${stats.mergedTxnTotal} 条（减少${Math.round(dropRatio*100)}%）。\n\n` +
-                                `为防止数据丢失，本次同步已自动中止，云端数据未被覆盖。\n` +
-                                `本地数据也未被修改，可以继续正常使用。\n\n` +
-                                `建议：请联系技术支持核实，或检查是否有历史存档/分片操作导致此现象。`;
-                            console.error('[syncToDrive] 数据完整性熔断触发', stats);
-                            uiAlert(msg);
-                            showToast('同步已中止：检测到数据异常减少', 'error', 0);
-                            return;
-                        }
-                    }
-
-                    finalData = mergedResult;
-                    inMemoryLoadedData = finalData;
-                    _configUpdatedAt = finalData.configUpdatedAt || Date.now();
-                    // 同步配置类变量（分类/图标/汇率/预算），防止需要重新登录才生效
-                    categories    = finalData.categories    || DEFAULT_CATEGORIES;
-                    exchangeRates = finalData.exchangeRates || DEFAULT_RATES;
-                    categoryIcons = finalData.categoryIcons || {};
-                    budgets       = finalData.budgets       || [];
-                    accounts = []; transactions = []; plannedTransactions = [];
-                    Object.entries(finalData.allUserData || {}).forEach(([u, uData]) => {
-                        accounts.push(...(uData.accounts || []).map(a => ({...a, ownerName: u})));
-                        transactions.push(...(uData.transactions || []).map(t => ({...t, ownerName: u})));
-                        if (uData.plannedTransactions) {
-                            plannedTransactions.push(...uData.plannedTransactions.map(p => ({...p, ownerName: u})));
-                        }
-                    });
-                    filterUserData();
-                    loadAllData();
-                    renderCategorySettings();
-                }
-            }
-            // 无新版本：跳过拉取与合并，直接上传本地数据
-        }
-
-        // ── 步骤 3：加密打包并推送 ──
-        let content;
-        if (userPassword) {
-            content = CryptoJS.AES.encrypt(JSON.stringify(finalData), userPassword).toString();
-        } else {
-            content = JSON.stringify(finalData);
-        }
-
-        const resp = await fetch(gasRequestUrl(), {
-            method: 'POST',
-            body: content,
-            headers: { 'Content-Type': 'text/plain' }
-        });
-        const text = (await resp.text()).trim();
-        if (text === 'OK' || text.startsWith('OK:')) {
-            clearUnsavedFlag();
-            // 新版后端会在写入成功时直接把新版本号带回来（"OK:<timestamp>"），
-            // 这样就不用像以前那样再额外发一次 action=version 请求，省一次网络往返。
-            if (text.startsWith('OK:')) {
-                const v = text.slice(3);
-                if (v && v !== '0') localStorage.setItem('APP_drive_version', v);
-            } else {
-                // 兼容尚未更新 .gs 脚本的情况：退回到原来的做法，额外查一次版本号
-                try {
-                    const vResp = await fetch(gasRequestUrl({ action: 'version' }));
-                    if (vResp.ok) {
-                        const v = (await vResp.text()).trim();
-                        if (v !== '0') localStorage.setItem('APP_drive_version', v);
-                    }
-                } catch(_) {}
-            }
-            window._driveRawContent = content;
-            try { localStorage.setItem('APP_raw_cache', content); } catch(_) {}
-            // 同步成功：有新数据时提示条数；无新数据时详细模式提示「已同步」，否则静默关闭
-            if (pulledNewCount > 0) {
-                showToast(`已同步 ${pulledNewCount} 条新数据`, 'success');
-            } else {
-                showToast('已同步', 'success');
-            }
-        } else if (text.includes('MIGRATED')) {
-            await incCheckServerMode();
-            uiAlert('云端数据已迁移到增量同步。\n\n页面将重新加载并自动切换，你尚未同步的修改会保留在本机，登录后会自动合并上传。');
-            location.reload();
-            return;
-        } else {
-            throw new Error('GAS 返回：' + text);
-        }
-    } catch (err) {
-        showToast('同步失败：' + err.message, 'error');
-    } finally {
-        driveIsSyncing = false;
-    }
+    return incSync(manual, forcePush);
 }
 
 /**
- * 从 Google Drive 加载 data.enc（在登录界面调用）
+ * 从 Google 表格加载（登录界面调用）
+ *  - 有本地缓存且未过期：先解缓存，登录后后台增量同步
+ *  - 没有缓存 / 缓存过期：输入密码后全量拉取
  */
 async function loadFromDrive() {
-    if (!cloudConfigured()) {
-        uiAlert('请先在登录界面的连接设置里配置 GAS。'); return;
-    }
-    if (!offlineMode) await incCheckServerMode();   // 先确认云端当前用哪种同步方式（多设备保持一致）
-
-    // 缓存过期天数：见文件顶部 STALE_CACHE_DAYS（必须 ≤ DELETED_LOG_RETENTION_DAYS，否则会出现"删除记录已失效但缓存还没刷新"的空窗期，导致已删数据复活）
     const localRawCache = localStorage.getItem('APP_raw_cache');
     const lastSyncTime = parseInt(localStorage.getItem('APP_last_sync_time') || '0', 10);
     const daysSinceSync = lastSyncTime ? (Date.now() - lastSyncTime) / (24 * 60 * 60 * 1000) : Infinity;
     const cacheIsStale = daysSinceSync > STALE_CACHE_DAYS;
 
-    // ── 离线优先：有本地缓存且未过期就立即展示，不等网络 ──
-    if (localRawCache && !cacheIsStale) {
-        window._driveRawContent = localRawCache;
-        try {
-            const parsed = JSON.parse(localRawCache);
-            // 明文缓存：直接进入用户选择
-            userPassword = '';
-            inMemoryLoadedData = parsed;
-            categories = parsed.categories || DEFAULT_CATEGORIES;
-            exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
-            _configUpdatedAt = parsed.configUpdatedAt || Date.now();
+    // 离线模式：只用本机缓存（不需要云端连接配置）
+    if (offlineMode) {
+        if (!localRawCache) {
+            showToast('本机还没有缓存，无法离线使用。请先切回在线模式登录一次。', 'warning', 5000);
             $('password-section').style.display = 'none';
-            if (verboseToast) showToast('已加载本地缓存', 'info', 3000);
-            onDataLoaded();
-        } catch(_) {
-            // 加密缓存：立即让用户输密码，完全不等网络
-            window._driveMode = true;
-            showToast('请输入密码', 'info', 3000);
-            $('user-section').style.display = 'none';
-            $('user-buttons').innerHTML = '';
-            $('password-error').classList.add('d-none');
-            $('password-section').style.display = 'block';
-            $('login-password').focus();
-        }
-        // 后台静默核对版本，登录后由 backgroundSyncAfterLogin 完成刷新
-        window._pendingBackgroundSync = true;
-        return;
-    }
-
-    // ── 逐条增量模式（GAS 表格）：需要先输入密码才能解密并拉取（数据由密码端到端加密） ──
-    if (useRows()) {
-        window._incPendingInitial = true;
-        window._driveMode = false;
-        localStorage.removeItem('APP_sb_state'); // 没有可用缓存 → 状态作废，做全量拉取
-        showToast(localRawCache ? `已 ${Math.floor(daysSinceSync)} 天未同步，请输入密码并从云端重新加载` : '请输入密码以从云端加载数据', 'info', 4000);
-        $('user-section').style.display = 'none';
-        $('user-buttons').innerHTML = '';
-        $('password-error').classList.add('d-none');
-        $('password-section').style.display = 'block';
-        $('login-password').focus();
-        return;
-    }
-
-    // ── 无缓存 或 缓存已过期（超过 STALE_CACHE_DAYS 天未同步）：强制从云端加载 ──
-    if (cacheIsStale && localRawCache) {
-        console.log(`[loadFromDrive] 本地缓存已 ${daysSinceSync.toFixed(1)} 天未同步，强制从云端拉取最新数据`);
-        showToast(`已 ${Math.floor(daysSinceSync)} 天未同步，正在从云端拉取最新数据…`, 'syncing', 0);
-    } else {
-        showToast('正在从 Drive 加载数据…', 'syncing', 0);
-    }
-
-    try {
-        const localVersion = localStorage.getItem('APP_drive_version') || '0';
-        let remoteVersion = '0';
-        try {
-            const vResp = await fetch(gasRequestUrl({ action: 'version' }));
-            if (vResp.ok) remoteVersion = (await vResp.text()).trim();
-        } catch (_) {}
-
-        const resp = await fetch(gasRequestUrl());
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const raw = (await resp.text()).trim();
-
-        if (!raw) {
-            showToast('Drive 上暂无数据文件，请选择本地文件', 'warning', 0);
             return;
         }
-
-        if (raw === 'UNAUTHORIZED') {
-            showToast('Token 错误或未填写，请检查登录界面的 GAS Token', 'error', 0);
-            return;
-        }
-
-        if (remoteVersion !== '0') localStorage.setItem('APP_drive_version', remoteVersion);
-        window._driveRawContent = raw;
-        try { localStorage.setItem('APP_raw_cache', raw); } catch(_) {}
-
-        try {
-            const parsed = JSON.parse(raw);
-            userPassword = '';
-            inMemoryLoadedData = parsed;
-            categories = parsed.categories || DEFAULT_CATEGORIES;
-            exchangeRates = parsed.exchangeRates || DEFAULT_RATES;
-            _configUpdatedAt = parsed.configUpdatedAt || Date.now();
-            $('password-section').style.display = 'none';
-            if (verboseToast) showToast('已从 Drive 加载数据', 'success', 3000);
-            onDataLoaded();
-            return;
-        } catch(_) {}
-
         window._driveMode = true;
-        showToast('已从 Drive 获取加密文件，请输入密码', 'info', 3000);
+        window._driveRawContent = localRawCache;
+        window._incPendingInitial = false;
         $('user-section').style.display = 'none';
         $('user-buttons').innerHTML = '';
         $('password-error').classList.add('d-none');
         $('password-section').style.display = 'block';
         $('login-password').focus();
-    } catch (err) {
-        showToast(`加载失败：${err.message}`, 'error', 0);
+        return;
     }
+
+    if (!cloudConfigured()) {
+        uiAlert('请先在登录界面的连接设置里填写 GAS URL 和 Token。');
+        return;
+    }
+
+    // 有未过期缓存：先让用户用缓存登录，随后后台增量同步
+    if (localRawCache && !cacheIsStale) {
+        window._driveMode = true;
+        window._driveRawContent = localRawCache;
+        window._incPendingInitial = false;
+        window._pendingBackgroundSync = true;
+        $('user-section').style.display = 'none';
+        $('user-buttons').innerHTML = '';
+        $('password-error').classList.add('d-none');
+        $('password-section').style.display = 'block';
+        $('login-password').focus();
+        if (verboseToast) showToast('请输入密码', 'info', 2000);
+        return;
+    }
+
+    // 没有缓存 / 缓存过期：输入密码后从云端全量拉取
+    window._driveMode = false;
+    window._driveRawContent = null;
+    window._incPendingInitial = true;
+    localStorage.removeItem('APP_sb_state'); // 没有可用缓存 → 状态作废，做全量拉取
+    showToast(localRawCache ? `已 ${Math.floor(daysSinceSync)} 天未同步，请输入密码并从云端重新加载` : '请输入密码以从 Google 表格加载数据', 'info', 4000);
+    $('user-section').style.display = 'none';
+    $('user-buttons').innerHTML = '';
+    $('password-error').classList.add('d-none');
+    $('password-section').style.display = 'block';
+    $('login-password').focus();
 }
 
-/**
- * 登录后在后台静默检查版本并合并更新
- * 由 loginWithUser() 在用户选完用户后触发
- */
+/** 登录后在后台静默同步（离线模式不执行） */
 async function backgroundSyncAfterLogin() {
-    if (!window._pendingBackgroundSync || !cloudConfigured() || offlineMode) return;
+    if (!window._pendingBackgroundSync || offlineMode) return;
     window._pendingBackgroundSync = false;
-    if (!useRows()) await incCheckServerMode();
-    if (useRows()) { await incBackgroundSync(); return; }
-
-    try {
-        // ── 步骤1：核对版本 ──
-        const localVersion = localStorage.getItem('APP_drive_version') || '0';
-        let remoteVersion = '0';
-        try {
-            const vResp = await fetch(gasRequestUrl({ action: 'version' }));
-            if (vResp.ok) remoteVersion = (await vResp.text()).trim();
-        } catch (_) { return; } // 无网络，静默放弃
-
-        if (remoteVersion === '0' || remoteVersion === localVersion) {
-            // 版本一致，直接用本地数据，无需拉取
-            if (verboseToast) showToast('数据已是最新', 'success', 2000);
-            // 记录本次登录时间
-            localStorage.setItem('APP_last_login_time', Date.now().toString());
-            return;
-        }
-
-        // ── 步骤2：有新版本，拉取远端数据 ──
-        const resp = await fetch(gasRequestUrl());
-        if (!resp.ok) return;
-        const raw = (await resp.text()).trim();
-        if (!raw || raw === 'UNAUTHORIZED') return;
-
-        let remoteData = null;
-        try {
-            remoteData = JSON.parse(raw);
-        } catch(_) {
-            if (userPassword) {
-                try {
-                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-                    remoteData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-                } catch(_) { return; }
-            } else { return; }
-        }
-
-        // ── 步骤3：判断是否有本地草稿 ──
-        const hasDraft = (() => {
-            for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                if (k && k.startsWith('APP_local_draft_') && !k.includes('_time_')) return true;
-            }
-            return false;
-        })();
-
-        // ── 步骤4：判断是否超过10天未登录 ──
-        const lastLoginTime = parseInt(localStorage.getItem('APP_last_login_time') || '0');
-        const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
-        const stale = (lastLoginTime === 0) || (Date.now() - lastLoginTime > tenDaysMs);
-
-        // 更新版本号和缓存
-        if (remoteVersion !== '0') localStorage.setItem('APP_drive_version', remoteVersion);
-        try { localStorage.setItem('APP_raw_cache', raw); } catch(_) {}
-        localStorage.setItem('APP_last_login_time', Date.now().toString());
-
-        // ── 步骤5：决策合并策略 ──
-        let finalData;
-        let strategyLabel = '';
-
-        if (!hasDraft || stale) {
-            // 无草稿 或 超过10天：远端直接覆盖本地
-            finalData = remoteData;
-            // 清除所有草稿（超期草稿作废）
-            const draftKeys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                if (k && k.startsWith('APP_local_draft_')) draftKeys.push(k);
-            }
-            draftKeys.forEach(k => localStorage.removeItem(k));
-            strategyLabel = stale && hasDraft ? '草稿已过期，已使用最新云端数据' : '';
-        } else {
-            // 有草稿且未过期：按 updatedAt 合并
-            finalData = mergeData(inMemoryLoadedData, remoteData);
-        }
-
-        // ── 步骤6：更新内存并刷新 UI ──
-        const newCount = countNewItemsFromRemote(inMemoryLoadedData, remoteData);
-        inMemoryLoadedData = finalData;
-        _configUpdatedAt = finalData.configUpdatedAt || Date.now();
-
-        const isFormOpen = $('add-transaction-section') && $('add-transaction-section').classList.contains('show');
-
-        if (isFormOpen) {
-            saveUserData();
-            if (strategyLabel) {
-                showToast(strategyLabel, 'warning', 4000);
-            } else if (newCount > 0) {
-                showToast(`后台已同步 ${newCount} 条新数据，关闭表单后自动刷新`, 'info', 4000);
-            } else {
-                showToast('后台已同步', 'info', 2000);
-            }
-            window._pendingUIRefresh = true;
-        } else {
-            loadAllData();
-            filterUserData();
-            renderAllTransactions();
-            renderAccounts();
-            if (strategyLabel) {
-                showToast(strategyLabel, 'warning', 4000);
-            } else if (newCount > 0) {
-                showToast(`已同步 ${newCount} 条新数据`, 'success', 3000);
-            } else {
-                showToast('已同步', 'success', 2000);
-            }
-        }
-    } catch(e) {
-        // 后台同步失败：以前完全静默，用户以为已经同步了；现在给一条可见的失败提示（带重试）
-        console.warn('[bg-sync] 后台同步失败', e);
-        const msg = (e && e.message) ? e.message : String(e);
-        showToast('后台同步失败：' + msg, 'error', 0);
-    }
-}
-
-
-/**
- * 导出加密文件 (.enc)
- */
-async function exportEncData() {
-    saveUserData();
-
-    let exportPassword = userPassword;
-
-    if (!exportPassword) {
-        exportPassword = await uiPrompt('设置导出密码（下次导入时需要输入此密码）：', { title: '导出加密文件', input: { placeholder: '至少 8 位', type: 'password' } });
-        if (!exportPassword) return;
-        const confirm2 = await uiPrompt('再次输入密码确认：', { title: '确认密码', input: { type: 'password' } });
-        if (exportPassword !== confirm2) { uiAlert('两次密码不一致'); return; }
-        userPassword = exportPassword;
-    } else {
-        // 有密码时也允许修改
-        const changePwd = await uiConfirm('将使用当前密码加密导出。\n\n点「使用现有密码」直接导出；点「设置新密码」重新设置一个。', { title: '导出加密文件', okText: '使用现有密码', cancelText: '设置新密码' });
-        if (!changePwd) {
-            exportPassword = await uiPrompt('输入新密码：', { title: '设置新密码', input: { type: 'password' } });
-            if (!exportPassword) return;
-            const confirm2 = await uiPrompt('确认新密码：', { title: '确认新密码', input: { type: 'password' } });
-            if (exportPassword !== confirm2) { uiAlert('两次密码不一致'); return; }
-            userPassword = exportPassword;
-        }
-    }
-
-    const encrypted = CryptoJS.AES.encrypt(JSON.stringify(inMemoryLoadedData), exportPassword).toString();
-    const blob = new Blob([encrypted], {type: 'text/plain'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `ledger_backup_${new Date().toISOString().split('T')[0]}.enc`;
-    a.click();
-
-    clearUnsavedFlag();
-    showToast('加密文件已导出', 'success', 2500);
+    await incBackgroundSync();
 }
 
 async function exportJsonData() {
@@ -6665,14 +5443,14 @@ function renderDetailContent(id) {
         mobileContainer.innerHTML = '';
         filteredTrans.forEach(t => {
             const isTransfer = t.isTransfer;
-            let canEdit = t.ownerName === currentUserName && !t._isArchived;
+            let canEdit = t.ownerName === currentUserName;
             let titleHtml = '', subLine = t.date;
             let amtColor = isTransfer ? '#ff8c00' : (t.amount >= 0 ? '#198754' : '#dc3545');
             let iconClass = isTransfer ? 'bi-arrow-left-right' : (t.amount >= 0 ? 'bi-arrow-up-circle' : 'bi-arrow-down-circle');
 
             if (isTransfer) {
                 const { tOut, tIn } = resolveTransfer(t);
-                if (tOut) canEdit = (tOut.ownerName === currentUserName) && !t._isArchived;
+                if (tOut) canEdit = (tOut.ownerName === currentUserName);
                 const fromAcc = tOut ? accounts.find(a => a.id == tOut.accountId) : null;
                 const toAcc   = tIn  ? accounts.find(a => a.id == tIn.accountId)  : null;
                 const fromName = fromAcc ? getAccountDisplayName(fromAcc) : '?';
@@ -7118,14 +5896,12 @@ function deleteTransaction(id) {
 }
 
 function openEditTransaction(id) {
-    const t = historyMode
-        ? historyTransactions.find(x => x.id == id)
-        : transactions.find(x => x.id == id);
+    const t = transactions.find(x => x.id == id);
     if (!t) { uiAlert('找不到此交易'); return; }
     if (t.isTransfer) { openEditTransfer(id); return; }
 
     const isOwner = t.ownerName === currentUserName;
-    const readOnly = !isOwner || !!t._isArchived;
+    const readOnly = !isOwner;
 
     $('edit-trans-id').value = t.id;
     $('edit-trans-mode').value = readOnly ? 'view' : 'edit';
@@ -7184,8 +5960,7 @@ function openEditTransaction(id) {
 }
 
 function openEditTransfer(id) {
-    // 历史模式从 historyTransactions 找，正常模式从 transactions 找
-    const pool = historyMode ? historyTransactions : transactions;
+    const pool = transactions;
 
     const t = pool.find(x => x.id === id);
     if (!t || !t.isTransfer) return;
@@ -7206,9 +5981,9 @@ function openEditTransfer(id) {
     }
     if (!tOut || !tIn) { uiAlert('找不到配对的转账记录'); return; }
 
-    // 只读判断：历史模式 或 非本人转账
+    // 只读判断：非本人转账
     const isOwner = tOut.ownerName === currentUserName;
-    const readOnly = historyMode || !isOwner;
+    const readOnly = !isOwner;
 
     $('edit-transfer-id').value = tOut.id;
     $('edit-transfer-mode').value = readOnly ? 'view' : 'edit';
@@ -7521,7 +6296,7 @@ function expandTransferDescForExistingData(desc) {
 function computeMonthlySpendByCategory(year, month, filterUser) {
     const mStart = formatLocal(new Date(year, month, 1));
     const mEnd   = formatLocal(new Date(year, month + 1, 0));
-    const source = historyMode ? historyTransactions : transactions;
+    const source = transactions;
     const spend = {};
     let total = 0;
     source.forEach(t => {
@@ -8176,21 +6951,11 @@ function handleSearchInput() {
 }
 
 function applyTransactionFilter() {
-    // 历史模式：强制将日期限制在该年范围内（JS 层二次校验，防止绕过 min/max）
-    if (historyMode && historyYear) {
-        const yStart = `${historyYear}-01-01`;
-        const yEnd   = `${historyYear}-12-31`;
-        const fsd = $('filter-start-date');
-        const fed = $('filter-end-date');
-        if (fsd && (!fsd.value || fsd.value < yStart || fsd.value > yEnd)) fsd.value = yStart;
-        if (fed && (!fed.value || fed.value > yEnd   || fed.value < yStart)) fed.value = yEnd;
-    }
     displayedTransactionCount = 100;
     renderAllTransactions();
 }
 
 function quickDateFilter(p) {
-    if (historyMode) return;
     const today = new Date();
     let start = '', end = '';
     if      (p === '30days')   { start = new Date(today); start.setDate(start.getDate() - 30); end = today; }
@@ -8248,7 +7013,7 @@ function updateTransferModeButton() {
 
 function getFilteredTransactions() {
     // 【关键切换】
-    const source = historyMode ? historyTransactions : transactions;
+    const source = transactions;
 
     const search = $('trans-search-input').value.toLowerCase();
     const startDate = $('filter-start-date').value;
@@ -8256,9 +7021,6 @@ function getFilteredTransactions() {
     const userFilter = currentUserFilterValue;
 
     return source.filter(t => {
-        // 历史模式年份保护
-        if (historyMode && !t.date.startsWith(String(historyYear))) return false;
-        
         if (t._isBaseline) return false;
         // 隐藏账户：其名下的交易记录不再显示在交易管理页面
         const _tAcc = accounts.find(a => a.id == t.accountId);
@@ -8280,19 +7042,14 @@ function getFilteredTransactions() {
 }
 function initMobileSwipeGestures(card, transactionId) {
     card.addEventListener('click', (e) => {
-        // 历史模式从 historyTransactions 找，正常模式从 transactions 找
-        const t = historyMode
-            ? historyTransactions.find(x => x.id === transactionId)
-            : transactions.find(x => x.id === transactionId);
+        const t = transactions.find(x => x.id === transactionId);
         if (!t || t.ownerName !== currentUserName) return;
-        // 历史模式：_isArchived 为 true，openEditTransaction 内部会以只读模式打开
         if (t.isTransfer) openEditTransfer(transactionId);
         else openEditTransaction(transactionId);
     });
 }
 
 function getTxnBadge(t) {
-    if (historyMode) return ''; // 历史模式不显示新/更新标签
     try {
         const raw = sessionStorage.getItem('knownTxnMap_' + currentUserName);
         if (!raw) return '';
@@ -8930,7 +7687,7 @@ async function checkHistoryCategories() {
     // ── 第一步：孤立分类（优先级最高，排在最前）──
     const allValidCats = new Set([...categories.expense, ...categories.income]);
     const orphanTrans = transactions.filter(t =>
-        !t.isTransfer && t.ownerName === currentUserName && !t._isArchived && !t._isBaseline && t.category &&
+        !t.isTransfer && t.ownerName === currentUserName && !t._isBaseline && t.category &&
         !allValidCats.has(t.category)
     );
     // 去重：同一个孤立分类只提示一次
@@ -9102,7 +7859,6 @@ function switchStatsTab(tab) {
 
 
 function navigateStatsMonth(delta) {
-    if (historyMode) return;
     const now = new Date();
     if (delta === 0) {
         // 点击中间标签：回到本月
@@ -9176,15 +7932,6 @@ function toggleStatsCustomDate() {
 
 // ─────────────────────────────────────────────────────────────
 function applyStatsFilter() {
-    // 历史模式：强制将日期限制在该年范围内
-    if (historyMode && historyYear) {
-        const yStart = `${historyYear}-01-01`;
-        const yEnd   = `${historyYear}-12-31`;
-        const ssd = $('stats-start-date');
-        const sed = $('stats-end-date');
-        if (ssd && (!ssd.value || ssd.value < yStart || ssd.value > yEnd)) ssd.value = yStart;
-        if (sed && (!sed.value || sed.value > yEnd   || sed.value < yStart)) sed.value = yEnd;
-    }
     currentStatsFilter.startDate = $('stats-start-date').value;
     currentStatsFilter.endDate   = $('stats-end-date').value;
     // 切换到自定义模式
@@ -9195,7 +7942,6 @@ function applyStatsFilter() {
 }
 
 function quickStatsDateFilter(p) {
-    if (historyMode) return;
     const today = new Date();
     let start = '', end = '';
     if      (p === '30days')  { start = new Date(today); start.setDate(today.getDate() - 30); end = today; }
@@ -9254,12 +8000,11 @@ function renderStats() {
     const filterUser = currentStatsFilter.user || 'all';
     const filterCurrency = currentStatsFilter.currency;
 
-    // 历史模式用 historyTransactions，正常模式用 transactions
-    const sourceTrans = historyMode ? historyTransactions : transactions;
+    const sourceTrans = transactions;
 
     // 按需计算：筛选条件、汇率、数据版本、来源数组长度均未变化时，跳过重复的过滤与汇总计算
     const cacheKey = [
-        historyMode ? 1 : 0, start, end, filterUser, filterCurrency,
+        0, start, end, filterUser, filterCurrency,
         _statsDataVersion, sourceTrans.length, JSON.stringify(exchangeRates)
     ].join('|');
 
@@ -9403,15 +8148,9 @@ async function loadBackupList() {
     }
     container.innerHTML = '<span class="text-muted small"><i class="bi bi-hourglass-split"></i> 读取中…</span>';
     try {
-        let backups;
-        if (useRows()) {
-            backups = await incListBackups();
-        } else {
-            const resp = await fetch(gasRequestUrl({ action: 'listBackups' }));
-            backups = await resp.json();
-        }
+        const backups = await incListBackups();
         if (!backups.length) {
-            container.innerHTML = '<span class="text-muted small">暂无备份文件。</span>';
+            container.innerHTML = '<span class="text-muted small">暂无备份。云端每日/每周会自动生成表格副本。</span>';
             return;
         }
         container.innerHTML = '';
@@ -9419,12 +8158,14 @@ async function loadBackupList() {
             const date = new Date(b.createdAt);
             const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
             const sizeKB = (b.size / 1024).toFixed(1);
+            const sizeLabel = b.size > 0 ? `${sizeKB} KB` : 'Google 表格副本';
+            const kindLabel = b.kind === 'weekly' ? '每周' : '每日';
             const row = document.createElement('div');
             row.className = 'd-flex align-items-center gap-2 py-1 border-bottom';
             row.innerHTML = `
                 <div class="flex-grow-1">
-                    <div style="font-size:0.82rem;font-weight:500;">${dateStr}</div>
-                    <div class="text-muted" style="font-size:0.75rem;">${b.rows !== undefined ? b.rows + ' 条记录' : sizeKB + ' KB'}</div>
+                    <div style="font-size:0.82rem;font-weight:500;">${dateStr} <span class="badge bg-secondary" style="font-size:0.62rem;">${kindLabel}</span></div>
+                    <div class="text-muted" style="font-size:0.75rem;">${sizeLabel}</div>
                 </div>
                 <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openBackupCompare('${b.name}','${dateStr}')">
                     <i class="bi bi-eye"></i> 对比
@@ -9449,24 +8190,7 @@ async function openBackupCompare(fileName, dateStr) {
     document.body.style.overflow = 'hidden';
 
     try {
-        let backupData = null;
-        if (useRows()) {
-            backupData = await incReadBackup(fileName);
-        } else {
-        const resp = await fetch(gasRequestUrl({ action: 'readBackup', file: fileName }));
-        const raw  = (await resp.text()).trim();
-        if (!raw) throw new Error('备份文件为空');
-
-        // 解密
-        try { backupData = JSON.parse(raw); } catch(_) {
-            if (userPassword) {
-                try {
-                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-                    backupData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-                } catch(_) { throw new Error('解密失败，请确认密码正确'); }
-            } else throw new Error('文件已加密，请先登录');
-        }
-        }
+        const backupData = await incReadBackup(fileName);
 
         // 统计当前数据
         const cur = summarizeData(inMemoryLoadedData);
@@ -9630,7 +8354,7 @@ async function openBackupCompare(fileName, dateStr) {
         </div>
 
         <div class="alert alert-danger py-2 px-3 small mb-2">
-            <i class="bi bi-exclamation-triangle-fill"></i> 恢复将用此备份<strong>完全覆盖</strong>当前本地数据，操作不可撤销。建议先同步保存当前数据。
+            <i class="bi bi-exclamation-triangle-fill"></i> 恢复将用此备份<strong>完全覆盖</strong>当前本机数据，操作不可撤销。建议先确认云端当前数据已同步。
         </div>
         <button class="btn btn-danger w-100" onclick="restoreFromBackup('${fileName}','${dateStr}')">
             <i class="bi bi-arrow-counterclockwise"></i> 从此备份恢复
@@ -9731,19 +8455,59 @@ function diffBackupVsCurrent(backupData, currentData) {
 
 async function restoreFromBackup(fileName, dateStr) {
     if (!window._pendingRestoreData) return;
-    if (!(await uiConfirm(`确认从备份「${dateStr}」恢复？\n\n此操作将完全覆盖当前本地数据，且不可撤销。`, { title: '从备份恢复', okText: '确认恢复', danger: true }))) return;
-    inMemoryLoadedData = window._pendingRestoreData;
-    _configUpdatedAt = window._pendingRestoreData.configUpdatedAt || Date.now();
+    if (!(await uiConfirm(`确认从备份「${dateStr}」恢复？\n\n恢复会用该备份完全覆盖本机和云端的当前数据，操作不可撤销。\n（云端会先自动留一份恢复前的安全副本）`, { title: '从备份恢复', okText: '确认恢复', danger: true }))) return;
+
+    const backup = window._pendingRestoreData;
     window._pendingRestoreData = null;
+    closeBackupDrawer();
+
+    // 统一把时间戳提到现在：让恢复的内容在各设备上都算“最新”，覆盖旧版本
+    const now = Date.now();
+    Object.values(backup.allUserData || {}).forEach(ud => {
+        ['accounts', 'transactions', 'plannedTransactions'].forEach(k => {
+            (ud[k] || []).forEach(r => { if (r) r.updatedAt = now; });
+        });
+    });
+    backup.configUpdatedAt = now;
+
+    inMemoryLoadedData = backup;
+    _configUpdatedAt = now;
     saveUserData();
     loadAllData();
     filterUserData();
     renderAllTransactions();
     renderAccounts();
-    closeBackupDrawer();
-    showToast(`已从备份 ${dateStr} 恢复数据`, 'warning', 5000);
-    // 提示用户同步到云端
-    setTimeout(() => showToast('建议立即同步到 Drive 以保存恢复结果', 'info', 5000), 5500);
+    showToast('正在把备份写回云端…', 'syncing', 0);
+
+    try {
+        // 1) 把备份中的全部记录（含配置）加密后一次性覆盖云端
+        const rows = [];
+        incCollectLocal(backup).forEach(item => {
+            rows.push({
+                id: item.id, kind: item.kind, owner: item.owner,
+                enc: incEnc(item.payload), ts: incTsOf(item)
+            });
+        });
+        const r = await sheetCall({}, { action: 'restoreAll', rows });
+        if (!r || !r.ok) throw new Error((r && (r.error || r.tooLarge && '部分记录过大')) || '云端恢复失败');
+
+        // 2) 以云端为准重建同步状态（其他设备下次同步也会收到这些变化）
+        const state = { lastSeq: 0, synced: {} };
+        const after = await incPullRows(0);
+        incApplyRows(inMemoryLoadedData, incDecryptRows(after, userPassword), state);
+        incPersistLocal(state, true);
+        clearUnsavedFlag();
+        loadAllData();
+        filterUserData();
+        renderAllTransactions();
+        renderAccounts();
+        incEnsureBackup();
+        showToast(`已从备份 ${dateStr} 恢复到本机并写回云端`, 'success', 5000);
+    } catch (e) {
+        hasUnsavedChanges = true;
+        syncBarRender();
+        showToast('恢复失败：' + e.message + '（本机数据已恢复，但尚未完整写回云端）', 'error', 0);
+    }
 }
 
 function closeBackupDrawer() {
@@ -9978,19 +8742,6 @@ function renderAssetHistoryChart() {
         data: { labels, datasets: [{ label: '净资产', data, borderColor: '#0d6efd', fill: true, backgroundColor: 'rgba(13,110,253,0.1)', tension: 0.4 }] },
         options: { maintainAspectRatio: false, elements: { point: { radius: 0 } }, plugins: { legend: { display: true } }, animation: { duration: 500 } }
     });
-
-    // 如有已存档年份，显示提示
-    const archivedYrs = getArchivedYears();
-    const noticeEl = $('history-chart-archive-notice');
-    const noticeText = $('history-chart-archive-text');
-    if (noticeEl && noticeText) {
-        if (archivedYrs.length > 0) {
-            noticeText.textContent = `${archivedYrs.join('、')} 年数据已归档，趋势图中仅显示基准交易节点，如需查看完整曲线请进入历史模式。`;
-            noticeEl.classList.remove('d-none');
-        } else {
-            noticeEl.classList.add('d-none');
-        }
-    }
 }
 
 
@@ -10095,12 +8846,6 @@ function updateSelectOptions() {
 }
 
 function switchTab(t, el) {
-    // 历史模式下禁止进入账户页
-    if (historyMode && t === 'accounts') {
-        showToast('历史模式下不可查看账户页', 'warning');
-        return;
-    }
-
     ['editTransactionModal','accountModal','plannedModal'].forEach(id => {
         const inst = bootstrap.Modal.getInstance($(id));
         if (inst) inst.hide();
@@ -10119,11 +8864,11 @@ function switchTab(t, el) {
     if (el) el.classList.add('active');
 
     const fab = $('mobile-fab-group');
-    // 历史模式或桌面端下始终隐藏悬浮按钮
-    if (fab) fab.classList.toggle('d-none', t !== 'transactions' || historyMode || window.innerWidth > 768);
+    // 桌面端下始终隐藏悬浮按钮
+    if (fab) fab.classList.toggle('d-none', t !== 'transactions' || window.innerWidth > 768);
 
     if (t === 'stats') { renderStats(); maybeShowInsight(); }
-    if (t === 'settings') { showSettingsMenu(); renderExchangeRateSettings(); initPasswordHint(); renderUserManagement(); renderArchiveManagementUI(); }
+    if (t === 'settings') { showSettingsMenu(); renderExchangeRateSettings(); initPasswordHint(); renderUserManagement(); }
 }
 
 function renderSettingsUserCard() {
@@ -10134,9 +8879,7 @@ function renderSettingsUserCard() {
     if (nameEl) nameEl.textContent = name;
     if (avEl) avEl.textContent = name.charAt(0).toUpperCase();
     if (subEl) {
-        const mode = offlineMode
-            ? '离线模式'
-            : (useRows() ? '在线 · 表格增量同步' : '在线 · 整包同步');
+        const mode = offlineMode ? '离线模式' : '在线 · 表格同步';
         subEl.textContent = mode + (hasUnsavedChanges ? ' · 有未同步改动' : '');
     }
 }
@@ -10154,7 +8897,6 @@ function showSettingsSubpage(name) {
     if (name === 'exchange-rate') renderExchangeRateSettings();
     if (name === 'categories') renderCategorySettings();
     if (name === 'users') { renderUserManagement(); initPasswordHint(); renderHiddenAccountsList(); }
-    if (name === 'archive') renderArchiveManagementUI();
     if (name === 'password') initPasswordHint();
     if (name === 'planned') renderPlannedTransactions();
     if (name === 'orphan-attachments') { $('orphan-attachments-result').innerHTML = ''; }
@@ -10178,36 +8920,6 @@ async function scanOrphanAttachments(btn) {
                 });
             }
         });
-        // 也扫描所有历史存档里的附件 ID
-        const archivedYears = getArchivedYears();
-        for (const year of archivedYears) {
-            try {
-                const archiveFile = `archive_${year}.enc`;
-                const resp = await fetch(gasRequestUrl({ file: archiveFile }));
-                if (!resp.ok) continue;
-                const raw = (await resp.text()).trim();
-                if (!raw || raw === 'UNAUTHORIZED') continue;
-                let archiveData;
-                try { archiveData = JSON.parse(raw); }
-                catch (_) {
-                    if (!userPassword) continue;
-                    const bytes = CryptoJS.AES.decrypt(raw, userPassword);
-                    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-                    if (!decrypted) continue;          // 解密失败（密码不匹配等）：跳过该存档
-                    try { archiveData = JSON.parse(decrypted); } catch (_) { continue; }
-                }
-                Object.values(archiveData.allUserData || {}).forEach(ud => {
-                    (ud.transactions || []).forEach(t => {
-                        if (t.attachmentId) {
-                            t.attachmentId.split(',').forEach(id => {
-                                const r = id.trim().replace(/^pdf:/, '');
-                                if (r) usedIds.add(r);
-                            });
-                        }
-                    });
-                });
-            } catch(_) {}
-        }
 
         // 拉取 Drive 上的附件列表
         const listResp = await fetch(gasRequestUrl({ action: 'listAttachments' }));
@@ -10375,7 +9087,7 @@ function syncBarDerive() {
     let s = { state: 'idle', text: '', btn: '', close: false, loginVisible };
     if (_barBusy) s = { ...s, state: 'syncing', text: _barBusy.msg };
     else if (_barError) s = { ...s, state: 'error', text: _barError.msg, btn: _barError.retry ? '重试' : '', close: true };
-    else if (currentUser && !historyMode && !offlineMode && hasUnsavedChanges) {
+    else if (currentUser && !offlineMode && hasUnsavedChanges) {
         if (driveIsSyncing) s = { ...s, state: 'syncing', text: '正在同步…' };
         else if (typeof navigator !== 'undefined' && navigator.onLine === false) s = { ...s, state: 'offline', text: '无网络，修改已保存在本机，联网后同步' };
         else s = { ...s, state: 'unsaved', text: '有修改尚未同步', btn: '立即同步' };
@@ -10455,6 +9167,10 @@ function changeDataPassword() {
         msgEl.innerHTML = text;
     };
 
+    if (offlineMode) {
+        showMsg('<i class="bi bi-x-circle"></i> 离线模式下无法重新加密云端数据，请先切换到在线模式', 'danger');
+        return;
+    }
     if (userPassword && currentInput !== userPassword) {
         showMsg('<i class="bi bi-x-circle"></i> 当前密码不正确', 'danger');
         return;
@@ -10472,17 +9188,58 @@ function changeDataPassword() {
         return;
     }
 
-    userPassword = newPwd;
-    triggerAutoSave();
-    bootstrap.Modal.getInstance($('changePwdModal')).hide();
-    initPasswordHint();
-    if (verboseToast) showToast('密码已更新，请导出加密文件保存', 'success');
+    // 改密必须把云端每一行都用新密码重新加密，否则新旧密码混合会导致之后无法解密。
+    (async () => {
+        const oldPwd = userPassword;
+        saveUserData();
+
+        try {
+            showMsg('<i class="bi bi-hourglass-split"></i> 正在核对云端数据…', 'warning');
+            const state = incLoadState();
+            // 先用旧密码拉取一次，确保本机包含云端最新数据
+            const rows = await incPullRows(state.lastSeq);
+            incApplyRows(inMemoryLoadedData, incDecryptRows(rows, oldPwd), state);
+            saveUserData();
+
+            userPassword = newPwd;
+            showMsg('<i class="bi bi-hourglass-split"></i> 正在用新密码重新加密云端数据…', 'warning');
+
+            let verified = false;
+            let lastErr = null;
+            for (let attempt = 1; attempt <= 3 && !verified; attempt++) {
+                const local = incCollectLocal(inMemoryLoadedData);
+                const upserts = Array.from(local.values()).map(item => ({ item, sig: incSig(item.payload) }));
+                await incPushUpserts(upserts, state);
+
+                const checkRows = await incPullRows(0);
+                try {
+                    incDecryptRows(checkRows, newPwd);
+                    checkRows.forEach(r => { if (r.seq > state.lastSeq) state.lastSeq = r.seq; });
+                    verified = true;
+                } catch (e) {
+                    lastErr = e;
+                }
+            }
+            if (!verified) throw lastErr || new Error('校验失败');
+
+            incPersistLocal(state, true);
+            clearUnsavedFlag();
+            bootstrap.Modal.getInstance($('changePwdModal')).hide();
+            initPasswordHint();
+            showToast('密码已更新，云端数据已用新密码重新加密；其他设备下次同步需输入新密码', 'success', 6000);
+        } catch (e) {
+            // 不自动恢复旧密码：可能已有部分行写入了新密码，恢复旧密码会让这些行无法解密。
+            showMsg('<i class="bi bi-x-circle"></i> 修改未完成：' + _escHtml(e.message) +
+                '<br>请保持当前页面不要退出，再点一次「修改密码」重试（新密码保持不变）。', 'danger');
+            showToast('密码修改未完成，请重试', 'error', 0);
+        }
+    })();
 }
 
 function initPasswordHint() {
     const hint = $('pwd-status-hint');
     if (!hint) return;
-    hint.textContent = userPassword ? '当前文件已加密（有密码）' : '当前文件无密码（JSON 明文）';
+    hint.textContent = userPassword ? '云端数据使用密码加密' : '当前没有加密密码';
 }
 
 const FOREIGN_CURRENCIES = [
@@ -11248,7 +10005,6 @@ function _markDailyShown()   { try { localStorage.setItem(_insightDayKey(), '1')
 
 /* ─── 切换到统计页时自动触发 ─── */
 function maybeShowInsight() {
-    if (historyMode) return;
     if (!transactions || transactions.length === 0) return;
     const monthNew = !_monthlyShown();
     const dayNew   = !_dailyShown();
