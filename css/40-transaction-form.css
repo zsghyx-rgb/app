@@ -1,0 +1,564 @@
+/* @file css/40-transaction-form.css
+   新增/编辑交易弹窗、拆分分录、金额键盘区、分类图标网格、只读查看模式 */
+
+/* ── 编辑/新增交易弹窗 ── */
+#editTransactionModal .modal-dialog {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: auto;
+    touch-action: pan-y;
+}
+#editTransactionModal .modal-content {
+    height: 100dvh;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    touch-action: pan-y;
+}
+#editTransactionModal .modal-body {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 1 !important;
+    min-height: 0;
+    padding-top: 6px !important;
+    touch-action: pan-y;
+    overscroll-behavior-x: none;
+}
+/* Tab 栏底部不再单独留白，交由 modal-body 的顶部间距统一控制，
+   使"tab↔金额"的间距与其余卡片间的间距（见 .tm-card margin-bottom）保持一致 */
+#trans-tab-bar { padding-bottom: 0 !important; }
+#edit-transaction-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    touch-action: pan-y;
+}
+/* 手机端：宽度全屏、贴顶、无圆角、铺满全屏高度 */
+@media (max-width: 768px) {
+    #editTransactionModal .modal-dialog {
+        margin: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0;
+    }
+    #editTransactionModal .modal-content {
+        border-radius: 0 !important;
+        border: none !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+    }
+}
+/* 拆分模式时分录列表占满剩余空间 */
+#split-items-section {
+    flex: 1;
+    min-height: 0;
+    display: none;
+    flex-direction: column;
+}
+#split-items-section.split-active {
+    display: flex;
+}
+#split-items-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 4px 0;
+}
+/* 分录卡片 Grid 布局 — 两行共用列宽 */
+.split-item-card .split-card-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1.5fr 30px;
+    gap: 4px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.split-card-tags { grid-column: 1; }
+.split-card-desc { grid-column: 2 / 4; }
+.split-card-del  { grid-column: 4; display: flex; justify-content: center; }
+
+/* 分录条目高亮：左侧彩色竖线 + 极淡底色 */
+.split-item-card {
+    border-left-width: 3px !important;
+    border-left-style: solid !important;
+    transition: background 0.15s;
+}
+.split-item-card[data-accent="0"] { border-left-color: var(--cat-blue); background: color-mix(in srgb, var(--cat-blue) 7%, var(--app-surface)) !important; }
+.split-item-card[data-accent="1"] { border-left-color: var(--cat-orange); background: color-mix(in srgb, var(--cat-orange) 7%, var(--app-surface)) !important; }
+.split-item-card[data-accent="2"] { border-left-color: var(--cat-green); background: color-mix(in srgb, var(--cat-green) 7%, var(--app-surface)) !important; }
+.split-item-card[data-accent="3"] { border-left-color: var(--cat-purple); background: color-mix(in srgb, var(--cat-purple) 7%, var(--app-surface)) !important; }
+
+/* ════════════════════════════════════════════════════════════
+   沉浸式收/支/转账弹窗（v2）
+   ════════════════════════════════════════════════════════════ */
+
+/* 类型分段控件 */
+.trans-type-segment {
+    display: flex;
+    gap: 4px;
+    background: var(--bs-tertiary-bg);
+    border-radius: 10px;
+    padding: 3px;
+}
+.trans-type-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 7px 4px;
+    border-radius: 8px;
+    transition: background .15s, color .15s;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.trans-type-btn i { font-size: 0.8rem; }
+.trans-type-btn.active[data-type="expense"] { background: var(--app-expense); color: var(--app-on-expense); }
+.trans-type-btn.active[data-type="income"]  { background: var(--app-income); color: var(--app-on-income); }
+.trans-type-btn.active[data-type="transfer"]{ background: var(--app-transfer); color: var(--app-on-transfer); }
+
+/* 表单整体：滚动区 + 吸底键盘区 */
+#edit-transfer-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.trans-form-v2 { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.trans-scroll-area {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+}
+.trans-amount-bar {
+    flex: 0 0 auto;
+    padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+}
+.trans-amount-bar.split-mode .amount-input-row { display: none; }
+
+/* 日期 / 账户 / 拆分 chip 行 */
+.trans-chip-row { display: flex; gap: 6px; margin-bottom: 10px; align-items: stretch; }
+.chip-date, .chip-acc-trigger {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bs-tertiary-bg);
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+    color: var(--bs-body-color);
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.chip-date { flex: 1; position: relative; }
+.chip-date i { color: var(--bs-secondary-color); flex-shrink: 0; }
+.chip-date-input {
+    border: none; background: transparent; padding: 0; margin: 0;
+    font-size: 0.85rem; color: var(--bs-body-color); flex: 1; min-width: 0;
+    position: relative;
+}
+.chip-date-input:focus { outline: none; }
+.chip-date-input::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    cursor: pointer;
+}
+.chip-acc { flex: 1.3; position: relative; }
+.chip-acc-trigger i { color: var(--bs-secondary-color); flex-shrink: 0; }
+.chip-acc-trigger .acc-trigger-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-acc-trigger.open { border-color: var(--bs-primary); }
+.chip-split-btn {
+    flex-shrink: 0;
+    width: 38px;
+    border: none;
+    border-radius: 10px;
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+    font-size: 0.95rem;
+    display: flex; align-items: center; justify-content: center;
+}
+.chip-split-btn.active { background: rgba(var(--app-income-rgb), 0.15); color: var(--app-income); }
+
+/* 分类设置：小图标预览按钮 */
+.cat-icon-mini {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(var(--cat-color-rgb), 0.18);
+    color: var(--cat-color);
+    font-size: 0.72rem;
+    margin-right: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.cat-icon-mini:hover { background: rgba(var(--cat-color-rgb), 0.32); }
+
+/* 图标选择弹窗 */
+.icon-picker-color-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.icon-picker-color-item {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    background: var(--swatch-color);
+}
+.icon-picker-color-item.selected { border-color: var(--bs-body-color); transform: scale(1.1); }
+.icon-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+.icon-picker-item {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; aspect-ratio: 1;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+    font-size: 1.05rem;
+    cursor: pointer;
+}
+.icon-picker-item.selected {
+    background: rgba(var(--picker-color-rgb), 0.18);
+    color: var(--picker-color);
+    border-color: var(--picker-color);
+}
+
+/* 类别图标网格 */
+.cat-grid-section { margin-bottom: 4px; }
+.cat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px 6px;
+    padding: 4px 2px 8px;
+    max-height: 232px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+.cat-grid::-webkit-scrollbar { width: 4px; }
+.cat-grid::-webkit-scrollbar-thumb { background: var(--bs-border-color); border-radius: 4px; }
+.cat-grid::-webkit-scrollbar-track { background: transparent; }
+.cat-grid-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: none; padding: 2px;
+    color: var(--bs-body-color);
+}
+.cat-icon-circle {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(var(--cat-color-rgb), 0.16);
+    color: var(--cat-color);
+    font-size: 1.15rem;
+    transition: transform .12s, background .15s;
+    border: 2px solid transparent;
+}
+.cat-grid-item.selected .cat-icon-circle {
+    background: var(--cat-color);
+    color: var(--app-on-primary);
+    border-color: rgba(var(--cat-color-rgb), 0.5);
+    transform: scale(1.06);
+}
+.cat-grid-item .cat-name {
+    font-size: 0.7rem;
+    color: var(--bs-secondary-color);
+    max-width: 60px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cat-grid-item.selected .cat-name { color: var(--bs-body-color); font-weight: 600; }
+
+/* 折叠字段展开按钮 */
+.btn-expand-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    padding: 2px 6px 2px 2px;
+    font-size: 0.76rem;
+    color: var(--bs-secondary-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color .15s, background .15s;
+    line-height: 1.4;
+}
+.btn-expand-field:hover {
+    color: var(--bs-body-color);
+    background: var(--bs-tertiary-bg);
+}
+.btn-expand-field i { font-size: 0.85rem; }
+
+.btn-tag-filter {
+    border: 1px solid var(--bs-border-color);
+    background: transparent;
+    color: var(--bs-secondary-color);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.76rem;
+}
+
+/* 沉浸式金额输入（系统键盘） */
+.amount-input-row {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 4px 0 6px;
+}
+.amount-currency { font-size: 1.3rem; font-weight: 600; color: var(--bs-secondary-color); }
+.amount-input-v2 {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    color: var(--bs-body-color);
+    width: 100%;
+    max-width: 240px;
+    text-align: center;
+    transition: color .15s, background-color .3s;
+    border-radius: 8px;
+}
+.trans-amount-bar.amt-expense .amount-input-v2 { color: var(--app-expense); }
+.trans-amount-bar.amt-income .amount-input-v2 { color: var(--app-income); }
+/* 隐藏数字输入框默认的上下箭头 */
+.amount-input-v2::-webkit-outer-spin-button,
+.amount-input-v2::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.amount-input-v2 { -moz-appearance: textfield; }
+
+.trans-action-row { display: flex; gap: 8px; }
+.btn-save-immersive {
+    flex: 1;
+    border: none;
+    border-radius: 10px;
+    background: var(--bs-primary);
+    color: var(--app-on-primary);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 10px 0;
+}
+.btn-delete-immersive {
+    flex: 0 0 100px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(var(--app-expense-rgb), 0.1);
+    color: var(--app-expense);
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 0;
+}
+
+/* 转账：账户流向卡片 */
+.transfer-flow-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.transfer-acc-card { flex: 1; position: relative; min-width: 0; }
+.transfer-acc-trigger {
+    display: flex; flex-direction: column; gap: 2px;
+    background: var(--bs-tertiary-bg);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.transfer-acc-trigger.open { border-color: var(--bs-primary); }
+.transfer-acc-label { font-size: 0.68rem; color: var(--bs-secondary-color); }
+.transfer-acc-trigger i { font-size: 1rem; color: var(--bs-primary); margin: 2px 0; }
+.transfer-acc-trigger .acc-trigger-text {
+    font-size: 0.82rem; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.transfer-flow-arrow {
+    flex-shrink: 0; color: var(--bs-primary); font-size: 1.1rem;
+    background: none; border: none; padding: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; width: 32px; height: 32px;
+}
+.transfer-flow-arrow:active { background: rgba(var(--app-primary-rgb), 0.12); }
+
+/* 转账：双金额输入（系统键盘） */
+.transfer-amount-row { display: flex; gap: 8px; margin-bottom: 2px; }
+.transfer-amount-field {
+    flex: 1;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+    border-radius: 10px;
+    padding: 6px 6px 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 54px;
+}
+.transfer-amount-field .amt-label { font-size: 0.68rem; color: var(--bs-secondary-color); }
+.transfer-amount-input-row { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; }
+.transfer-amount-field .amount-currency { font-size: 1.1rem; flex-shrink: 0; }
+.transfer-amount-input {
+    font-size: 1.3rem;
+    max-width: none;
+    padding: 2px 0 0;
+    text-align: center;
+}
+
+/* 只读查看模式：禁用新组件的交互 */
+.trans-modal-v2.view-only .cat-grid-item,
+.trans-modal-v2.view-only .chip-acc-trigger,
+.trans-modal-v2.view-only .chip-date,
+.trans-modal-v2.view-only .chip-split-btn,
+.trans-modal-v2.view-only .transfer-acc-trigger,
+.trans-modal-v2.view-only .transfer-flow-arrow,
+.trans-modal-v2.view-only .tm-acc-trigger,
+.trans-modal-v2.view-only .tm-date-trigger,
+.trans-modal-v2.view-only .tm-camera-btn,
+.trans-modal-v2.view-only .tm-tag-add-btn,
+.trans-modal-v2.view-only .tm-meta-box {
+    pointer-events: none;
+    opacity: 0.65;
+}
+
+/* ════════════════════════════════════════════════════════════
+   收支/转账弹窗 v3：卡片式布局
+   ════════════════════════════════════════════════════════════ */
+.tm-card {
+    background: var(--bs-tertiary-bg);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+}
+.tm-card-header {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+    margin-bottom: 5px;
+}
+/* 金额卡片 */
+.tm-amount-card { padding: 9px 13px 7px; }
+.tm-amount-label { font-size: 0.72rem; color: var(--bs-secondary-color); margin-bottom: 1px; }
+.tm-amount-card .amount-input-row-v3 { display: flex; align-items: center; gap: 5px; }
+.tm-amount-card .amount-currency { font-size: 1.3rem; font-weight: 700; color: var(--app-link, var(--bs-primary)); }
+.tm-amount-card .amount-input-v2 {
+    text-align: left;
+    max-width: none;
+    font-size: 1.6rem;
+    padding: 0;
+    color: var(--bs-primary);
+}
+.tm-amount-card.amt-expense .amount-input-v2 { color: var(--app-expense); }
+.tm-amount-card.amt-income .amount-input-v2 { color: var(--app-income); }
+.tm-transfer-amount-card .transfer-amount-row { margin-bottom: 0; }
+
+/* 行式卡片（账户/日期/备注） */
+.tm-row-card { padding: 0 12px; }
+.tm-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0;
+    cursor: pointer;
+    position: relative;
+}
+.tm-row + .tm-row { border-top: 1px solid var(--bs-border-color); }
+.tm-row-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.86rem; flex-shrink: 0;
+}
+.tm-icon-blue  { background: rgba(var(--app-primary-rgb), 0.15); color: var(--app-primary); }
+.tm-icon-green { background: rgba(var(--app-income-rgb), 0.15); color: var(--app-income); }
+.tm-row-text { flex: 1; min-width: 0; }
+.tm-row-label { font-size: 0.68rem; color: var(--bs-secondary-color); margin-bottom: 0; line-height: 1.2; }
+.tm-row-value {
+    flex: 1; min-width: 0;
+    font-size: 0.88rem; font-weight: 600; color: var(--bs-body-color);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25;
+}
+.tm-row-chevron { color: var(--bs-secondary-color); font-size: 0.85rem; flex-shrink: 0; }
+.tm-date-input-hidden {
+    position: absolute; inset: 0; opacity: 0; border: none; padding: 0; margin: 0; width: 100%; cursor: pointer;
+}
+.tm-row-card .transfer-flow-row {
+    padding-top: 8px; padding-bottom: 8px; margin-bottom: 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+/* 账户 + 日期 同行显示 */
+.tm-combo-row { display: flex; align-items: center; gap: 10px; }
+.tm-combo-item { flex: 1; min-width: 0; position: relative; }
+.tm-combo-trigger {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; cursor: pointer; position: relative;
+}
+.tm-combo-trigger .tm-row-value { flex: 0 1 auto; }
+
+/* 分类卡片：固定高度约展示 4 行，多余分类滚动查看 */
+.tm-cat-card .cat-grid {
+    max-height: 210px;
+    overflow-y: auto;
+    padding: 2px 2px 2px;
+    gap: 6px 4px;
+}
+.tm-cat-card .cat-icon-circle { width: 40px; height: 40px; font-size: 1rem; }
+.tm-cat-card .cat-grid-item .cat-name { font-size: 0.64rem; }
+.tm-split-btn { width: 26px; height: 26px; border-radius: 8px; font-size: 0.8rem; }
+
+/* 备注行 */
+.tm-desc-row { cursor: text; }
+.tm-row-label-static { font-size: 0.82rem; color: var(--bs-body-color); flex-shrink: 0; }
+.tm-desc-input {
+    flex: 1; border: none; background: transparent; outline: none;
+    text-align: right; font-size: 0.82rem; color: var(--bs-body-color); min-width: 0;
+}
+.tm-desc-input::placeholder { color: var(--bs-secondary-color); }
+
+/* 标签卡片：标题与"+ 标签"按钮、已选标签同排显示，节省纵向空间 */
+.tm-tags-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.tm-tags-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.tm-tag-add-btn {
+    display: inline-flex; align-items: center; gap: 3px;
+    border: 1px solid var(--bs-primary); color: var(--bs-primary);
+    background: transparent; border-radius: 999px; padding: 3px 10px;
+    font-size: 0.74rem; font-weight: 500; flex-shrink: 0;
+}
+.tm-tag-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid var(--bs-border-color); color: var(--bs-secondary-color);
+    border-radius: 999px; padding: 3px 9px; font-size: 0.74rem;
+}
+.tm-tag-pill .tm-tag-remove { cursor: pointer; opacity: 0.6; font-size: 0.7rem; }
+.tm-tag-pill .tm-tag-remove:hover { opacity: 1; color: var(--app-expense); }
+
+/* 备注 / 标签：各占一整行，样式统一，标签始终显示 */
+.tm-meta-box {
+    flex: 1; min-width: 0; box-sizing: border-box;
+    display: flex; align-items: center; gap: 6px;
+    height: 42px; padding: 0 12px; cursor: pointer;
+}
+.tm-meta-input {
+    flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+    font-size: 0.82rem; color: var(--bs-body-color);
+}
+.tm-meta-input::placeholder { color: var(--bs-secondary-color); }
+.tm-meta-tag-icon { color: var(--bs-secondary-color); font-size: 0.82rem; flex-shrink: 0; }
+
+/* 图片卡片 */
+.tm-image-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.tm-camera-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
+    color: var(--bs-secondary-color); display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+}
+
+/* 底部固定栏：仅保留操作按钮（金额已移至顶部卡片）。顶部内边距缩小，
+   让分隔线贴近按钮；额外的留白空间改由 .trans-scroll-area 的底部内边距承担，
+   这样空白会留在"图片区和分隔线之间"，而不是"分隔线和按钮之间" */
+.trans-amount-bar.tm-footer-bar { padding-top: 10px; }

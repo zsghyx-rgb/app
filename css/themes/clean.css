@@ -1,0 +1,320 @@
+﻿/* @file css/themes/clean.css
+   主题「简洁清爽」：冷灰画布 + 白色大圆角面板 + 克莱因蓝主色。
+   同时定义浅色与深色两套语义变量，并覆盖 Bootstrap 变量。 */
+
+html[data-app-theme="clean"] {
+    --app-bg: #F6F7F9;
+    --app-surface: #FFFFFF;
+    --app-surface-2: #F0F2F6;
+    --app-surface-3: #E8EBF1;
+    --app-text: #171B24;
+    --app-muted: #626B79;
+    --app-border: #E5E8EF;
+    --app-border-soft: #EEF0F4;
+    --app-primary: #2F6BFF;
+    --app-primary-rgb: 47, 107, 255;
+    --app-link: #245CE0;
+    --app-on-primary: #FFFFFF;
+    --app-income: #087A56;
+    --app-income-rgb: 8, 122, 86;
+    --app-expense: #C9353A;
+    --app-expense-rgb: 201, 53, 58;
+    --app-transfer: #A85A00;
+    --app-transfer-rgb: 168, 90, 0;
+    --app-hero-bg: #FFFFFF;
+    --app-hero-text: #171B24;
+    --app-hero-muted: #6B7280;
+    --app-nav-bg: rgba(255, 255, 255, 0.94);
+    --app-nav-active-bg: rgba(47, 107, 255, 0.11);
+    --app-nav-active-text: #245CE0;
+    --app-icon-bg: rgba(47, 107, 255, 0.10);
+    --app-chip-bg: #F0F2F6;
+    --app-shadow: 0 20px 48px -28px rgba(23, 27, 36, 0.34);
+    --app-shadow-soft: 0 8px 24px -18px rgba(23, 27, 36, 0.28);
+    --app-radius-card: 22px;
+    --app-radius-sheet: 26px;
+    --app-radius-row: 16px;
+    --app-radius-pill: 999px;
+    --app-chart-grid: #E8EBF1;
+    --app-chart-text: #6B7280;
+    --app-overlay: rgba(15, 17, 21, 0.44);
+    --app-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --app-display-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --app-number-font: "SF Pro Display", "PingFang SC", "Segoe UI", sans-serif;
+    --app-row-gap: 0px;
+    --app-row-radius: 0px;
+    --app-row-pad-y: 13px;
+
+    /* Bootstrap 璇箟鍙橀噺瑕嗙洊 */
+    --bs-body-bg: var(--app-bg);
+    --bs-body-color: var(--app-text);
+    --bs-emphasis-color: var(--app-text);
+    --bs-secondary-color: var(--app-muted);
+    --bs-secondary-bg: var(--app-surface-2);
+    --bs-tertiary-bg: var(--app-surface-2);
+    --bs-border-color: var(--app-border);
+    --bs-border-color-translucent: rgba(23, 27, 36, 0.10);
+    --bs-primary: var(--app-primary);
+    --bs-primary-rgb: var(--app-primary-rgb);
+    --bs-primary-text-emphasis: #1D4ED8;
+    --bs-primary-bg-subtle: rgba(var(--app-primary-rgb), 0.10);
+    --bs-primary-border-subtle: rgba(var(--app-primary-rgb), 0.24);
+    --bs-success: var(--app-income);
+    --bs-success-rgb: var(--app-income-rgb);
+    --bs-success-text-emphasis: #08734F;
+    --bs-success-bg-subtle: rgba(var(--app-income-rgb), 0.10);
+    --bs-success-border-subtle: rgba(var(--app-income-rgb), 0.24);
+    --bs-danger: var(--app-expense);
+    --bs-danger-rgb: var(--app-expense-rgb);
+    --bs-danger-text-emphasis: #B42318;
+    --bs-danger-bg-subtle: rgba(var(--app-expense-rgb), 0.10);
+    --bs-danger-border-subtle: rgba(var(--app-expense-rgb), 0.24);
+    --bs-warning: var(--app-transfer);
+    --bs-warning-rgb: var(--app-transfer-rgb);
+    --bs-warning-text-emphasis: #9A5B00;
+    --bs-warning-bg-subtle: rgba(var(--app-transfer-rgb), 0.12);
+    --bs-warning-border-subtle: rgba(var(--app-transfer-rgb), 0.26);
+    --bs-info: #0B8FA8;
+    --bs-info-rgb: 11, 143, 168;
+    --bs-link-color: var(--app-primary);
+    --bs-link-hover-color: #1D4ED8;
+    --bs-body-font-family: var(--app-font);
+    --bs-border-radius: 12px;
+    --bs-border-radius-sm: 10px;
+    --bs-border-radius-lg: 18px;
+    --bs-border-radius-xl: 22px;
+    --bs-modal-bg: var(--app-surface);
+    --bs-modal-color: var(--app-text);
+    --bs-modal-border-color: var(--app-border);
+    --bs-modal-header-border-color: var(--app-border-soft);
+    --bs-modal-footer-border-color: var(--app-border-soft);
+    --bs-dropdown-bg: var(--app-surface);
+    --bs-dropdown-color: var(--app-text);
+    --bs-dropdown-border-color: var(--app-border);
+    --bs-dropdown-link-hover-bg: var(--app-surface-2);
+    --bs-dropdown-link-active-bg: var(--app-primary);
+}
+
+html[data-app-theme="clean"][data-bs-theme="dark"] {
+    --app-bg: #0F1115;
+    --app-surface: #1A1D24;
+    --app-surface-2: #22262F;
+    --app-surface-3: #2A2F3A;
+    --app-text: #F2F5FA;
+    --app-muted: #98A2B3;
+    --app-border: #2A2F3A;
+    --app-border-soft: #232832;
+    --app-primary: #7C9DFF;
+    --app-primary-rgb: 124, 157, 255;
+    --app-link: #A9C0FF;
+    --app-on-primary: #0C1224;
+    --app-income: #3DDC97;
+    --app-income-rgb: 61, 220, 151;
+    --app-expense: #FF6B6B;
+    --app-expense-rgb: 255, 107, 107;
+    --app-transfer: #FFB454;
+    --app-transfer-rgb: 255, 180, 84;
+    --app-hero-bg: #1A1D24;
+    --app-hero-text: #F2F5FA;
+    --app-hero-muted: #98A2B3;
+    --app-nav-bg: rgba(20, 23, 30, 0.95);
+    --app-nav-active-bg: rgba(124, 157, 255, 0.16);
+    --app-nav-active-text: #A9C0FF;
+    --app-icon-bg: rgba(124, 157, 255, 0.14);
+    --app-chip-bg: #22262F;
+    --app-shadow: 0 22px 50px -30px rgba(0, 0, 0, 0.80);
+    --app-shadow-soft: 0 10px 26px -20px rgba(0, 0, 0, 0.72);
+    --app-chart-grid: #2A2F3A;
+    --app-chart-text: #98A2B3;
+    --app-overlay: rgba(0, 0, 0, 0.62);
+
+    --bs-primary-text-emphasis: #A9C0FF;
+    --bs-primary-bg-subtle: rgba(var(--app-primary-rgb), 0.14);
+    --bs-primary-border-subtle: rgba(var(--app-primary-rgb), 0.30);
+    --bs-success-text-emphasis: #6EE7B7;
+    --bs-success-bg-subtle: rgba(var(--app-income-rgb), 0.13);
+    --bs-success-border-subtle: rgba(var(--app-income-rgb), 0.30);
+    --bs-danger-text-emphasis: #FF9E9E;
+    --bs-danger-bg-subtle: rgba(var(--app-expense-rgb), 0.13);
+    --bs-danger-border-subtle: rgba(var(--app-expense-rgb), 0.30);
+    --bs-warning-text-emphasis: #FFC97A;
+    --bs-warning-bg-subtle: rgba(var(--app-transfer-rgb), 0.14);
+    --bs-warning-border-subtle: rgba(var(--app-transfer-rgb), 0.30);
+    --bs-link-hover-color: #A9C0FF;
+    --bs-border-color-translucent: rgba(255, 255, 255, 0.12);
+}
+
+/* ── clean 主题的组件皮肤 ──────────────────────────────── */
+
+html[data-app-theme="clean"] body {
+    background: var(--app-bg);
+    letter-spacing: -0.006em;
+}
+
+html[data-app-theme="clean"] .main-content {
+    background: var(--app-bg);
+}
+
+html[data-app-theme="clean"] .sidebar {
+    background: var(--app-surface);
+    border-right: 1px solid var(--app-border-soft);
+}
+
+html[data-app-theme="clean"] .page-sticky-header {
+    background: color-mix(in srgb, var(--app-bg) 88%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--app-border-soft);
+}
+
+html[data-app-theme="clean"] h4,
+html[data-app-theme="clean"] h5,
+html[data-app-theme="clean"] h6 {
+    font-family: var(--app-display-font);
+    letter-spacing: -0.02em;
+}
+
+html[data-app-theme="clean"] .tx-day-rows,
+html[data-app-theme="clean"] .app-panel,
+html[data-app-theme="clean"] .card,
+html[data-app-theme="clean"] .chart-card {
+    background: var(--app-surface);
+    border: none;
+    border-radius: var(--app-radius-card);
+    box-shadow: var(--app-shadow-soft);
+}
+
+html[data-app-theme="clean"] .mobile-transaction-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid var(--app-border-soft);
+}
+
+html[data-app-theme="clean"] .mobile-transaction-card:last-child {
+    border-bottom: none;
+}
+
+html[data-app-theme="clean"] .tx-row-icon {
+    background: color-mix(in srgb, var(--cat-color, var(--app-primary)) 12%, var(--app-surface));
+    color: var(--cat-color, var(--app-primary));
+    border-radius: 14px;
+}
+
+html[data-app-theme="clean"] .app-hero,
+html[data-app-theme="clean"] .tx-hero,
+html[data-app-theme="clean"] .stats-hero {
+    background: var(--app-hero-bg);
+    border-radius: var(--app-radius-card);
+    box-shadow: var(--app-shadow);
+    border: none;
+}
+
+html[data-app-theme="clean"] .settings-menu-list {
+    background: var(--app-surface);
+    border-radius: var(--app-radius-card);
+    box-shadow: var(--app-shadow-soft);
+    overflow: hidden;
+}
+
+html[data-app-theme="clean"] .settings-menu-item {
+    border-bottom: 1px solid var(--app-border-soft);
+}
+
+html[data-app-theme="clean"] .settings-user-card {
+    background: var(--app-surface);
+    border: none;
+    border-radius: var(--app-radius-card);
+    box-shadow: var(--app-shadow-soft);
+}
+
+html[data-app-theme="clean"] .account-card {
+    background: var(--app-surface);
+    border: none;
+    border-radius: var(--app-radius-card);
+    box-shadow: var(--app-shadow-soft);
+}
+
+html[data-app-theme="clean"] .stats-sub-tabs {
+    border-bottom: 1px solid var(--app-border-soft);
+}
+
+html[data-app-theme="clean"] .stats-sub-tab-btn.active {
+    color: var(--app-link, var(--app-primary));
+    border-bottom-color: var(--app-primary);
+}
+
+html[data-app-theme="clean"] .btn {
+    --bs-btn-border-radius: var(--app-radius-pill);
+    font-weight: 600;
+}
+
+html[data-app-theme="clean"] .btn-sm {
+    --bs-btn-border-radius: 999px;
+}
+
+html[data-app-theme="clean"] .form-control,
+html[data-app-theme="clean"] .form-select,
+html[data-app-theme="clean"] .input-group-text {
+    border-radius: 14px;
+    border-color: var(--app-border);
+    background-color: var(--app-surface);
+}
+
+html[data-app-theme="clean"] .input-group > :not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+html[data-app-theme="clean"] .input-group > :not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+html[data-app-theme="clean"] .modal-content {
+    border: none;
+    border-radius: var(--app-radius-sheet);
+    box-shadow: var(--app-shadow);
+}
+
+html[data-app-theme="clean"] .tm-card {
+    background: var(--app-surface-2);
+    border-radius: 18px;
+}
+
+html[data-app-theme="clean"] .tx-hero-amount,
+html[data-app-theme="clean"] .hero-big,
+html[data-app-theme="clean"] .mobile-transaction-card .amount-expense,
+html[data-app-theme="clean"] .mobile-transaction-card .amount-income,
+html[data-app-theme="clean"] .mobile-transaction-card .amount-transfer {
+    font-family: var(--app-number-font);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+@media (max-width: 768px) {
+    html[data-app-theme="clean"] .sidebar {
+        background: var(--app-nav-bg);
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+        border-top: 1px solid var(--app-border-soft);
+        border-right: none;
+    }
+    html[data-app-theme="clean"] .nav-pills .nav-link {
+        border-radius: 16px;
+    }
+    html[data-app-theme="clean"] .nav-pills .nav-link.active {
+        background: var(--app-nav-active-bg);
+        color: var(--app-nav-active-text);
+    }
+    html[data-app-theme="clean"] .nav-pills .nav-link.active i {
+        transform: translateY(-1px);
+    }
+    html[data-app-theme="clean"] .nav-add-btn {
+        background: var(--app-primary);
+        color: var(--app-on-primary);
+        box-shadow: 0 12px 26px -8px rgba(var(--app-primary-rgb), 0.62);
+    }
+}
+

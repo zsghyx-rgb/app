@@ -1,0 +1,379 @@
+/* @file css/themes/finance.css
+   主题「深色金融」：深海军蓝 + 金色强调，紧凑列表，左侧细色条，等宽数字。 */
+
+html[data-app-theme="finance"] {
+    --app-bg: #F4F5F8;
+    --app-surface: #FFFFFF;
+    --app-surface-2: #EDF0F5;
+    --app-surface-3: #E3E8F0;
+    --app-text: #0E1B33;
+    --app-muted: #5E6C83;
+    --app-border: #DCE2EC;
+    --app-border-soft: #E8ECF3;
+    --app-primary: #8F6416;
+    --app-primary-rgb: 143, 100, 22;
+    --app-link: #8A6218;
+    --app-on-primary: #FFFFFF;
+    --app-gold: #C79A3B;
+    --app-gold-soft: #E9D3A1;
+    --app-income: #0F7A54;
+    --app-income-rgb: 15, 122, 84;
+    --app-expense: #C0392B;
+    --app-expense-rgb: 192, 57, 43;
+    --app-transfer: #4B6B9A;
+    --app-transfer-rgb: 75, 107, 154;
+    --app-hero-bg: #0E1320;
+    --app-hero-text: #F4F7FC;
+    --app-hero-muted: #9AA8C0;
+    --app-nav-bg: #FFFFFF;
+    --app-nav-active-bg: #F1E4C6;
+    --app-nav-active-text: #7A5514;
+    --app-icon-bg: rgba(168, 121, 31, 0.10);
+    --app-chip-bg: #EDF0F5;
+    --app-shadow: 0 18px 40px -30px rgba(14, 27, 51, 0.40);
+    --app-shadow-soft: 0 6px 18px -16px rgba(14, 27, 51, 0.34);
+    --app-radius-card: 12px;
+    --app-radius-sheet: 16px;
+    --app-radius-row: 0px;
+    --app-radius-pill: 8px;
+    --app-chart-grid: #E3E8F0;
+    --app-chart-text: #5E6C83;
+    --app-overlay: rgba(6, 12, 24, 0.56);
+    --app-font: "IBM Plex Sans", "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --app-display-font: "IBM Plex Sans", "SF Pro Display", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --app-number-font: "DIN Alternate", "Bahnschrift", "Roboto Mono", "SF Mono", "PingFang SC", monospace;
+
+    --bs-body-bg: var(--app-bg);
+    --bs-body-color: var(--app-text);
+    --bs-emphasis-color: var(--app-text);
+    --bs-secondary-color: var(--app-muted);
+    --bs-secondary-bg: var(--app-surface-2);
+    --bs-tertiary-bg: var(--app-surface-2);
+    --bs-border-color: var(--app-border);
+    --bs-border-color-translucent: rgba(14, 27, 51, 0.10);
+    --bs-primary: var(--app-primary);
+    --bs-primary-rgb: var(--app-primary-rgb);
+    --bs-primary-text-emphasis: #7A5514;
+    --bs-primary-bg-subtle: rgba(var(--app-primary-rgb), 0.10);
+    --bs-primary-border-subtle: rgba(var(--app-primary-rgb), 0.24);
+    --bs-success: var(--app-income);
+    --bs-success-rgb: var(--app-income-rgb);
+    --bs-success-text-emphasis: #0B6646;
+    --bs-success-bg-subtle: rgba(var(--app-income-rgb), 0.10);
+    --bs-success-border-subtle: rgba(var(--app-income-rgb), 0.24);
+    --bs-danger: var(--app-expense);
+    --bs-danger-rgb: var(--app-expense-rgb);
+    --bs-danger-text-emphasis: #96291E;
+    --bs-danger-bg-subtle: rgba(var(--app-expense-rgb), 0.10);
+    --bs-danger-border-subtle: rgba(var(--app-expense-rgb), 0.24);
+    --bs-warning: var(--app-primary);
+    --bs-warning-rgb: var(--app-primary-rgb);
+    --bs-warning-text-emphasis: #6E4D12;
+    --bs-warning-bg-subtle: rgba(var(--app-primary-rgb), 0.12);
+    --bs-warning-border-subtle: rgba(var(--app-primary-rgb), 0.26);
+    --bs-info: #3E6B99;
+    --bs-info-rgb: 62, 107, 153;
+    --bs-link-color: #8A6218;
+    --bs-link-hover-color: #6E4D12;
+    --bs-body-font-family: var(--app-font);
+    --bs-border-radius: 8px;
+    --bs-border-radius-sm: 6px;
+    --bs-border-radius-lg: 12px;
+    --bs-border-radius-xl: 16px;
+    --bs-modal-bg: var(--app-surface);
+    --bs-modal-color: var(--app-text);
+    --bs-modal-border-color: var(--app-border);
+    --bs-modal-header-border-color: var(--app-border-soft);
+    --bs-modal-footer-border-color: var(--app-border-soft);
+    --bs-dropdown-bg: var(--app-surface);
+    --bs-dropdown-color: var(--app-text);
+    --bs-dropdown-border-color: var(--app-border);
+    --bs-dropdown-link-hover-bg: var(--app-surface-2);
+    --bs-dropdown-link-active-bg: var(--app-primary);
+}
+
+html[data-app-theme="finance"][data-bs-theme="dark"] {
+    --app-bg: #0E1320;
+    --app-surface: #161D2F;
+    --app-surface-2: #1C2539;
+    --app-surface-3: #24304A;
+    --app-text: #E9EEF7;
+    --app-muted: #8C9AB3;
+    --app-border: #27324A;
+    --app-border-soft: #1F2940;
+    --app-primary: #E5B567;
+    --app-primary-rgb: 229, 181, 103;
+    --app-link: #F0C984;
+    --app-on-primary: #221806;
+    --app-gold: #E5B567;
+    --app-gold-soft: #6E5628;
+    --app-income: #3DDC97;
+    --app-income-rgb: 61, 220, 151;
+    --app-expense: #FF7A8A;
+    --app-expense-rgb: 255, 122, 138;
+    --app-transfer: #7FA6E0;
+    --app-transfer-rgb: 127, 166, 224;
+    --app-hero-bg: #111A2C;
+    --app-hero-text: #F2F6FC;
+    --app-hero-muted: #8C9AB3;
+    --app-nav-bg: rgba(14, 19, 32, 0.97);
+    --app-nav-active-bg: rgba(229, 181, 103, 0.13);
+    --app-nav-active-text: #E5B567;
+    --app-icon-bg: rgba(229, 181, 103, 0.12);
+    --app-chip-bg: #1C2539;
+    --app-shadow: 0 22px 48px -30px rgba(0, 0, 0, 0.86);
+    --app-shadow-soft: 0 8px 20px -18px rgba(0, 0, 0, 0.80);
+    --app-chart-grid: #27324A;
+    --app-chart-text: #8C9AB3;
+    --app-overlay: rgba(0, 0, 0, 0.64);
+
+    --bs-primary-text-emphasis: #E5B567;
+    --bs-primary-bg-subtle: rgba(var(--app-primary-rgb), 0.13);
+    --bs-primary-border-subtle: rgba(var(--app-primary-rgb), 0.28);
+    --bs-success-text-emphasis: #7BE9B9;
+    --bs-success-bg-subtle: rgba(var(--app-income-rgb), 0.12);
+    --bs-success-border-subtle: rgba(var(--app-income-rgb), 0.28);
+    --bs-danger-text-emphasis: #FFA5AF;
+    --bs-danger-bg-subtle: rgba(var(--app-expense-rgb), 0.12);
+    --bs-danger-border-subtle: rgba(var(--app-expense-rgb), 0.28);
+    --bs-warning-text-emphasis: #F0C984;
+    --bs-warning-bg-subtle: rgba(var(--app-primary-rgb), 0.13);
+    --bs-warning-border-subtle: rgba(var(--app-primary-rgb), 0.28);
+    --bs-link-color: #E5B567;
+    --bs-link-hover-color: #F0C984;
+    --bs-border-color-translucent: rgba(233, 238, 247, 0.12);
+}
+
+/* ── finance 主题的组件气质 ─────────────────────────────── */
+
+html[data-app-theme="finance"] body {
+    background: var(--app-bg);
+    letter-spacing: 0.002em;
+}
+
+html[data-app-theme="finance"] .main-content {
+    background: var(--app-bg);
+}
+
+html[data-app-theme="finance"] .sidebar {
+    background: var(--app-surface);
+    border-right: 1px solid var(--app-border);
+}
+
+html[data-app-theme="finance"] .page-sticky-header {
+    background: color-mix(in srgb, var(--app-bg) 92%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--app-gold-soft);
+}
+
+html[data-app-theme="finance"] h4,
+html[data-app-theme="finance"] h5,
+html[data-app-theme="finance"] h6 {
+    font-family: var(--app-display-font);
+    letter-spacing: 0.01em;
+    font-weight: 700;
+}
+
+html[data-app-theme="finance"] .mobile-transaction-card {
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: 0;
+    padding: 9px 0 9px 12px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--app-border-soft);
+}
+
+html[data-app-theme="finance"] .mobile-transaction-card[data-ttype="expense"] { border-left-color: var(--app-expense); }
+html[data-app-theme="finance"] .mobile-transaction-card[data-ttype="income"]  { border-left-color: var(--app-income); }
+html[data-app-theme="finance"] .mobile-transaction-card[data-ttype="transfer"]{ border-left-color: var(--app-transfer); }
+
+html[data-app-theme="finance"] .mobile-transaction-card.batch-selected {
+    background: rgba(var(--app-primary-rgb), 0.08);
+}
+
+html[data-app-theme="finance"] .tx-row-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--cat-color, var(--app-primary));
+    font-size: 0.98rem;
+}
+
+html[data-app-theme="finance"] .tx-day-head {
+    padding: 13px 0 6px 12px;
+    border-bottom: 1px solid var(--app-border-soft);
+}
+
+html[data-app-theme="finance"] .tx-day-label {
+    letter-spacing: 0.10em;
+    font-weight: 700;
+    font-size: 0.72rem;
+    color: var(--app-muted);
+}
+
+html[data-app-theme="finance"] .app-hero,
+html[data-app-theme="finance"] .tx-hero,
+html[data-app-theme="finance"] .stats-hero {
+    background: var(--app-hero-bg);
+    color: var(--app-hero-text);
+    border-radius: var(--app-radius-card);
+    border: 1px solid rgba(229, 181, 103, 0.24);
+    box-shadow: var(--app-shadow);
+}
+
+html[data-app-theme="finance"] .tx-hero .tx-hero-label,
+html[data-app-theme="finance"] .tx-hero .tx-hero-meta span,
+html[data-app-theme="finance"] .app-hero .hero-eyebrow,
+html[data-app-theme="finance"] .app-hero .hero-split span,
+html[data-app-theme="finance"] .stats-hero .text-muted {
+    color: var(--app-hero-muted) !important;
+}
+
+html[data-app-theme="finance"] .tx-hero-amount,
+html[data-app-theme="finance"] .hero-big,
+html[data-app-theme="finance"] .tx-hero-meta b {
+    color: var(--app-hero-text);
+}
+
+html[data-app-theme="finance"] .tx-hero-amount {
+    color: var(--app-gold);
+}
+
+html[data-app-theme="finance"] .settings-menu-list {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-card);
+    overflow: hidden;
+}
+
+html[data-app-theme="finance"] .settings-menu-item {
+    border-bottom: 1px solid var(--app-border-soft);
+    padding: 12px 16px;
+}
+
+html[data-app-theme="finance"] .settings-menu-item i:first-child {
+    color: var(--app-primary);
+}
+
+html[data-app-theme="finance"] .settings-user-card {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-card);
+}
+
+html[data-app-theme="finance"] .settings-user-avatar {
+    background: var(--app-gold-soft);
+    color: var(--app-text);
+    border-radius: 8px;
+}
+
+html[data-app-theme="finance"] .account-card {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-card);
+    box-shadow: none;
+}
+
+html[data-app-theme="finance"] .account-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--app-gold);
+}
+
+html[data-app-theme="finance"] .card,
+html[data-app-theme="finance"] .chart-card {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-card);
+    box-shadow: none;
+}
+
+html[data-app-theme="finance"] .btn {
+    --bs-btn-border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+html[data-app-theme="finance"] .form-control,
+html[data-app-theme="finance"] .form-select,
+html[data-app-theme="finance"] .input-group-text {
+    border-radius: 8px;
+    border-color: var(--app-border);
+    background-color: var(--app-surface);
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-app-theme="finance"] .modal-content {
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-sheet);
+    box-shadow: 0 28px 70px -40px rgba(0, 0, 0, 0.70);
+}
+
+html[data-app-theme="finance"] .tm-card {
+    background: var(--app-surface-2);
+    border-radius: 10px;
+    border: 1px solid var(--app-border-soft);
+}
+
+html[data-app-theme="finance"] .stats-sub-tabs {
+    border-bottom: 1px solid var(--app-border);
+}
+
+html[data-app-theme="finance"] .stats-sub-tab-btn {
+    letter-spacing: 0.02em;
+}
+
+html[data-app-theme="finance"] .stats-sub-tab-btn.active {
+    color: var(--app-link, var(--app-primary));
+    border-bottom-color: var(--app-primary);
+}
+
+html[data-app-theme="finance"] .stats-hero .stat-number.is-income { color: #3DDC97; }
+html[data-app-theme="finance"] .stats-hero .stat-number.is-expense { color: #FF7A8A; }
+html[data-app-theme="finance"] .stats-hero .stat-number.is-net { color: #E5B567; }
+
+html[data-app-theme="finance"] .tx-hero-amount,
+html[data-app-theme="finance"] .hero-big,
+html[data-app-theme="finance"] .mobile-transaction-card .amount-expense,
+html[data-app-theme="finance"] .mobile-transaction-card .amount-income,
+html[data-app-theme="finance"] .mobile-transaction-card .amount-transfer,
+html[data-app-theme="finance"] .stat-number {
+    font-family: var(--app-number-font);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+@media (max-width: 768px) {
+    html[data-app-theme="finance"] .sidebar {
+        background: var(--app-nav-bg);
+        border-top: 1px solid var(--app-gold-soft);
+        border-right: none;
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+    }
+    html[data-app-theme="finance"] .nav-pills .nav-link {
+        border-radius: 6px;
+    }
+    html[data-app-theme="finance"] .nav-pills .nav-link.active {
+        background: var(--app-nav-active-bg);
+        color: var(--app-nav-active-text);
+    }
+    html[data-app-theme="finance"] .nav-add-btn {
+        width: 54px;
+        height: 54px;
+        top: -18px;
+        border-radius: 50%;
+        background: var(--app-gold);
+        color: var(--app-on-primary);
+        border: 3px solid var(--app-bg);
+        box-shadow: 0 10px 22px -8px rgba(229, 181, 103, 0.55);
+    }
+}
