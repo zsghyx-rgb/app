@@ -21,18 +21,21 @@ function renderAccounts() {
         // 隐藏账户 / 标记为“不计入总资产汇总”的账户，不参与总资产、总负债、净值的计算
         if (acc.hidden || acc.excludeFromTotal) return;
         const bal = calculateBalance(acc.id);
-        const rmbVal = toRmb(bal, acc.currency);
-        if (acc.accountType === 'Liability') totalLiabilities += rmbVal;
-        else totalAssets += rmbVal;
+        // 与统计页一致：按当前显示币种折算
+        const dispVal = convertAmt(bal, acc.currency);
+        if (acc.accountType === 'Liability') totalLiabilities += dispVal;
+        else totalAssets += dispVal;
     });
 
+    const dispCurrency = currentStatsFilter.currency || 'RMB';
+    const dispSymbol = CURRENCY_SYMBOLS[dispCurrency] || dispCurrency;
     const hiddenClass = amountsHidden ? 'amount-hidden' : '';
     $('net-worth-display').innerHTML = `
         <div class="hero-eyebrow">净资产</div>
-        <div class="hero-big ${hiddenClass}">¥${(totalAssets + totalLiabilities).toFixed(2)}</div>
+        <div class="hero-big ${hiddenClass}">${dispSymbol}${(totalAssets + totalLiabilities).toFixed(2)}</div>
         <div class="hero-split">
-            <span>总资产 <b class="${hiddenClass}">¥${totalAssets.toFixed(2)}</b></span>
-            <span>总负债 <b class="${hiddenClass}">¥${Math.abs(totalLiabilities).toFixed(2)}</b></span>
+            <span>总资产 <b class="${hiddenClass}">${dispSymbol}${totalAssets.toFixed(2)}</b></span>
+            <span>总负债 <b class="${hiddenClass}">${dispSymbol}${Math.abs(totalLiabilities).toFixed(2)}</b></span>
         </div>`;
 
     ['Asset', 'Liability', 'Receivable'].forEach(type => {

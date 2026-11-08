@@ -30,8 +30,10 @@ function _txDateLabel(dateStr) {
     return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
-function _fmtRmb(n) {
-    return '¥' + formatAmount(Math.abs(Number(n) || 0), 'RMB');
+/** 按当前显示币种（与统计页一致）格式化金额。 */
+function _fmtMoney(n) {
+    const cur = currentStatsFilter.currency || 'RMB';
+    return (CURRENCY_SYMBOLS[cur] || '') + formatAmount(Math.abs(Number(n) || 0), cur);
 }
 
 /** 首页概览：本月支出大数字、收入、结余、预算进度（没有预算就不显示进度条）。 */
@@ -53,19 +55,19 @@ function renderTransactionsHero() {
         if (t.date < start || t.date > end) continue;
         const acc = accMap.get(String(t.accountId));
         if (!acc) continue;
-        const v = toRmb(parseFloat(t.amount) || 0, acc.currency);
+        const v = convertAmt(parseFloat(t.amount) || 0, acc.currency);
         if (v < 0) expense += -v; else income += v;
     }
 
     const hidden = amountsHidden ? 'amount-hidden' : '';
     const monthEl = $('tx-hero-month');
     if (monthEl) monthEl.textContent = `${m + 1}月`;
-    expEl.textContent = _fmtRmb(expense);
+    expEl.textContent = _fmtMoney(expense);
     expEl.className = 'tx-hero-amount ' + hidden;
     const incEl = $('tx-hero-income');
-    if (incEl) { incEl.textContent = _fmtRmb(income); incEl.className = hidden; }
+    if (incEl) { incEl.textContent = _fmtMoney(income); incEl.className = hidden; }
     const netEl = $('tx-hero-net');
-    if (netEl) { netEl.textContent = _fmtRmb(income - expense); netEl.className = hidden; }
+    if (netEl) { netEl.textContent = _fmtMoney(income - expense); netEl.className = hidden; }
 
     // 预算进度：只有设置过预算才显示；总预算优先，否则把各分类预算相加
     const budgetWrap = $('tx-hero-budget');
@@ -74,10 +76,10 @@ function renderTransactionsHero() {
     if (Array.isArray(budgets) && budgets.length) {
         const totalRow = budgets.find(b => b.category === '__total__');
         if (totalRow) {
-            totalBudget = toRmb(parseFloat(totalRow.amount) || 0, totalRow.currency || 'RMB');
+            totalBudget = convertAmt(parseFloat(totalRow.amount) || 0, totalRow.currency || 'RMB');
         } else {
             budgets.forEach(b => {
-                totalBudget += toRmb(parseFloat(b.amount) || 0, b.currency || 'RMB');
+                totalBudget += convertAmt(parseFloat(b.amount) || 0, b.currency || 'RMB');
             });
         }
     }
@@ -92,7 +94,7 @@ function renderTransactionsHero() {
     if (label) label.textContent = over ? '本月预算 · 已超支' : '本月预算';
     const text = $('tx-hero-budget-text');
     if (text) {
-        text.textContent = `${pct}% · ${over ? '超' : '余'} ${_fmtRmb(Math.abs(totalBudget - expense))}`;
+        text.textContent = `${pct}% · ${over ? '超' : '余'} ${_fmtMoney(Math.abs(totalBudget - expense))}`;
         text.className = hidden;
     }
     const fill = $('tx-hero-budget-fill');
@@ -110,11 +112,11 @@ function _dayTotalFor(dateStr, filtered, accMap) {
         if (t.date !== dateStr || t.isTransfer) continue;
         const acc = accMap.get(String(t.accountId));
         if (!acc) continue;
-        const v = toRmb(parseFloat(t.amount) || 0, acc.currency);
+        const v = convertAmt(parseFloat(t.amount) || 0, acc.currency);
         if (v < 0) expense += -v; else income += v;
     }
-    if (expense > 0) return { cls: 'is-expense', text: `支出 ${_fmtRmb(expense)}` };
-    if (income > 0) return { cls: 'is-income', text: `收入 ${_fmtRmb(income)}` };
+    if (expense > 0) return { cls: 'is-expense', text: `支出 ${_fmtMoney(expense)}` };
+    if (income > 0) return { cls: 'is-income', text: `收入 ${_fmtMoney(income)}` };
     return null;
 }
 

@@ -197,11 +197,16 @@ function quickStatsDateFilter(p) {
 }
 
 function switchStatsCurrency(c, el) {
-    $$('#stats-currency-btns button').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
+    if (el) {
+        $$('#stats-currency-btns button').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+    }
     currentStatsFilter.currency = c;
     localStorage.setItem('APP_stats_currency', c);
     renderStats();
+    // 账户页净资产、交易页概览与当日合计使用同一个显示币种，立即同步刷新
+    if (typeof renderAllTransactions === 'function') renderAllTransactions();
+    if (typeof renderAccounts === 'function') renderAccounts();
 }
 
 function switchStatsUser(u) {
