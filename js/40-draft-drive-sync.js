@@ -22,6 +22,7 @@ function _buildDraftPayload() {
         exchangeRates: exchangeRates,
         budgets: budgets,
         categoryIcons: categoryIcons,
+        userPins: userPins || {},
         configUpdatedAt: _configUpdatedAt,
         deletedLog: inMemoryLoadedData.deletedLog || [],
         allUserData: { [currentUserName]: ud }
@@ -127,6 +128,7 @@ function mergeData(local, remote) {
         users: local.users || remote.users || [],
         categories: local.categories,
         exchangeRates: local.exchangeRates,
+        userPins: {},
         deletedLog: mergedDeletedLog,
         allUserData: {}
     };
@@ -139,10 +141,12 @@ function mergeData(local, remote) {
         merged.exchangeRates = remote.exchangeRates || local.exchangeRates;
         merged.budgets       = remote.budgets       || local.budgets;
         merged.categoryIcons = remote.categoryIcons || local.categoryIcons || {};
+        merged.userPins      = remote.userPins      || local.userPins      || {};
         merged.configUpdatedAt = remoteConfigTs;
     } else {
         merged.budgets       = local.budgets       || remote.budgets || [];
         merged.categoryIcons = local.categoryIcons || remote.categoryIcons || {};
+        merged.userPins      = local.userPins      || remote.userPins      || {};
         merged.configUpdatedAt = localConfigTs || remoteConfigTs || 0;
     }
     // 确保 categories 和 exchangeRates 有值（local 优先已在上方设置，但以防为 undefined）

@@ -19,6 +19,7 @@ const CURRENCY_SYMBOLS = { 'RMB': '¥', 'EUR': '€', 'USD': '$', 'HKD': 'HK$', 
 let inMemoryLoadedData = null;
 let userPassword = '';          // 用户输入的密码
 let dataUsers = [];             // 从数据文件读取的用户列表
+let userPins = {};              // 用户登录 PIN（可选）：{ 用户名: { salt, hash } }，随数据文件同步
 let accounts = [];
 let transactions = [];
 let plannedTransactions = [];
@@ -70,7 +71,7 @@ let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'a
 
 // 清理已移除功能（AI / 设备昵称 / 旧整包同步）遗留在本机的配置
 ['ai_api_url', 'ai_api_key', 'ai_model', 'APP_device_name', 'APP_backend', 'APP_drive_version'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-const APP_VERSION = '5.0.6';
+const APP_VERSION = '5.0.7';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），

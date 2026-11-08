@@ -272,12 +272,14 @@ function renderStats() {
     }
 
     const hiddenClass = amountsHidden ? 'amount-hidden' : '';
+    // 顶部三个金额跟随币种选择显示货币单位（与账户页、交易页一致）
+    const statSymbol = CURRENCY_SYMBOLS[currentStatsFilter.currency] || currentStatsFilter.currency || '';
     $('stat-income-display').className = `stat-number is-income ${hiddenClass}`;
     $('stat-expense-display').className = `stat-number is-expense ${hiddenClass}`;
     $('stat-net-display').className = `stat-number is-net ${hiddenClass}`;
-    $('stat-income-display').innerText = formatAmount(inc, currentStatsFilter.currency);
-    $('stat-expense-display').innerText = formatAmount(Math.abs(exp), currentStatsFilter.currency);
-    $('stat-net-display').innerText = formatAmount(inc + exp, currentStatsFilter.currency);
+    $('stat-income-display').innerText = statSymbol + formatAmount(inc, currentStatsFilter.currency);
+    $('stat-expense-display').innerText = statSymbol + formatAmount(Math.abs(exp), currentStatsFilter.currency);
+    $('stat-net-display').innerText = statSymbol + formatAmount(inc + exp, currentStatsFilter.currency);
 
     // 概览子页才需要图表；在预算子页时只刷新预算
     if (!$('stats-pane-overview')?.classList.contains('active')) {

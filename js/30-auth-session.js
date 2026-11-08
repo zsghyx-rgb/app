@@ -72,6 +72,7 @@ function onDataLoaded() {
     // 预算数据：全局共享（不分用户），跟随主数据文件一起加载
     budgets = inMemoryLoadedData.budgets || [];
     categoryIcons = inMemoryLoadedData.categoryIcons || {};
+    userPins = inMemoryLoadedData.userPins || {};
 
     // 从数据文件读取用户列表（兼容旧格式：只有allUserData没有users字段）
     if (inMemoryLoadedData.users && inMemoryLoadedData.users.length > 0) {
@@ -97,20 +98,8 @@ function onDataLoaded() {
     if (verboseToast) showToast('数据加载成功，请选择用户', 'success', 3000);
     $('user-section').style.display = 'block';
 
-    // 渲染用户按钮
-    const container = $('user-buttons');
-    container.innerHTML = '';
-    if (dataUsers.length === 0) {
-        container.innerHTML = '<span class="text-danger small">账本中没有用户，请新建空账本。</span>';
-        return;
-    }
-    dataUsers.forEach(name => {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-outline-primary flex-fill py-2 fw-bold';
-        btn.textContent = name;
-        btn.onclick = () => loginWithUser(name);
-        container.appendChild(btn);
-    });
+    // 渲染用户按钮：只显示最近 7 天在本设备登录过的用户，其他用户折叠起来
+    renderLoginUserList();
 
     // 自动登录：如果上次登录的用户仍在列表中，直接登录
     try {
@@ -188,6 +177,7 @@ function loginWithUser(name) {
     currentUserName = name;
     // 记录本设备最近登录的用户
     try { localStorage.setItem('APP_last_user', name); } catch(_) {}
+    if (typeof recordRecentLoginUser === 'function') recordRecentLoginUser(name);
 
     $('login-overlay').classList.add('d-none');
     $('app-wrapper').classList.remove('d-none');
@@ -207,6 +197,18 @@ function loginWithUser(name) {
         sessionStorage.setItem('knownTxnMap_' + name, JSON.stringify(knownMap));
     } catch(_) {}
     initAppUI();
+
+    // 首次登录该用户时提示设置 PIN（可跳过）；随后检查进入提醒。
+    // 需要后台同步时，提醒会等同步结束再检查，避免用过期的本机缓存判断。
+    window._entryReminderWillSync = !!window._pendingBackgroundSync && !offlineMode;
+    if (typeof resetEntryReminders === 'function') resetEntryReminders();
+    if (typeof maybePromptPinSetup === 'function') {
+        maybePromptPinSetup(name).then(() => {
+            if (typeof scheduleEntryReminders === 'function') scheduleEntryReminders();
+        });
+    } else if (typeof scheduleEntryReminders === 'function') {
+        scheduleEntryReminders();
+    }
 
     // 初始 tab = 交易页，仅手机端显示悬浮按钮
     const fabInit = $('mobile-fab-group');
@@ -257,6 +259,8 @@ function checkAndRestoreDraft(userName) {
             // 草稿作为 local，当前内存数据作为 remote，按 updatedAt 取最新
             inMemoryLoadedData = mergeData(draft, inMemoryLoadedData);
             _configUpdatedAt = inMemoryLoadedData.configUpdatedAt || Date.now();
+            // 草稿里的 PIN 可能比内存中的新，合并后同步到全局变量
+            userPins = inMemoryLoadedData.userPins || userPins || {};
             hasUnsavedChanges = true;
 
             const timeStr = new Date(parseInt(draftTime))
@@ -393,6 +397,7 @@ function saveUserData() {
         };
     });
     inMemoryLoadedData.users = dataUsers;
+    inMemoryLoadedData.userPins = userPins || {};
     inMemoryLoadedData.categories = categories;
     inMemoryLoadedData.exchangeRates = exchangeRates;
     inMemoryLoadedData.budgets = budgets;

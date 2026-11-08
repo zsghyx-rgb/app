@@ -334,6 +334,11 @@ async function restoreFromBackup(fileName, dateStr) {
 
     inMemoryLoadedData = backup;
     _configUpdatedAt = now;
+    // 备份里带 PIN 就用备份的；旧备份没有该字段时保留当前 PIN，避免恢复后变成无 PIN
+    userPins = (inMemoryLoadedData.userPins && Object.keys(inMemoryLoadedData.userPins).length)
+        ? inMemoryLoadedData.userPins
+        : (userPins || {});
+    inMemoryLoadedData.userPins = userPins;
     saveUserData();
     loadAllData();
     filterUserData();
@@ -357,6 +362,7 @@ async function restoreFromBackup(fileName, dateStr) {
         const state = { lastSeq: 0, synced: {} };
         const after = await incPullRows(0);
         incApplyRows(inMemoryLoadedData, incDecryptRows(after, userPassword), state);
+        userPins = inMemoryLoadedData.userPins || userPins || {};
         incPersistLocal(state, true);
         clearUnsavedFlag();
         loadAllData();

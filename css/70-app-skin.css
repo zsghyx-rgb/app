@@ -604,6 +604,8 @@ a { color: var(--app-link, var(--app-primary)); }
     display: flex;
     align-items: center;
     gap: 8px;
+    /* 左侧圆点带 4px 光晕，留出内边距避免在移动端被容器裁掉 */
+    padding-left: 6px;
     margin: 22px 0 10px;
     font-size: 0.78rem;
     font-weight: 700;
@@ -1053,3 +1055,92 @@ a { color: var(--app-link, var(--app-primary)); }
         scroll-behavior: auto !important;
     }
 }
+
+/* ── 登录页：最近登录用户 / 折叠的其他用户 ─────────────── */
+/* 刻意做成不显眼的文字链接，不提供“展开全部用户”的醒目按钮 */
+.login-user-more {
+    flex-basis: 100%;
+    border: 0;
+    background: transparent;
+    padding: 2px 0 0;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--app-muted);
+    text-align: left;
+    opacity: 0.8;
+}
+.login-user-more:hover,
+.login-user-more:focus-visible { color: var(--app-primary); opacity: 1; }
+
+/* ── 进入 App 的转入提醒 ───────────────────────────────── */
+.entry-reminder-group-title {
+    margin: 14px 0 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--app-muted);
+}
+
+.entry-reminder-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    margin-bottom: 6px;
+    border-radius: 14px;
+    background: var(--app-surface-2);
+}
+
+.entry-reminder-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.entry-reminder-main { flex: 1 1 auto; min-width: 0; }
+
+.entry-reminder-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.entry-reminder-sub {
+    font-size: 0.72rem;
+    color: var(--app-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.entry-reminder-amt {
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-align: right;
+}
+
+.entry-reminder-tag {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 0 5px;
+    border-radius: 6px;
+    font-size: 0.62rem;
+    background: var(--app-surface-3);
+    color: var(--app-muted);
+}
+
+.entry-reminder-icon.is-income { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+.entry-reminder-icon.is-warn   { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+.entry-reminder-icon.is-danger { background: var(--bs-danger-bg-subtle);  color: var(--bs-danger-text-emphasis); }
+
+.entry-reminder-amt.is-income { color: var(--app-income); }
+.entry-reminder-amt.is-warn   { color: var(--bs-warning-text-emphasis); }
+.entry-reminder-amt.is-danger { color: var(--app-expense); }

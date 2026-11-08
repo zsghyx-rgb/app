@@ -106,12 +106,20 @@ function _uiSheetOpen(opts) {
             wrap.style.cssText = 'margin-top:12px;';
             const inp = document.createElement('input');
             inp.type = o.input.type || 'text';
+            if (o.input.inputmode) inp.inputMode = o.input.inputmode;
             inp.className = 'form-control';
             inp.placeholder = o.input.placeholder || '';
             inp.value = o.input.value || '';
-            inp.autocomplete = 'off';
+            inp.autocomplete = o.input.autocomplete || 'off';
             inp.spellcheck = false;
             if (o.input.maxlength) inp.maxLength = o.input.maxlength;
+            // 数字键盘输入（如登录 PIN）：只保留数字，并限制长度
+            if ((o.input.inputmode || '') === 'numeric') {
+                inp.addEventListener('input', () => {
+                    const cleaned = inp.value.replace(/[^0-9]/g, '').slice(0, o.input.maxlength || 4);
+                    if (cleaned !== inp.value) inp.value = cleaned;
+                });
+            }
             inp.style.cssText = 'font-size:1rem;padding:.6rem .8rem;border-radius:12px;';
             inp.addEventListener('keydown', ev => {
                 if (ev.key === 'Enter') { ev.preventDefault(); _uiSheetClose(true); }

@@ -92,6 +92,7 @@ function incConfigPayload(d) {
         exchangeRates: d.exchangeRates || null,
         budgets: d.budgets || [],
         categoryIcons: d.categoryIcons || {},
+        userPins: d.userPins || {},
         configUpdatedAt: d.configUpdatedAt || 0
     };
 }
@@ -149,6 +150,7 @@ function incApplyConfig(data, cfg) {
     data.exchangeRates = cfg.exchangeRates || data.exchangeRates;
     data.budgets = cfg.budgets || [];
     data.categoryIcons = cfg.categoryIcons || {};
+    data.userPins = cfg.userPins || data.userPins || {};
     data.configUpdatedAt = cfg.configUpdatedAt || 0;
     (data.users || []).forEach(u => incEnsureUserSlot(data, u));
 }
@@ -385,6 +387,7 @@ function incRefreshAfterMerge(summary) {
     exchangeRates = inMemoryLoadedData.exchangeRates || DEFAULT_RATES;
     categoryIcons = inMemoryLoadedData.categoryIcons || {};
     budgets       = inMemoryLoadedData.budgets       || [];
+    userPins      = inMemoryLoadedData.userPins      || {};
     if (inMemoryLoadedData.users && inMemoryLoadedData.users.length) dataUsers = inMemoryLoadedData.users;
     if (!currentUser) { // 还在登录界面（例如迁移时）：只刷新用户列表
         window._suppressAutoLogin = true;
@@ -431,6 +434,9 @@ async function incBackgroundSync() {
         saveUserData();
         const s = await incSyncCore({ manual: false });
         localStorage.setItem('APP_last_login_time', Date.now().toString());
+        // 即使表单打开、稍后才刷新界面，也先把配置里的 PIN 同步到全局变量，
+        // 否则随后保存表单时可能用旧的 userPins 覆盖云端的新值。
+        userPins = inMemoryLoadedData.userPins || userPins || {};
         if (s.aborted) { showToast('后台同步已中止：' + s.aborted, 'warning', 4000); return; }
         incPersistLocal(s.state, s.changed > 0 || s.pushed > 0 || s.deleted > 0);
         clearUnsavedFlag();
@@ -450,13 +456,15 @@ async function incBackgroundSync() {
         showToast('同步失败：' + msg, 'error', 0);
     } finally {
         driveIsSyncing = false;
+        // 同步结束后再检查进入提醒（若登录时已检查过，函数内部会直接返回）
+        if (typeof checkEntryReminders === 'function') setTimeout(checkEntryReminders, 400);
     }
 }
 
 /* ── 首次加载（本机没有缓存）：输入密码 → 全量拉取 → 解密 ── */
 function incAssemble(rows, pw) {
     const dec = incDecryptRows(rows, pw);
-    const data = { users: [], allUserData: {}, categories: null, exchangeRates: null, budgets: [], categoryIcons: {}, configUpdatedAt: 0, deletedLog: [] };
+    const data = { users: [], allUserData: {}, categories: null, exchangeRates: null, budgets: [], categoryIcons: {}, userPins: {}, configUpdatedAt: 0, deletedLog: [] };
     const state = { lastSeq: 0, synced: {} };
     let hasConfig = false;
     dec.sort((a, b) => a.row.seq - b.row.seq).forEach(({ row, rec }) => {

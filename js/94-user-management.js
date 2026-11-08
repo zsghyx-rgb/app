@@ -25,6 +25,24 @@ function renderUserManagement() {
         container.innerHTML = '<span class="text-muted small">暂无用户</span>';
         return;
     }
+
+    // 自己的登录 PIN（可选）：只影响“从别人的界面切换过来”时是否询问
+    if (currentUserName && typeof hasUserPin === 'function') {
+        const pinned = hasUserPin(currentUserName);
+        const pinRow = document.createElement('div');
+        pinRow.className = 'd-flex align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom';
+        pinRow.innerHTML = `
+            <div class="small" style="min-width:0;">
+                <div class="fw-bold">我的登录 PIN</div>
+                <div class="text-muted" style="font-size:0.72rem;">${pinned ? '已设置 · 从别人界面切换过来时询问' : '未设置 · 切换用户时不需要 PIN'}</div>
+            </div>
+            <div class="d-flex gap-1 flex-shrink-0">
+                <button class="btn btn-outline-secondary btn-sm py-0" onclick="openMyPinModal()">${pinned ? '修改' : '设置'}</button>
+                ${pinned ? '<button class="btn btn-outline-danger btn-sm py-0" onclick="clearMyPin()">清除</button>' : ''}
+            </div>`;
+        container.appendChild(pinRow);
+    }
+
     dataUsers.forEach(u => {
         const hasData = (accounts.some(a => a.ownerName === u) ||
                          transactions.some(t => t.ownerName === u));
@@ -69,6 +87,13 @@ async function renameUser(oldName) {
     plannedTransactions.forEach(p => { if (p.ownerName === oldName) p.ownerName = trimmed; });
     inMemoryLoadedData.allUserData[trimmed] = inMemoryLoadedData.allUserData[oldName];
     delete inMemoryLoadedData.allUserData[oldName];
+    // 登录 PIN 与本机登录记录一起改名
+    if (inMemoryLoadedData.userPins && inMemoryLoadedData.userPins[oldName]) {
+        inMemoryLoadedData.userPins[trimmed] = inMemoryLoadedData.userPins[oldName];
+        delete inMemoryLoadedData.userPins[oldName];
+        userPins = inMemoryLoadedData.userPins;
+    }
+    if (typeof migrateLoginLocalState === 'function') migrateLoginLocalState(oldName, trimmed);
     if (currentUserName === oldName) {
         currentUserName = trimmed;
         currentUser.name = trimmed;
@@ -89,14 +114,21 @@ async function removeUser(name) {
     if (!ok) return;
     const snapUsers = dataUsers.slice();
     const snapSlot = inMemoryLoadedData.allUserData[name];
+    const snapPin = userPins ? userPins[name] : null;
     dataUsers = dataUsers.filter(u => u !== name);
     delete inMemoryLoadedData.allUserData[name];
+    if (inMemoryLoadedData.userPins) delete inMemoryLoadedData.userPins[name];
     saveUserData(); triggerAutoSave();
     renderUserManagement();
     showToast(`已删除用户「${name}」`, 'success', 2200);
     showUndo(`已删除用户「${name}」`, () => {
         dataUsers = snapUsers;
         if (snapSlot) inMemoryLoadedData.allUserData[name] = snapSlot;
+        if (snapPin) {
+            if (!inMemoryLoadedData.userPins) inMemoryLoadedData.userPins = {};
+            inMemoryLoadedData.userPins[name] = snapPin;
+            userPins = inMemoryLoadedData.userPins;
+        }
         saveUserData(); triggerAutoSave();
         renderUserManagement();
         showToast('已撤销，用户已恢复', 'info', 2000);
