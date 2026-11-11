@@ -40,7 +40,7 @@
         }
     })();
     </script>
-    <title id="app-title">记一笔 v5.0.8</title>
+    <title id="app-title">记一笔 v5.0.9</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -207,7 +207,7 @@
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.0.8</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.0.9</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -658,6 +658,17 @@
                     </div>
                 </div>
 
+                <div class="appearance-block">
+                    <div class="appearance-block-head">
+                        <span class="appearance-block-title">同步提示位置</span>
+                        <span class="appearance-block-hint" id="sync-bar-pos-state">当前：默认位置</span>
+                    </div>
+                    <div class="sync-pos-row">
+                        <span class="sync-pos-tip">长按“有修改尚未同步”提示，再拖动即可移动；位置只保存在本机。</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="sync-bar-reset-btn" onclick="resetSyncBarPos()" disabled>恢复默认</button>
+                    </div>
+                </div>
+
                 <div class="settings-section-title">记账</div>
                 <div class="settings-menu-list">
                     <div class="settings-menu-item" onclick="showSettingsSubpage('planned')">
@@ -963,7 +974,7 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.0.8</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.0.9</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -1362,27 +1373,28 @@
 
                     <div class="trans-scroll-area">
 
-                        <!-- 转账金额卡片 -->
+                        <!-- 转账金额：一个大金额；只有跨币种时才出现“转入金额” -->
                         <div class="tm-card tm-amount-card tm-transfer-amount-card">
-                            <div class="transfer-amount-row">
-                                <div class="transfer-amount-field">
-                                    <label class="amt-label">转出金额</label>
-                                    <div class="transfer-amount-input-row">
-                                        <span class="amount-currency" id="transfer-currency-out">¥</span>
-                                        <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-out" oninput="handleEditTransferAmountChange('out')" required="">
-                                    </div>
+                            <div class="transfer-main-amount">
+                                <label class="amt-label" for="edit-transfer-amount-out">转账金额</label>
+                                <div class="transfer-amount-input-row">
+                                    <span class="amount-currency" id="transfer-currency-out">¥</span>
+                                    <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-out" oninput="handleEditTransferAmountChange('out')" required="">
                                 </div>
-                                <div class="transfer-amount-field">
-                                    <label class="amt-label">转入金额</label>
-                                    <div class="transfer-amount-input-row">
-                                        <span class="amount-currency" id="transfer-currency-in">¥</span>
-                                        <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-in" oninput="handleEditTransferAmountChange('in')" required="">
-                                    </div>
+                            </div>
+                            <div class="transfer-in-wrap" id="transfer-in-wrap" style="display:none;">
+                                <div class="transfer-in-head">
+                                    <label class="amt-label" for="edit-transfer-amount-in">转入金额</label>
+                                    <span class="transfer-rate-hint" id="transfer-rate-hint"></span>
+                                </div>
+                                <div class="transfer-amount-input-row">
+                                    <span class="amount-currency" id="transfer-currency-in">¥</span>
+                                    <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 transfer-amount-input decimal-input" id="edit-transfer-amount-in" oninput="handleEditTransferAmountChange('in')">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- 转出/转入账户 + 日期 卡片 -->
+                        <!-- 转出 / 转入账户（上下两行）+ 日期 -->
                         <div class="tm-card tm-row-card">
                             <div class="transfer-flow-row">
                                 <div class="acc-select-wrapper transfer-acc-card" id="wrap-edit-transfer-from">
@@ -1395,7 +1407,7 @@
                                     <div class="acc-select-dropdown" id="dropdown-edit-transfer-from"></div>
                                 </div>
                                 <button type="button" class="transfer-flow-arrow" title="互换转出/转入账户" onclick="swapTransferAccounts()">
-                                    <i class="bi bi-arrow-left-right"></i>
+                                    <i class="bi bi-arrow-down-up"></i>
                                 </button>
                                 <div class="acc-select-wrapper transfer-acc-card" id="wrap-edit-transfer-to">
                                     <select class="form-select" id="edit-transfer-to" onchange="handleEditTransferAmountChange()" required="" style="display:none;"></select>
@@ -1414,6 +1426,26 @@
                                 <input type="date" class="tm-date-input-hidden" id="edit-transfer-date" required="" onchange="syncDateLabels()">
                             </div>
                         </div>
+
+                        <!-- 手续费：默认折叠；记为转出账户的一笔“手续费”支出 -->
+                        <div class="tm-card tm-row-card" id="transfer-fee-card">
+                            <div class="tm-row" onclick="toggleTransferFee()">
+                                <div class="tm-row-icon tm-icon-orange"><i class="bi bi-receipt"></i></div>
+                                <div class="tm-row-value">手续费</div>
+                                <span class="transfer-fee-summary" id="transfer-fee-summary">无</span>
+                                <i class="bi bi-chevron-down tm-row-chevron" id="transfer-fee-chevron"></i>
+                            </div>
+                            <div class="transfer-fee-body" id="transfer-fee-body" style="display:none;">
+                                <div class="transfer-fee-input-row">
+                                    <span class="amount-currency" id="transfer-currency-fee">¥</span>
+                                    <input type="text" inputmode="decimal" placeholder="0.00" class="transfer-fee-input decimal-input" id="edit-transfer-fee" oninput="handleTransferFeeInput()">
+                                    <button type="button" class="transfer-fee-clear" onclick="clearTransferFee()">清除</button>
+                                </div>
+                                <div class="transfer-fee-note">会记为转出账户的一笔支出，分类“手续费”，计入支出统计。</div>
+                            </div>
+                        </div>
+
+                        <div class="transfer-total-hint" id="transfer-total-hint" style="display:none;"></div>
 
                         <!-- 转账备注 -->
                         <div class="tm-card tm-row-card" id="transfer-desc-collapse-wrap">
@@ -1488,6 +1520,7 @@
 <script src="js/50-accounts.js"></script>
 <script src="js/52-account-detail.js"></script>
 <script src="js/55-transaction-modals.js"></script>
+<script src="js/57-transfer-ui.js"></script>
 <script src="js/58-split-items.js"></script>
 <script src="js/60-budget.js"></script>
 <script src="js/62-category-icons.js"></script>
