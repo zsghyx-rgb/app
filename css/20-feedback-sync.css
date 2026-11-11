@@ -54,16 +54,22 @@
     border-radius: 20px;
     font-size: 0.82rem;
     line-height: 1.25;
+    /* 5.0.9：接近透明 + 细边框 + 轻微毛玻璃，不再是一整条纯黑/纯白的色块。
+       先给不支持 color-mix 的浏览器一个半透明兜底，再用 color-mix 覆盖。 */
     border: 1px solid var(--sb-border, var(--bs-border-color));
-    /* 半透明背景：不再用不透明 --bs-body-bg 兜底，避免出现整条全黑/全白的色块。
-       先给一个不透明兜底色，再用 color-mix 覆盖成接近不透明但有透明感的圆角胶囊；
-       支持 backdrop-filter 时再加一层毛玻璃，在弹窗暗色遮罩上也有层次。 */
-    background: var(--sb-bg, var(--bs-body-bg));
-    background: color-mix(in srgb, var(--sb-bg, var(--bs-body-bg)) 88%, transparent);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid color-mix(in srgb, var(--sb-fg, var(--bs-body-color)) 30%, transparent);
+    background: rgba(128, 128, 128, 0.12);
+    /* 页面底色 22% + 文字色 8%：约 28% 不透明度，透出后面的内容但文字仍清晰（不依赖各主题 *-bg-subtle 本身的透明度） */
+    background: color-mix(in srgb, var(--sb-fg, var(--bs-body-color)) 8%, color-mix(in srgb, var(--bs-body-bg) 22%, transparent));
+    backdrop-filter: blur(8px) saturate(1.3);
+    -webkit-backdrop-filter: blur(8px) saturate(1.3);
     color: var(--sb-fg, var(--bs-body-color));
-    box-shadow: var(--app-shadow-soft);
+    box-shadow: none;
+    /* 长按后可拖动：禁用浏览器自己的滚动/选中/长按菜单，免得和拖动抢手势 */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
     opacity: 0;
     pointer-events: none;
     transition: opacity .2s ease, transform .2s ease;
@@ -101,6 +107,25 @@
     }
     #sync-bar:not(.on-login).expanded { max-width: min(calc(100vw - 20px), 420px); }
     body.sync-bar-on { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 56px); }
+}
+/* 5.0.9：用户长按拖动过位置（位置存在本机 localStorage，只在非登录界面生效）。
+   left / top 由 js/88-toast-syncbar.js 设置到 --sb-left / --sb-top。 */
+#sync-bar.moved:not(.on-login) {
+    left: var(--sb-left, 10px);
+    top: var(--sb-top, 80px);
+    bottom: auto;
+    right: auto;
+    transform: translateY(12px);
+    max-width: min(calc(100vw - 16px), 360px);
+}
+#sync-bar.moved:not(.on-login).show { transform: translateY(0); }
+#sync-bar.moved:not(.on-login).expanded { max-width: min(calc(100vw - 16px), 420px); }
+/* 拖动中：略放大 + 轻阴影，transform 不做过渡，跟手 */
+#sync-bar.dragging, #sync-bar.dragging.moved:not(.on-login).show {
+    transform: scale(1.04);
+    transition: none;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+    cursor: grabbing;
 }
 @media (prefers-reduced-motion: reduce) { #sync-bar { transition: none; } }
 

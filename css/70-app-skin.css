@@ -792,6 +792,10 @@ a { color: var(--app-link, var(--app-primary)); }
 .subpage-header .bi-arrow-left:hover { background: var(--app-surface-2); }
 
 /* 外观设置 */
+.sync-pos-row { display: flex; align-items: center; gap: 12px; }
+.sync-pos-tip { flex: 1; min-width: 0; font-size: 0.8rem; color: var(--app-muted); line-height: 1.4; }
+.sync-pos-row .btn { flex-shrink: 0; }
+
 .appearance-block {
     background: var(--app-surface);
     border: 1px solid var(--app-border-soft);

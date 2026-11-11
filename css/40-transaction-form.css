@@ -364,52 +364,67 @@
     padding: 0;
 }
 
-/* 转账：账户流向卡片 */
-.transfer-flow-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
-.transfer-acc-card { flex: 1; position: relative; min-width: 0; }
+/* 转账：账户流向（转出 / 转入上下两行，右侧一个互换按钮） */
+.transfer-flow-row { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 4px 0 10px; }
+.transfer-acc-card { position: relative; min-width: 0; width: 100%; }
 .transfer-acc-trigger {
-    display: flex; flex-direction: column; gap: 2px;
+    display: flex; flex-direction: row; align-items: center; gap: 10px;
     background: var(--bs-tertiary-bg);
     border-radius: 12px;
-    padding: 10px;
+    padding: 12px 14px;
+    min-height: 50px;
     cursor: pointer;
     border: 1px solid transparent;
 }
 .transfer-acc-trigger.open { border-color: var(--bs-primary); }
-.transfer-acc-label { font-size: 0.68rem; color: var(--bs-secondary-color); }
-.transfer-acc-trigger i { font-size: 1rem; color: var(--bs-primary); margin: 2px 0; }
+.transfer-acc-label { flex-shrink: 0; width: 2.2em; font-size: 0.78rem; font-weight: 600; color: var(--bs-secondary-color); }
+.transfer-acc-trigger i { flex-shrink: 0; font-size: 1.1rem; color: var(--bs-primary); }
 .transfer-acc-trigger .acc-trigger-text {
-    font-size: 0.82rem; font-weight: 600;
+    flex: 1; min-width: 0;
+    font-size: 0.95rem; font-weight: 600;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .transfer-flow-arrow {
-    flex-shrink: 0; color: var(--bs-primary); font-size: 1.1rem;
-    background: none; border: none; padding: 6px; cursor: pointer;
+    position: absolute; right: 46px; top: 50%; transform: translateY(calc(-50% - 3px)); z-index: 3;
+    color: var(--bs-primary); font-size: 1rem;
+    background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); padding: 0; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 50%; width: 32px; height: 32px;
+    border-radius: 50%; width: 34px; height: 34px;
 }
 .transfer-flow-arrow:active { background: rgba(var(--app-primary-rgb), 0.12); }
 
-/* 转账：双金额输入（系统键盘） */
-.transfer-amount-row { display: flex; gap: 8px; margin-bottom: 2px; }
-.transfer-amount-field {
-    flex: 1;
-    border: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg);
-    border-radius: 10px;
-    padding: 6px 6px 8px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    min-height: 54px;
-}
-.transfer-amount-field .amt-label { font-size: 0.68rem; color: var(--bs-secondary-color); }
+/* 转账：金额（一个大数字；跨币种时下方多一行转入金额） */
+.transfer-main-amount { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0 2px; }
+.transfer-main-amount .amt-label, .transfer-in-head .amt-label { font-size: 0.72rem; color: var(--bs-secondary-color); margin: 0; }
 .transfer-amount-input-row { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; }
-.transfer-amount-field .amount-currency { font-size: 1.1rem; flex-shrink: 0; }
-.transfer-amount-input {
-    font-size: 1.3rem;
-    max-width: none;
+.tm-transfer-amount-card .transfer-main-amount .amount-currency { font-size: 1.6rem; flex-shrink: 0; }
+.tm-transfer-amount-card .transfer-amount-input {
+    font-size: 2.1rem; font-weight: 700;
+    width: 100%; max-width: 260px;
     padding: 2px 0 0;
     text-align: center;
 }
+.transfer-in-wrap { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--bs-border-color); }
+.transfer-in-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.transfer-rate-hint { font-size: 0.72rem; color: var(--bs-secondary-color); }
+.transfer-rate-hint a { color: var(--bs-primary); font-weight: 600; text-decoration: none; margin-left: 4px; }
+.tm-transfer-amount-card .transfer-in-wrap .amount-currency { font-size: 1.2rem; flex-shrink: 0; }
+.tm-transfer-amount-card .transfer-in-wrap .transfer-amount-input { font-size: 1.5rem; font-weight: 600; }
+
+/* 只读查看（收款人看他人转账）：隐藏互换按钮和“清除”，避免看起来可操作 */
+.view-only .transfer-flow-arrow, .view-only .transfer-fee-clear { display: none; }
+
+/* 转账：手续费（折叠行） */
+.tm-icon-orange { background: rgba(var(--app-warning-rgb), 0.15); color: var(--app-warning); }
+.transfer-fee-summary { flex-shrink: 0; font-size: 0.88rem; color: var(--bs-secondary-color); margin-right: 4px; }
+.transfer-fee-summary.has-fee { color: var(--app-expense); font-weight: 600; }
+.transfer-fee-body { padding: 2px 14px 12px; }
+.transfer-fee-input-row { display: flex; align-items: center; gap: 8px; background: var(--bs-tertiary-bg); border-radius: 12px; padding: 8px 12px; }
+.transfer-fee-input-row .amount-currency { font-size: 1.1rem; flex-shrink: 0; }
+.transfer-fee-input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 1.15rem; font-weight: 600; color: var(--bs-body-color); }
+.transfer-fee-clear { flex-shrink: 0; border: 0; background: none; color: var(--bs-secondary-color); font-size: 0.8rem; padding: 4px 6px; }
+.transfer-fee-note { margin-top: 6px; font-size: 0.72rem; color: var(--bs-secondary-color); }
+.transfer-total-hint { margin: 2px 6px 0; text-align: center; font-size: 0.82rem; color: var(--bs-secondary-color); }
 
 /* 只读查看模式：禁用新组件的交互 */
 .trans-modal-v2.view-only .cat-grid-item,
@@ -456,7 +471,6 @@
 }
 .tm-amount-card.amt-expense .amount-input-v2 { color: var(--app-expense); }
 .tm-amount-card.amt-income .amount-input-v2 { color: var(--app-income); }
-.tm-transfer-amount-card .transfer-amount-row { margin-bottom: 0; }
 
 /* 行式卡片（账户/日期/备注） */
 .tm-row-card { padding: 0 12px; }
