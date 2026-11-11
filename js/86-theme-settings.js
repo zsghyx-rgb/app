@@ -87,6 +87,7 @@ function renderThemeSettings() {
         el.classList.toggle('selected', on);
         el.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+    if (typeof syncBarRefreshResetUI === 'function') syncBarRefreshResetUI();   // 同步提示位置：默认 / 自定义
 }
 
 // ── Chart.js 主题 ────────────────────────────────────────────

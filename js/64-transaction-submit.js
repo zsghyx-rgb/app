@@ -87,15 +87,18 @@ $('edit-transfer-form').addEventListener('submit', (e) => {
     const newFromId = $('edit-transfer-from').value;
     const newToId = $('edit-transfer-to').value;
     const newAmtOut = parseFloat($('edit-transfer-amount-out').value);
-    const newAmtIn = parseFloat($('edit-transfer-amount-in').value);
     const newDesc = $('edit-transfer-desc').value;
+    const newFee = _transferFeeValue();     // 0 = 无手续费；NaN = 输入无效
 
     if (newFromId === newToId) { uiAlert('转出账户和转入账户不能相同'); return; }
-    if (isNaN(newAmtOut) || isNaN(newAmtIn)) { uiAlert('请输入有效的转账金额'); return; }
 
     const accFrom = accounts.find(a => a.id == newFromId);
     const accTo = accounts.find(a => a.id == newToId);
     if (!accFrom || !accTo) { uiAlert('账户不存在'); return; }
+    // 同币种时转入金额一定等于转出金额（转入框是隐藏的）；跨币种才读转入框
+    const newAmtIn = accFrom.currency === accTo.currency ? newAmtOut : parseFloat($('edit-transfer-amount-in').value);
+    if (isNaN(newAmtOut) || isNaN(newAmtIn) || newAmtOut <= 0 || newAmtIn <= 0) { uiAlert('请输入有效的转账金额'); return; }
+    if (isNaN(newFee)) { uiAlert('请输入有效的手续费金额（或留空表示没有手续费）'); return; }
 
     if (mode === 'add') {
         const uniqueId = Date.now() + Math.random();
@@ -111,6 +114,7 @@ $('edit-transfer-form').addEventListener('submit', (e) => {
             desc: newDesc, ownerName: accTo.ownerName,
             isTransfer: true, relatedAccountId: newFromId, transferPairId: uniqueId, updatedAt: Date.now()
         });
+        if (newFee > 0) applyTransferFee(transactions.find(x => x.id === uniqueId), newFee, newDate, newFromId, newDesc);
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
         displayedTransactionCount = 100; renderAllTransactions(); renderAccounts();
         // 若在账户详情页，只刷新内容（不触发switchTab，保持modal开着）
@@ -119,6 +123,7 @@ $('edit-transfer-form').addEventListener('submit', (e) => {
         $('edit-transfer-amount-out').value = '';
         $('edit-transfer-amount-in').value = '';
         $('edit-transfer-desc').value = '';
+        resetTransferFeeUI();
         if (verboseToast) showToast('已添加', 'success', 1500);
         if ($('view-stats').classList.contains('active-view')) renderStats();
     } else {
@@ -141,6 +146,7 @@ $('edit-transfer-form').addEventListener('submit', (e) => {
         tIn.amount = Math.abs(newAmtIn); tIn.desc = newDesc;
         tIn.ownerName = accTo.ownerName;
         tIn.updatedAt = Date.now();
+        applyTransferFee(tOut, newFee, newDate, newFromId, newDesc);
 
         saveUserData(); triggerAutoSave(); filterUserData();
         displayedTransactionCount = 100;

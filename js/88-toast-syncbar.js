@@ -92,7 +92,146 @@ function syncBarRender() {
     bar.classList.toggle('on-login', s.loginVisible);
     bar.classList.toggle('show', s.state !== 'idle');
     if (s.state === 'idle') bar.classList.remove('expanded');
-    document.body.classList.toggle('sync-bar-on', s.state !== 'idle' && !s.loginVisible);
+    syncBarApplyPos();
+    // 提示条被拖到别处后，页面底部不必再留出它的位置
+    document.body.classList.toggle('sync-bar-on', s.state !== 'idle' && !s.loginVisible && !bar.classList.contains('moved'));
+}
+
+/* ─── 5.0.9：长按拖动提示条，位置记在本机 ───
+ * 位置按“可移动范围的比例”保存 {x, y}（0~1），换屏幕尺寸/横竖屏后仍在相对位置，并自动限制在屏幕内。 */
+const SYNC_BAR_POS_KEY = 'APP_sync_bar_pos';
+const SYNC_BAR_MARGIN = 8;          // 离屏幕边缘的最小距离
+const SYNC_BAR_LONGPRESS_MS = 380;  // 长按多久后进入拖动
+
+let _syncBarInsets = null;
+function _syncBarSafeInsets() {      // 读取刘海/底部横条的安全区（env() 只能借助真实元素算出像素）
+    if (_syncBarInsets) return _syncBarInsets;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);';
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    _syncBarInsets = { top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
+    probe.remove();
+    return _syncBarInsets;
+}
+
+function _syncBarBounds(bar) {
+    const ins = _syncBarSafeInsets();
+    const w = bar.offsetWidth, h = bar.offsetHeight;
+    const minL = SYNC_BAR_MARGIN, minT = ins.top + SYNC_BAR_MARGIN;
+    const maxL = Math.max(minL, window.innerWidth - w - SYNC_BAR_MARGIN);
+    const maxT = Math.max(minT, window.innerHeight - h - SYNC_BAR_MARGIN - ins.bottom);
+    return { minL, maxL, minT, maxT };
+}
+
+function _syncBarSetLeftTop(bar, left, top) {
+    const b = _syncBarBounds(bar);
+    const l = Math.min(b.maxL, Math.max(b.minL, left));
+    const t = Math.min(b.maxT, Math.max(b.minT, top));
+    bar.style.setProperty('--sb-left', l + 'px');
+    bar.style.setProperty('--sb-top', t + 'px');
+    return { l, t, b };
+}
+
+function _syncBarLoadPos() {
+    try {
+        const p = JSON.parse(localStorage.getItem(SYNC_BAR_POS_KEY) || 'null');
+        if (p && isFinite(p.x) && isFinite(p.y)) return { x: Math.min(1, Math.max(0, p.x)), y: Math.min(1, Math.max(0, p.y)) };
+    } catch (_) {}
+    return null;
+}
+
+// 按已保存的位置摆放（没有保存位置 / 登录界面时恢复默认位置）
+function syncBarApplyPos() {
+    const bar = $('sync-bar');
+    if (!bar) return;
+    const pos = _syncBarLoadPos();
+    if (!pos || bar.classList.contains('on-login')) {
+        bar.classList.remove('moved');
+        return;
+    }
+    bar.classList.add('moved');
+    const b = _syncBarBounds(bar);
+    _syncBarSetLeftTop(bar, b.minL + pos.x * (b.maxL - b.minL), b.minT + pos.y * (b.maxT - b.minT));
+}
+
+function resetSyncBarPos() {
+    try { localStorage.removeItem(SYNC_BAR_POS_KEY); } catch (_) {}
+    const bar = $('sync-bar');
+    if (bar) {
+        bar.classList.remove('moved');
+        bar.style.removeProperty('--sb-left');
+        bar.style.removeProperty('--sb-top');
+    }
+    _barKey = '';              // 让下一次渲染重新计算页面底部留白
+    syncBarRender();
+    syncBarRefreshResetUI();
+}
+
+// 设置页“同步提示位置”一行：显示当前是默认位置还是自定义位置
+function syncBarRefreshResetUI() {
+    const st = $('sync-bar-pos-state'), btn = $('sync-bar-reset-btn');
+    const custom = !!_syncBarLoadPos();
+    if (st) st.textContent = custom ? '当前：自定义位置' : '当前：默认位置';
+    if (btn) btn.disabled = !custom;
+}
+
+function initSyncBarDrag() {
+    const bar = $('sync-bar');
+    if (!bar) return;
+    let timer = null, dragging = false, sx = 0, sy = 0, offX = 0, offY = 0, pid = null, swallowClick = false;
+
+    const cancelPending = () => { if (timer) { clearTimeout(timer); timer = null; } };
+    const finish = () => {
+        cancelPending();
+        if (!dragging) return;
+        dragging = false;
+        bar.classList.remove('dragging');
+        try { if (pid != null) bar.releasePointerCapture(pid); } catch (_) {}
+        // 保存位置（比例）
+        const r = bar.getBoundingClientRect(), b = _syncBarBounds(bar);
+        const x = b.maxL > b.minL ? (r.left - b.minL) / (b.maxL - b.minL) : 0;
+        const y = b.maxT > b.minT ? (r.top - b.minT) / (b.maxT - b.minT) : 0;
+        try { localStorage.setItem(SYNC_BAR_POS_KEY, JSON.stringify({ x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) })); } catch (_) {}
+        syncBarApplyPos();
+        document.body.classList.remove('sync-bar-on');
+        syncBarRefreshResetUI();
+        setTimeout(() => { swallowClick = false; }, 0);
+    };
+
+    bar.addEventListener('pointerdown', e => {
+        if (bar.classList.contains('on-login')) return;                 // 登录界面不可拖
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (e.target.closest('.sb-btn, .sb-close')) return;              // 按钮上的长按不触发拖动
+        sx = e.clientX; sy = e.clientY; pid = e.pointerId;
+        cancelPending();
+        timer = setTimeout(() => {
+            timer = null;
+            dragging = true; swallowClick = true;
+            const r = bar.getBoundingClientRect();
+            offX = sx - r.left; offY = sy - r.top;
+            bar.classList.add('moved', 'dragging');
+            _syncBarSetLeftTop(bar, r.left, r.top);
+            try { bar.setPointerCapture(pid); } catch (_) {}
+            if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }   // 触感反馈（iOS 不支持则忽略）
+        }, SYNC_BAR_LONGPRESS_MS);
+    });
+    bar.addEventListener('pointermove', e => {
+        if (!dragging) {
+            // 长按前手指移动超过 8px：说明是想滑动/点击别的，取消长按
+            if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 8) cancelPending();
+            return;
+        }
+        e.preventDefault();
+        _syncBarSetLeftTop(bar, e.clientX - offX, e.clientY - offY);
+    });
+    bar.addEventListener('pointerup', finish);
+    bar.addEventListener('pointercancel', finish);
+    bar.addEventListener('contextmenu', e => { if (dragging || timer) e.preventDefault(); });
+    // 拖动结束时手指抬起会产生一次 click，不要让它触发“展开/立即同步”
+    bar.addEventListener('click', e => { if (swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = false; } }, true);
+    window.addEventListener('resize', syncBarApplyPos);
+    window.addEventListener('orientationchange', () => setTimeout(syncBarApplyPos, 200));
 }
 
 function syncBarAction() {            // “立即同步” / “重试”
@@ -106,6 +245,7 @@ function syncBarDismiss() { _barError = null; syncBarRender(); }
     bar.querySelector('.sb-btn').addEventListener('click', syncBarAction);
     bar.querySelector('.sb-text').addEventListener('click', () => bar.classList.toggle('expanded'));   // 文字很长时，点一下展开看全文
     bar.querySelector('.sb-close').addEventListener('click', syncBarDismiss);
+    initSyncBarDrag();
     window.addEventListener('online', syncBarRender);
     window.addEventListener('offline', syncBarRender);
     setInterval(syncBarRender, 800);   // 兜底：hasUnsavedChanges / driveIsSyncing 等变量被各处直接修改时，也能及时反映
