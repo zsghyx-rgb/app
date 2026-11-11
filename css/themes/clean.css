@@ -314,7 +314,7 @@ html[data-app-theme="clean"] .mobile-transaction-card .amount-transfer {
     html[data-app-theme="clean"] .nav-add-btn {
         background: var(--app-primary);
         color: var(--app-on-primary);
-        box-shadow: 0 12px 26px -8px rgba(var(--app-primary-rgb), 0.62);
+        box-shadow: 0 8px 16px -8px rgba(var(--app-primary-rgb), 0.55);
     }
 }
 

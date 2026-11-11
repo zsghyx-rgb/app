@@ -397,13 +397,13 @@ html[data-app-theme="cute"] .mobile-transaction-card .amount-transfer {
         color: var(--app-nav-active-text);
     }
     html[data-app-theme="cute"] .nav-add-btn {
-        width: 62px;
-        height: 62px;
-        top: -24px;
+        width: 56px;
+        height: 56px;
+        top: -8px;
         background: linear-gradient(145deg, #FFB067, var(--app-primary));
         color: var(--app-on-primary);
-        box-shadow: 0 14px 28px -8px rgba(240, 138, 60, 0.66);
-        border: 4px solid var(--app-bg);
+        box-shadow: 0 8px 16px -8px rgba(240, 138, 60, 0.6);
+        border: 3px solid var(--app-nav-bg);
     }
     html[data-app-theme="cute"] .main-content {
         padding-bottom: 8px;
