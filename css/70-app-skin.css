@@ -289,10 +289,13 @@ a { color: var(--app-link, var(--app-primary)); }
     letter-spacing: 0.02em;
 }
 
+/* 页面顶部大金额（账户页 .hero-big / 交易页 .tx-hero-amount）共用同一个字号，只改这一处 */
+:root { --app-hero-amount-size: clamp(1.75rem, 5vw, 2.35rem); }
+
 .tx-hero-amount {
     margin-top: 2px;
-    font-size: clamp(2rem, 6vw, 2.75rem);
-    line-height: 1.05;
+    font-size: var(--app-hero-amount-size);
+    line-height: 1.08;
     font-weight: 800;
     color: var(--app-hero-text);
     letter-spacing: -0.03em;
@@ -365,7 +368,7 @@ a { color: var(--app-link, var(--app-primary)); }
 
 .hero-big {
     margin-top: 4px;
-    font-size: clamp(1.75rem, 5vw, 2.35rem);
+    font-size: var(--app-hero-amount-size);
     line-height: 1.08;
     font-weight: 800;
     letter-spacing: -0.025em;
@@ -962,15 +965,15 @@ a { color: var(--app-link, var(--app-primary)); }
     .nav-add-btn {
         position: absolute;
         left: 50%;
-        top: -22px;
+        top: -6px;   /* 略微上浮（原 -22px） */
         transform: translateX(-50%);
-        width: 56px;
-        height: 56px;
+        width: 52px;
+        height: 52px;
         border-radius: 50%;
         background: var(--app-primary);
         color: var(--app-on-primary);
-        font-size: 1.45rem;
-        box-shadow: 0 12px 26px -8px rgba(var(--app-primary-rgb), 0.62);
+        font-size: 1.4rem;
+        box-shadow: 0 8px 16px -8px rgba(var(--app-primary-rgb), 0.55);
         z-index: 2;
     }
 
@@ -991,8 +994,6 @@ a { color: var(--app-link, var(--app-primary)); }
     .page-title { font-size: 1.2rem; }
 
     .tx-hero { margin: 10px 0 6px; padding: 14px 18px 12px; }
-
-    .tx-hero-amount { font-size: clamp(1.85rem, 9vw, 2.4rem); }
 
     .app-hero, .stats-hero { padding: 17px 18px; }
 

@@ -134,14 +134,14 @@
 /* ───────── 应用内底部弹层（替代原生 confirm / alert） ───────── */
 #ui-sheet-backdrop {
     position: fixed; inset: 0; background: var(--app-overlay);
-    z-index: 1080; opacity: 0; pointer-events: none;
+    z-index: 5100; opacity: 0; pointer-events: none;   /* 必须高于登录遮罩(#login-overlay 5000)，否则登录页上的 PIN 输入弹层会被盖住 */
     transition: opacity .2s;
     -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
 }
 #ui-sheet-backdrop.show { opacity: 1; pointer-events: auto; }
 
 #ui-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 1081;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5101;
     background: var(--app-surface); color: var(--app-text);
     border-radius: var(--app-radius-sheet) var(--app-radius-sheet) 0 0;
     border-top: 1px solid var(--app-border);
