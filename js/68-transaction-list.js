@@ -59,7 +59,7 @@ function renderTransactionsHero() {
         if (v < 0) expense += -v; else income += v;
     }
 
-    const hidden = amountsHidden ? 'amount-hidden' : '';
+    const hidden = summaryHidden ? 'amount-hidden' : '';   // 首页顶部汇总：本月支出 / 收入 / 结余 / 预算
     const monthEl = $('tx-hero-month');
     if (monthEl) monthEl.textContent = `${m + 1}月`;
     expEl.textContent = _fmtMoney(expense);

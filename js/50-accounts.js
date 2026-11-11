@@ -29,7 +29,7 @@ function renderAccounts() {
 
     const dispCurrency = currentStatsFilter.currency || 'RMB';
     const dispSymbol = CURRENCY_SYMBOLS[dispCurrency] || dispCurrency;
-    const hiddenClass = amountsHidden ? 'amount-hidden' : '';
+    const hiddenClass = summaryHidden ? 'amount-hidden' : '';   // 页面顶部汇总：净资产 / 总资产 / 总负债
     $('net-worth-display').innerHTML = `
         <div class="hero-eyebrow">净资产</div>
         <div class="hero-big ${hiddenClass}">${dispSymbol}${(totalAssets + totalLiabilities).toFixed(2)}</div>

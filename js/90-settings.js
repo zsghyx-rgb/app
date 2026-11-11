@@ -1,8 +1,11 @@
 // @file js/90-settings.js
 // 设置页：金额隐藏、修改数据密码、汇率、分类管理与图标选择器、表格列宽拖拽、图表折叠。
 
+// 点击页面顶部汇总金额循环切换：显示 → 全部隐藏 → 仅隐藏汇总(明细仍可见) → 显示
 function toggleAmountVisibility() {
-    amountsHidden = !amountsHidden;
+    if (!amountsHidden && !summaryHidden) { amountsHidden = true; summaryHidden = true; }
+    else if (amountsHidden) { amountsHidden = false; summaryHidden = true; }
+    else { summaryHidden = false; }
     renderAccounts();
     // 重绘列表，让首页概览、每日合计和每一行金额同时套用隐藏状态
     if (typeof renderAllTransactions === 'function') renderAllTransactions();

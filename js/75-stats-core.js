@@ -271,7 +271,7 @@ function renderStats() {
         _statsCache = { key: cacheKey, filtered, inc, exp };
     }
 
-    const hiddenClass = amountsHidden ? 'amount-hidden' : '';
+    const hiddenClass = summaryHidden ? 'amount-hidden' : '';   // 统计页顶部汇总：收入 / 支出 / 结余
     // 顶部三个金额跟随币种选择显示货币单位（与账户页、交易页一致）
     const statSymbol = CURRENCY_SYMBOLS[currentStatsFilter.currency] || currentStatsFilter.currency || '';
     $('stat-income-display').className = `stat-number is-income ${hiddenClass}`;

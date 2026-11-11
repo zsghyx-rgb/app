@@ -237,7 +237,9 @@ function maybePromptPinSetup(name) {
         setTimeout(async () => {
             try {
                 const pin = _validPinOrNull(await uiPrompt(
-                    '可以给这个用户设一个 1-4 位数字 PIN。\n\n',
+                    '可以给这个用户设一个 1-4 位数字 PIN。\n\n' +
+                    '只有从别人的界面切换到「' + name + '」时才会询问；' +
+                    '登录自己、进入 App 自动登录都不需要。',
                     {
                         title: '设置登录 PIN（可选）',
                         okText: '保存',
@@ -264,7 +266,8 @@ async function openMyPinModal() {
     if (!currentUserName) return;
     const hadPin = hasUserPin(currentUserName);
     let pin = _validPinOrNull(await uiPrompt(
-        `为「${currentUserName}」设置 1-4 位数字 PIN。\n\n`,
+        `为「${currentUserName}」设置 1-4 位数字 PIN。\n\n` +
+        '切换到其他用户时需要输入；登录自己不需要。',
         {
             title: hadPin ? '修改登录 PIN' : '设置登录 PIN',
             okText: '保存',
