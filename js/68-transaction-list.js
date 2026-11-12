@@ -135,7 +135,7 @@ function _createDayGroup(dateStr, filtered, accMap) {
 }
 
 /** 单条交易行。结构：分类图标 / 分类 + 备注·账户 / 金额。 */
-function _buildTransactionCard(t, accMap, batchEditMode, batchSelectedIds) {
+function _buildTransactionCard(t, accMap, batchEditMode, batchSelectedIds, isOrphan) {
     const acc = accMap.get(String(t.accountId));
     if (!acc) return null;
 
@@ -147,7 +147,8 @@ function _buildTransactionCard(t, accMap, batchEditMode, batchSelectedIds) {
     const catName = isTransfer ? '转账' : (isSplit ? firstItem.category : (t.category || '未分类'));
     const meta = getCategoryIconByName(catName);
     const hidden = amountsHidden ? 'amount-hidden' : '';
-    const badge = getTxnBadge(t);
+    // isOrphan：转账的另一半已不存在（js/56-transfer-pair.js），加一个“配对缺失”小标签，点开可处理
+    const badge = getTxnBadge(t) + (isOrphan ? '<span class="txn-orphan-badge">配对缺失</span>' : '');
 
     const card = document.createElement('div');
     card.className = 'mobile-transaction-card';
@@ -177,9 +178,7 @@ function _buildTransactionCard(t, accMap, batchEditMode, batchSelectedIds) {
     if (isTransfer && t.type === 'expense') {
         const accTo = accMap.get(String(t.relatedAccountId));
         if (!accTo) return null;
-        let tIn = t.transferPairId
-            ? transactions.find(tx => tx.transferPairId === t.transferPairId && tx.type === 'income')
-            : transactions.find(tx => tx.isTransfer && tx.type === 'income' && tx.date === t.date && tx.relatedAccountId == t.accountId);
+        const tIn = resolveTransferPair(t).tIn;
         const amountIn = tIn ? Math.abs(tIn.amount) : Math.abs(t.amount);
         amountClass = 'is-transfer';
         amountText = `${CURRENCY_SYMBOLS[acc.currency] || ''}${formatAmount(Math.abs(t.amount), acc.currency)}`;
@@ -197,6 +196,13 @@ function _buildTransactionCard(t, accMap, batchEditMode, batchSelectedIds) {
         subText = accDisplayName;
         iconClass = meta.icon;
         iconColor = meta.color;
+        if (isTransfer) {
+            // 孤立的转入记录（转出那一半已不存在）：按转账样式显示，并写明来源账户
+            const fromAcc = accMap.get(String(t.relatedAccountId));
+            if (fromAcc) subText = `${getAccountDisplayName(fromAcc)} → ${accDisplayName}`;
+            iconClass = 'bi-arrow-left-right';
+            iconColor = 'var(--app-transfer)';
+        }
     }
 
     const tagHtml = tagsText
@@ -270,9 +276,10 @@ function renderAllTransactions() {
         let currentDate = null;
         let currentRows = null;
 
+        const orphanIds = getOrphanTransferIds();     // 另一半已不存在的转账记录
         displayData.forEach(t => {
-            // 转账只显示支出侧
-            if (t.isTransfer && t.type === 'income') return;
+            // 转账只显示转出侧；转入侧如果成了孤立记录（转出那一半已不存在），也要显示出来，否则看不见却照样计入余额
+            if (t.isTransfer && t.type === 'income' && !orphanIds.has(t.id)) return;
             const acc = accMap.get(String(t.accountId));
             if (!acc) return;
 
@@ -285,7 +292,7 @@ function renderAllTransactions() {
                 }
             }
 
-            const card = _buildTransactionCard(t, accMap, batchEditMode, batchSelectedIds);
+            const card = _buildTransactionCard(t, accMap, batchEditMode, batchSelectedIds, orphanIds.has(t.id));
             if (!card) return;
             if (groupByDate && currentRows) currentRows.appendChild(card);
             else frag.appendChild(card);

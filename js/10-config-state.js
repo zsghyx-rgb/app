@@ -73,7 +73,7 @@ let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'a
 
 // 清理已移除功能（AI / 设备昵称 / 旧整包同步）遗留在本机的配置
 ['ai_api_url', 'ai_api_key', 'ai_model', 'APP_device_name', 'APP_backend', 'APP_drive_version'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-const APP_VERSION = '5.0.9';
+const APP_VERSION = '5.1.0';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），

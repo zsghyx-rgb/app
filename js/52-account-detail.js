@@ -30,23 +30,7 @@ function renderDetailContent(id) {
     const mobileContainer = $('account-detail-view-list');
     const empty = $('account-detail-view-empty');
 
-    const resolveTransfer = (t) => {
-        let tOut, tIn;
-        if (t.transferPairId) {
-            const pair = transactions.filter(x => x.transferPairId === t.transferPairId);
-            tOut = pair.find(x => x.type === 'expense');
-            tIn  = pair.find(x => x.type === 'income');
-        } else {
-            if (t.type === 'expense') {
-                tOut = t;
-                tIn = transactions.find(x => x.isTransfer && x.type === 'income' && x.date === t.date && x.relatedAccountId == t.accountId);
-            } else {
-                tIn = t;
-                tOut = transactions.find(x => x.isTransfer && x.type === 'expense' && x.date === t.date && x.relatedAccountId == t.accountId);
-            }
-        }
-        return { tOut, tIn };
-    };
+    const resolveTransfer = (t) => resolveTransferPair(t);   // 统一的配对查找（js/56-transfer-pair.js）
 
     // 搜索过滤
     const adSearchRaw = ($('ad-search-input')?.value || '').trim().toLowerCase();
@@ -100,13 +84,15 @@ function renderDetailContent(id) {
             let catName = t.category || '';
 
             if (isTransfer) {
-                const { tOut, tIn } = resolveTransfer(t);
+                const { tOut, tIn, orphan } = resolveTransfer(t);
                 if (tOut) canEdit = (tOut.ownerName === currentUserName);
-                const fromAcc = tOut ? accounts.find(a => a.id == tOut.accountId) : null;
-                const toAcc   = tIn  ? accounts.find(a => a.id == tIn.accountId)  : null;
+                else if (orphan) canEdit = (t.ownerName === currentUserName);   // 孤立记录：所有者可点开处理
+                // 孤立记录（另一半缺失）：另一端账户从 relatedAccountId 推出来，不显示成“?”
+                const fromAcc = tOut ? accounts.find(a => a.id == tOut.accountId) : (t.type === 'income'  ? accounts.find(a => a.id == t.relatedAccountId) : null);
+                const toAcc   = tIn  ? accounts.find(a => a.id == tIn.accountId)  : (t.type === 'expense' ? accounts.find(a => a.id == t.relatedAccountId) : null);
                 const fromName = fromAcc ? getAccountDisplayName(fromAcc) : '?';
                 const toName   = toAcc   ? getAccountDisplayName(toAcc)   : '?';
-                titleHtml = `<span>${_escHtml(fromName)} <span style="color:var(--app-primary);margin:0 2px;">→</span> ${_escHtml(toName)}${getTxnBadge(t)}</span>`;
+                titleHtml = `<span>${_escHtml(fromName)} <span style="color:var(--app-primary);margin:0 2px;">→</span> ${_escHtml(toName)}${getTxnBadge(t)}${orphan ? '<span class="txn-orphan-badge">配对缺失</span>' : ''}</span>`;
                 const cleanDesc = tOut ? (tOut.desc || '') : (t.desc || '');
                 if (cleanDesc) subLine += ' · ' + _escHtml(cleanDesc);
                 amountClass = 'is-transfer';

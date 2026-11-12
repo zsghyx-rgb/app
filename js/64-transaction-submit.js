@@ -131,13 +131,8 @@ $('edit-transfer-form').addEventListener('submit', (e) => {
         const tOut = transactions.find(x => x.id === id);
         if (!tOut || !tOut.isTransfer) { uiAlert('找不到转账记录'); return; }
 
-        let tIn;
-        if (tOut.transferPairId) {
-            tIn = transactions.find(x => x.transferPairId === tOut.transferPairId && x.type === 'income');
-        } else {
-            tIn = transactions.find(x => x.isTransfer && x.type === 'income' && x.date === tOut.date && x.accountId === tOut.relatedAccountId);
-        }
-        if (!tIn) { uiAlert('找不到配对的转账记录'); return; }
+        const tIn = resolveTransferPair(tOut).tIn;
+        if (!tIn) { uiAlert('找不到配对的转账记录（另一半可能已被删除）。请关闭后在转账记录上重新点开处理。'); return; }
 
         tOut.date = newDate; tOut.accountId = newFromId; tOut.relatedAccountId = newToId;
         tOut.amount = -Math.abs(newAmtOut); tOut.desc = newDesc;

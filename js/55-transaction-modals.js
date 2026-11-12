@@ -298,12 +298,19 @@ function deleteTransaction(id) {
     if (!t) { uiAlert('找不到记录'); return; }
     let feeRecToDelete = null;   // 这笔转账的手续费记录（有的话一并删除）
 
+    let pairIds = null;          // 要一起删除的转账记录 id（转出 + 转入）
     if (t.isTransfer) {
-        let tOut = t.type === 'expense' ? t : (t.transferPairId ?
-            transactions.find(x => x.transferPairId === t.transferPairId && x.type === 'expense') :
-            transactions.find(x => x.isTransfer && x.type === 'expense' && x.date === t.date && x.relatedAccountId === t.accountId));
-        if (!tOut || tOut.ownerName !== currentUserName) { uiAlert('无权删除此转账'); return; }
-        feeRecToDelete = getTransferFeeRecord(tOut);
+        const pr = resolveTransferPair(t);
+        if (pr.orphan) {
+            // 另一半已不存在：谁拥有这条记录，谁可以删除它
+            if (t.ownerName !== currentUserName) { uiAlert('无权删除此转账'); return; }
+            pairIds = [t.id];
+            if (pr.tOut) feeRecToDelete = getTransferFeeRecord(pr.tOut);
+        } else {
+            if (pr.tOut.ownerName !== currentUserName) { uiAlert('无权删除此转账'); return; }
+            pairIds = [pr.tOut.id, pr.tIn.id];
+            feeRecToDelete = getTransferFeeRecord(pr.tOut);
+        }
     } else {
         if (t.ownerName !== currentUserName) { uiAlert('无权删除此交易'); return; }
     }
@@ -317,12 +324,11 @@ function deleteTransaction(id) {
         const now = Date.now();
         // 收集要删除的id，写入删除日志
         let deletedIds = [];
-        if (t.isTransfer && t.transferPairId) {
-            deletedIds = transactions.filter(x => x.transferPairId === t.transferPairId).map(x => x.id);
-            transactions = transactions.filter(x => x.transferPairId !== t.transferPairId);
-        } else if (t.isTransfer) {
-            const toDelete = transactions.filter(x => x.isTransfer && x.date === t.date && (x.id === t.id || x.relatedAccountId == t.accountId));
-            deletedIds = toDelete.map(x => x.id);
+        if (t.isTransfer) {
+            // 有配对 id 的：同一 transferPairId 的全部记录；老数据：只删找到的这一对（不再按“同一天 + 账户”误伤别的转账）
+            deletedIds = t.transferPairId != null
+                ? transactions.filter(x => x.isTransfer && _sameId(x.transferPairId, t.transferPairId)).map(x => x.id)
+                : pairIds.slice();
             transactions = transactions.filter(x => !deletedIds.includes(x.id));
         } else {
             deletedIds = [id];
@@ -432,21 +438,9 @@ function openEditTransfer(id) {
     const t = pool.find(x => x.id === id);
     if (!t || !t.isTransfer) return;
 
-    let tOut, tIn;
-    if (t.transferPairId) {
-        const pair = pool.filter(x => x.transferPairId === t.transferPairId);
-        tOut = pair.find(x => x.type === 'expense');
-        tIn  = pair.find(x => x.type === 'income');
-    } else {
-        if (t.type === 'expense') {
-            tOut = t;
-            tIn  = pool.find(x => x.isTransfer && x.type === 'income' && x.date === t.date && x.accountId === t.relatedAccountId);
-        } else {
-            tIn  = t;
-            tOut = pool.find(x => x.isTransfer && x.type === 'expense' && x.date === t.date && x.relatedAccountId === t.accountId);
-        }
-    }
-    if (!tOut || !tIn) { uiAlert('找不到配对的转账记录'); return; }
+    const pr = resolveTransferPair(t, pool);
+    if (pr.orphan) { handleOrphanTransfer(t); return; }   // 另一半已不存在：说明情况，是自己的记录可删除
+    const tOut = pr.tOut, tIn = pr.tIn;
 
     // 只读判断：非本人转账
     const isOwner = tOut.ownerName === currentUserName;
