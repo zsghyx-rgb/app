@@ -40,7 +40,7 @@
         }
     })();
     </script>
-    <title id="app-title">记一笔 v5.0.9</title>
+    <title id="app-title">记一笔 v5.1.0</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -207,7 +207,7 @@
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.0.9</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.0</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -840,6 +840,11 @@
                         <span>清理孤立附件</span>
                         <i class="bi bi-chevron-right"></i>
                     </div>
+                    <div class="settings-menu-item" onclick="scanOrphanTransfers()">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>检查孤立转账</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
                     <div class="settings-menu-item" onclick="showSettingsSubpage('password')">
                         <i class="bi bi-key"></i>
                         <span>数据密码</span>
@@ -974,7 +979,7 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.0.9</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.1.0</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -1520,6 +1525,7 @@
 <script src="js/50-accounts.js"></script>
 <script src="js/52-account-detail.js"></script>
 <script src="js/55-transaction-modals.js"></script>
+<script src="js/56-transfer-pair.js"></script>
 <script src="js/57-transfer-ui.js"></script>
 <script src="js/58-split-items.js"></script>
 <script src="js/60-budget.js"></script>
