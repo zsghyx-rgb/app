@@ -1149,3 +1149,11 @@ a { color: var(--app-link, var(--app-primary)); }
 .entry-reminder-amt.is-income { color: var(--app-income); }
 .entry-reminder-amt.is-warn   { color: var(--bs-warning-text-emphasis); }
 .entry-reminder-amt.is-danger { color: var(--app-expense); }
+
+/* 5.1.0：转账的另一半已不存在（孤立记录）的小标签，点开可处理 */
+.txn-orphan-badge {
+    display: inline-block; margin-left: 6px; padding: 0 6px;
+    font-size: 0.66rem; font-weight: 600; line-height: 1.5;
+    color: var(--app-expense); border: 1px solid currentColor; border-radius: 999px;
+    vertical-align: middle; white-space: nowrap;
+}
