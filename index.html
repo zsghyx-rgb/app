@@ -40,7 +40,7 @@
         }
     })();
     </script>
-    <title id="app-title">记一笔 v5.1.5</title>
+    <title id="app-title">记一笔 v5.1.6</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -207,7 +207,7 @@
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.5</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.6</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -960,12 +960,19 @@
                             <button class="btn btn-outline-secondary btn-sm" onclick="rebuildFromCloud()">
                                 <i class="bi bi-arrow-repeat"></i> 从云端重建本机数据
                             </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="jibiOverwriteCloud()">
+                                <i class="bi bi-cloud-arrow-up-fill"></i> 用本机数据覆盖云端（危险）
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" onclick="jibiRecoverCloudDeleted()">
+                                <i class="bi bi-arrow-counterclockwise"></i> 恢复云端已删除的记录
+                            </button>
                             <button class="btn btn-outline-secondary btn-sm" onclick="purgeCloudDeletedRows(this)">
                                 <i class="bi bi-eraser"></i> 清理云端表格中的已删除行
                             </button>
                         </div>
                         <p class="text-muted small mb-0 mt-2">
-                            删除交易后，云端表格会保留一行“已删除”标记（用于多设备同步）。这里可以把这些残留行真正清掉，减小表格体积。
+                            删除交易后，云端表格会保留一行“已删除”标记（用于多设备同步）。这里可以把这些残留行真正清掉，减小表格体积。<br>
+                            <strong>用本机数据覆盖云端</strong>：把本机这份完整数据整体写进 Google 表格，用于云端被误删、或某台设备数据乱了的时候。<strong>恢复云端已删除的记录</strong>：把云端标记为删除、但本机没有的记录找回来。
                         </p>
                     </div>
                 </div>
@@ -1066,7 +1073,7 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.1.5</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.1.6</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>

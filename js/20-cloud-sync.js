@@ -447,6 +447,29 @@ async function incSyncCore(options = {}) {
     // 1) 拉取
     // 拉取与写入都在 GAS 的同一把锁里，不会乱序，所以直接从上次的序号往后拉即可
     const rows = await incPullRows(state.lastSeq);
+
+    // 1.5) 熔断（拉取侧）：云端一次发来大量“删除标记”时先确认。
+    // 另一台设备如果丢了自己的数据桶，会把“自己没见过的记录”当成删除推上云端；
+    // 本机原样拉下来，会把自己的完整数据也跟着删掉。删除前一定先问。
+    const delRows = rows.filter(r => r.deleted).length;
+    const liveRows = rows.length - delRows;
+    if (delRows > 50 && delRows > liveRows) {
+        let ok = false;
+        if (options.manual) {
+            ok = await uiConfirm(
+                `云端这次有 ${delRows} 条“已删除”记录（正常记录只有 ${liveRows} 条）。\n\n` +
+                '如果这不是你刚做的批量删除，请点“取消”：本机不会删除任何数据，也不会把删除推回云端。\n' +
+                '确认是本人操作，才点“继续同步”。',
+                { title: '云端发来大量删除', okText: '继续同步', cancelText: '取消（安全）', danger: true }
+            );
+        }
+        if (!ok) {
+            summary.aborted = `云端有 ${delRows} 条删除标记、正常记录只有 ${liveRows} 条，已中止（本机数据未改动）`;
+            incSaveState(state);
+            return summary;
+        }
+    }
+
     const pullPw = options.pullPassword || userPassword;
     const applied = incApplyRows(data, incDecryptRows(rows, pullPw), state);
     summary.newItems += applied.newItems;
@@ -654,10 +677,13 @@ async function incInitialLoad(password) {
 async function incListBackups() {
     return (await sheetCall({ action: 'listBackups' })).map(x => ({ name: x.name, createdAt: x.createdAt, size: x.size, kind: x.kind }));
 }
-async function incReadBackup(name) {
+async function incReadBackupRows(name) {
     const rows = await sheetCall({ action: 'readBackup', file: name });
     if (!Array.isArray(rows)) throw new Error('备份不存在或格式异常');
-    return incAssemble(rows, userPassword).data;
+    return rows;
+}
+async function incReadBackup(name) {
+    return incAssemble(await incReadBackupRows(name), userPassword).data;
 }
 
 /* INC-END */

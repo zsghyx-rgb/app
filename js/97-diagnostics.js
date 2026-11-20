@@ -1,5 +1,8 @@
 // @file js/97-diagnostics.js
-// 账本自检（5.1.5）：一键检查“多设备数字对不上”的常见原因，并顺手修掉本机重复记录。
+// 账本自检与数据修复（5.1.5 起）：
+//  - 自检：多设备数字对不上时，列出用户/数据桶/同步状态，并顺手合并本机重复记录
+//  - 从云端重建本机数据
+//  - 5.1.6：用本机数据覆盖云端；恢复云端“已删除但本机没有”的记录
 
 /** 收集一份可读的自检报告（纯数据，便于贴到聊天/控制台） */
 function jibiSelfCheck() {
@@ -118,13 +121,217 @@ async function rebuildFromCloud() {
         { title: '从云端重建', okText: '重新拉取', cancelText: '取消', danger: true }
     );
     if (!ok) return;
+
+    // 先留一份旧的缓存/同步进度：万一云端拉不到数据，还能退回现在能用的状态
+    const oldState = localStorage.getItem('APP_sb_state');
+    const oldCache = localStorage.getItem('APP_raw_cache');
     try {
         localStorage.removeItem('APP_sb_state');
         localStorage.removeItem('APP_raw_cache');
         window._incPendingInitial = true;
         showToast('正在从 Google 表格重建…', 'syncing', 0);
         await incInitialLoad(userPassword);
+        if (window._incPendingInitial) {
+            // incInitialLoad 自己吞掉了错误；这里看标记判断是否成功
+            if (oldCache !== null) localStorage.setItem('APP_raw_cache', oldCache);
+            if (oldState !== null) localStorage.setItem('APP_sb_state', oldState);
+            showToast('重建失败：云端数据没有拉下来，本机数据已保留', 'error', 0);
+        }
     } catch (e) {
-        showToast('重建失败：' + (e && e.message ? e.message : e), 'error', 0);
+        if (oldCache !== null) localStorage.setItem('APP_raw_cache', oldCache);
+        if (oldState !== null) localStorage.setItem('APP_sb_state', oldState);
+        showToast('重建失败：' + (e && e.message ? e.message : e) + '（本机数据已保留）', 'error', 0);
+    }
+}
+
+/** 只统计真正的账目记录（不含 config / order） */
+function jibiCountRecords(map) {
+    let n = 0;
+    map.forEach(it => { if (it.kind === 'acc' || it.kind === 'txn' || it.kind === 'plan') n++; });
+    return n;
+}
+
+/**
+ * 用本机数据整体覆盖云端（5.1.6）。
+ * 用于：云端被误删/被清空、某台设备数据乱了、想把完好的那台设备的数据重新变成唯一标准。
+ * 与「从备份恢复」走同一个服务端动作 restoreAll：覆盖前 GAS 会自动留一份 records_before_restore_ 安全副本。
+ */
+async function jibiOverwriteCloud() {
+    if (!userPassword) { uiAlert('需要先登录（输入加密密码）才能覆盖云端。'); return; }
+    if (offlineMode) { uiAlert('离线模式下不能写入云端，请先切换到在线模式。'); return; }
+    if (driveIsSyncing) { uiAlert('正在同步中，请稍后再试。'); return; }
+    if (!inMemoryLoadedData || !inMemoryLoadedData.allUserData) { uiAlert('本机还没有加载数据。'); return; }
+
+    const local = incCollectLocal(inMemoryLoadedData);
+    const localRecords = jibiCountRecords(local);
+
+    let cloudLive = 0, cloudOnly = 0, cloudDeleted = 0;
+    showToast('正在核对云端数据…', 'syncing', 0);
+    try {
+        const rows = await incPullRows(0);
+        cloudDeleted = rows.filter(r => r.deleted).length;
+        rows.forEach(r => {
+            if (r.deleted) return;
+            if (r.kind === 'acc' || r.kind === 'txn' || r.kind === 'plan') cloudLive++;
+            if (!local.has(String(r.id))) cloudOnly++;
+        });
+    } catch (e) {
+        uiAlert('读取云端失败：' + e.message +
+            '\n\n请检查：\n·「连接设置」里的 Apps Script 地址是否还有效；\n· Google Drive 的 FamilyLedger 文件夹里是否有一个真实的 Google 表格 records_sheet（同名 .xlsx 不算）。\n\n修好后回到这里重试。');
+        return;
+    }
+
+    const bucketUsers = Object.keys(inMemoryLoadedData.allUserData || {});
+    const users = (inMemoryLoadedData.users && inMemoryLoadedData.users.length ? inMemoryLoadedData.users : bucketUsers);
+    const risk = localRecords < cloudLive
+        ? `\n⚠ 本机记录（${localRecords}）比云端（${cloudLive}）少，覆盖后云端多出来的 ${cloudLive - localRecords} 条会被标记删除。\n请先确认这台设备的数据才是完整的。\n`
+        : '';
+    const ok = await uiConfirm(
+        `会用本机的 ${localRecords} 条记录（用户：${users.join('、')}）整体覆盖 Google 表格。\n` +
+        risk +
+        `\n本机：${localRecords} 条\n` +
+        `云端：${cloudLive} 条（其中 ${cloudOnly} 条本机没有，覆盖后会被标记为已删除）\n` +
+        (cloudDeleted ? `云端另有 ${cloudDeleted} 条已删除记录\n` : '') +
+        '\n覆盖前，云端会自动保存一份 records_before_restore_ 安全副本。\n' +
+        '覆盖后，其他设备同步一次就会拿到这份数据。确定继续？',
+        { title: '用本机数据覆盖云端', okText: '确认覆盖', cancelText: '取消', danger: true }
+    );
+    if (!ok) return;
+
+    // 把时间戳提到现在：让本机这份数据在所有设备上都算“最新”
+    const now = Date.now();
+    Object.values(inMemoryLoadedData.allUserData || {}).forEach(ud => {
+        ['accounts', 'transactions', 'plannedTransactions'].forEach(k => {
+            (ud[k] || []).forEach(r => { if (r) r.updatedAt = now; });
+        });
+    });
+    inMemoryLoadedData.configUpdatedAt = now;
+    _configUpdatedAt = now;
+    saveUserData();
+    showToast('正在把本机数据写入云端…', 'syncing', 0);
+
+    try {
+        const rows = [];
+        incCollectLocal(inMemoryLoadedData).forEach(item => {
+            rows.push({
+                id: item.id, kind: item.kind, owner: item.owner,
+                enc: incEnc(item.payload), ts: incTsOf(item)
+            });
+        });
+        const r = await sheetCall({}, { action: 'restoreAll', rows });
+        if (!r || !r.ok) throw new Error((r && r.error) || '云端写入失败');
+
+        // 以云端为准重建同步状态：其他设备下次同步会拉到这批全新的序号
+        const state = { lastSeq: 0, synced: {} };
+        const after = await incPullRows(0);
+        incApplyRows(inMemoryLoadedData, incDecryptRows(after, userPassword), state);
+        userPins = inMemoryLoadedData.userPins || userPins || {};
+        incPersistLocal(state, true);
+        clearUnsavedFlag();
+        loadAllData();
+        filterUserData();
+        renderAllTransactions();
+        renderAccounts();
+        incEnsureBackup();
+        showToast(`已用本机 ${localRecords} 条记录覆盖云端`, 'success', 6000);
+    } catch (e) {
+        hasUnsavedChanges = true;
+        if (typeof syncBarRender === 'function') syncBarRender();
+        showToast('覆盖失败：' + (e && e.message ? e.message : e), 'error', 0);
+    }
+}
+
+/**
+ * 恢复云端“已删除但本机没有”的记录（5.1.6）。
+ * 用于：另一台设备把本机没见过的记录误判为删除、推上云端之后，找回被误删的账目。
+ * 只恢复属于当前用户的记录；已删除用户的记录直接跳过。
+ */
+async function jibiRecoverCloudDeleted() {
+    if (!userPassword) { uiAlert('需要先登录（输入加密密码）才能读取云端。'); return; }
+    if (offlineMode) { uiAlert('离线模式下不能读取云端，请先切换到在线模式。'); return; }
+    if (!inMemoryLoadedData || !inMemoryLoadedData.allUserData) { uiAlert('本机还没有加载数据。'); return; }
+
+    showToast('正在读取云端的已删除记录…', 'syncing', 0);
+    let rows;
+    try { rows = await incPullRows(0); }
+    catch (e) { showToast('读取失败：' + e.message, 'error', 0); return; }
+
+    const local = incCollectLocal(inMemoryLoadedData);
+    const removed = inMemoryLoadedData.removedUsers || {};
+    const users = (inMemoryLoadedData.users || []).concat(Object.keys(inMemoryLoadedData.allUserData || {}))
+        .filter(u => !incUserRemoved(removed, u));
+    const cand = [], skipped = [];
+    let failed = 0;
+    rows.forEach(row => {
+        if (!row.deleted) return;
+        if (!INC_KIND_LIST[row.kind]) return;            // 只处理账户/交易/计划
+        if (local.has(String(row.id))) return;           // 本机已有，不用恢复
+        let rec = null;
+        try { rec = incDec(row.enc, userPassword); } catch (_) { failed++; return; }
+        if (!rec) return;
+        if (users.indexOf(row.owner) < 0) { skipped.push({ row, rec }); return; }
+        cand.push({ row, rec });
+    });
+
+    if (!cand.length) {
+        uiAlert('没有可恢复的记录。\n\n云端已删除、本机又没有的记录：0 条' +
+            (skipped.length ? `\n其中 ${skipped.length} 条属于已删除的用户，已跳过。` : '') +
+            (failed ? `\n另有 ${failed} 条无法解密。` : ''), { title: '恢复已删除记录', okText: '知道了' });
+        return;
+    }
+
+    const label = ({ row, rec }) => {
+        if (row.kind === 'txn') {
+            const cat = rec.category || (rec.isTransfer ? '转账' : '');
+            return `${rec.date || ''} ${cat} ${rec.amount != null ? rec.amount : ''} ${rec.desc || ''}`.replace(/\s+/g, ' ').trim() + `（${row.owner}）`;
+        }
+        if (row.kind === 'acc') return `账户「${rec.name || ''}」（${row.owner}）`;
+        return `计划「${rec.name || rec.desc || ''}」（${row.owner}）`;
+    };
+    const preview = cand.slice(0, 20).map((x, i) => `${i + 1}. ${label(x)}`).join('\n')
+        + (cand.length > 20 ? `\n…另有 ${cand.length - 20} 条` : '');
+
+    const ok = await uiConfirm(
+        `云端有 ${cand.length} 条“已删除、但本机没有”的记录：\n\n${preview}\n\n` +
+        '如果这些是你误删的，点“恢复”：它们会加回本机并重新写回云端。' +
+        (skipped.length ? `\n（另有 ${skipped.length} 条属于已删除的用户，已跳过）` : ''),
+        { title: '恢复已删除记录', okText: '恢复这些记录', cancelText: '取消', danger: false }
+    );
+    if (!ok) return;
+
+    const now = Date.now();
+    const state = incLoadState();
+    const items = [];
+    cand.forEach(({ row, rec }) => {
+        const ln = INC_KIND_LIST[row.kind];
+        const ud = incEnsureUserSlot(inMemoryLoadedData, row.owner);
+        const arr = ud[ln] || (ud[ln] = []);
+        if (arr.some(x => String(x.id) === String(row.id))) return;
+        rec.updatedAt = now;
+        arr.push(rec);
+        items.push({ item: { id: String(row.id), kind: row.kind, owner: row.owner, payload: rec }, sig: incSig(rec) });
+    });
+
+    showToast('正在把恢复的记录写回云端…', 'syncing', 0);
+    try {
+        // 直接推，不要先拉：先拉会重新收到这些记录的删除标记，又把刚恢复的删掉
+        const up = await incPushUpserts(items, state);
+        if (up.rejected.length) {
+            const again = await incPullByIds(up.rejected);
+            incApplyRows(inMemoryLoadedData, incDecryptRows(again, userPassword), state);
+        }
+        incPersistLocal(state, true);
+        clearUnsavedFlag();
+        loadAllData();
+        filterUserData();
+        renderAllTransactions();
+        renderAccounts();
+        const failedN = up.rejected.length;
+        showToast(`已恢复 ${up.pushed} 条记录` + (failedN ? `，${failedN} 条被云端拒绝（时间戳较旧）` : ''), failedN ? 'warning' : 'success', 6000);
+    } catch (e) {
+        saveUserData();
+        hasUnsavedChanges = true;
+        if (typeof syncBarRender === 'function') syncBarRender();
+        showToast('恢复记录已加回本机，但写回云端失败：' + (e && e.message ? e.message : e), 'error', 0);
     }
 }

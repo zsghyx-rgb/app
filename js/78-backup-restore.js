@@ -52,7 +52,17 @@ async function openBackupCompare(fileName, dateStr) {
     document.body.style.overflow = 'hidden';
 
     try {
-        const backupData = await incReadBackup(fileName);
+        const backupRows = await incReadBackupRows(fileName);
+        const backupData = incAssemble(backupRows, userPassword).data;
+
+        // 备份表格的原始行数：用于解释“文件很大，但有效交易很少”
+        const rawStat = { total: backupRows.length, deleted: 0, meta: 0, unknown: 0, live: 0 };
+        backupRows.forEach(r => {
+            if (r.deleted) rawStat.deleted++;
+            else if (r.kind === 'config' || r.kind === 'order') rawStat.meta++;
+            else if (r.kind === 'acc' || r.kind === 'txn' || r.kind === 'plan') rawStat.live++;
+            else rawStat.unknown++;
+        });
 
         // 统计当前数据
         const cur = summarizeData(inMemoryLoadedData);
@@ -181,6 +191,13 @@ async function openBackupCompare(fileName, dateStr) {
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="alert alert-secondary py-1 px-2 small mb-3">
+            <i class="bi bi-table"></i> 备份表格共 <strong>${rawStat.total}</strong> 行：
+            账目记录（账户/交易/计划）<strong>${rawStat.live}</strong> 条、
+            已删除标记 ${rawStat.deleted} 条、配置与排序 ${rawStat.meta} 行${rawStat.unknown ? `、无法识别 ${rawStat.unknown} 行` : ''}。
+            <div class="text-muted mt-1">上面的“笔交易”只统计未删除、且能识别的记录；文件大小主要来自加密密文和删除墓碑，两者不是一回事。</div>
         </div>
 
         <div class="mb-3">
