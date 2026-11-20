@@ -1,7 +1,15 @@
 // @file js/55-transaction-modals.js
 // 新增/编辑交易与转账弹窗：标签切换、打开新增/编辑、转账账户互换、删除交易。
 
+// 5.1.1：切换前先把金额里的算式算成数字（再带到另一个标签），切换后刷新数字键盘/日期快捷
 function switchTransTab(tab, skipReset) {
+    commitTransAmount();
+    _switchTransTabCore(tab, skipReset);
+    amountPadSync();
+    syncDateChips();
+}
+
+function _switchTransTabCore(tab, skipReset) {
     // tab: 'expense' | 'income' | 'transfer'
     const transForm = $('edit-transaction-form');
     const transferForm = $('edit-transfer-form');
@@ -39,6 +47,8 @@ function switchTransTab(tab, skipReset) {
     });
 
     if (isTransfer) {
+        // 切到转账表单时退出拆分（拆分只在收支表单里）
+        if (_inSplitMode) exitSplitMode();
         // 转账 tab：填充账户下拉框
         if (!skipReset) {
             fillTransferSelects(null, null);
@@ -60,9 +70,7 @@ function switchTransTab(tab, skipReset) {
         }
         updateEditFormCategories();
         const attachSec = $('attachment-section');
-        const attachBtn = $('attachment-btn');
         if (attachSec) attachSec.style.display = tab === 'expense' ? '' : 'none';
-        if (attachBtn) attachBtn.style.display = tab === 'expense' ? '' : 'none';
         // 拆分按钮仅在支出时显示
         const splitBtn = $('split-toggle-btn');
         if (splitBtn) splitBtn.style.display = tab === 'expense' ? '' : 'none';
@@ -90,6 +98,7 @@ function syncDateLabels() {
     if (tEl) tEl.textContent = formatTransDateLabel($('edit-trans-date').value);
     const fEl = $('edit-transfer-date-label');
     if (fEl) fEl.textContent = formatTransDateLabel($('edit-transfer-date').value);
+    syncDateChips();   // 日期快捷按钮的高亮跟着变
 }
 
 // 标签输入框始终显示（不再需要展开/收起逻辑）
@@ -100,7 +109,7 @@ function _userTitle(base) {
 }
 
 function _initNewTransModal(mode, title) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocal(new Date());   // 本地日期（toISOString 是 UTC，东八区 0~8 点会变成“昨天”）
     $('editTransactionModal').querySelector('.trans-modal-v2')?.classList.remove('view-only');
     $('edit-trans-id').value = '';
     $('edit-trans-mode').value = mode;
@@ -123,6 +132,7 @@ function _initNewTransModal(mode, title) {
     resetAttachmentUI();
     resetMetaFieldsCollapse();
     $('trans-tab-bar').style.display = '';
+    transFormUiInit('add');
 }
 
 function openNewTransFromDetail() {
@@ -143,7 +153,7 @@ function openNewTransFromDetail() {
 
 function openNewTransferFromDetail() {
     openedFromDetail = true;
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocal(new Date());   // 本地日期（toISOString 是 UTC，东八区 0~8 点会变成“昨天”）
     $('editTransactionModal').querySelector('.trans-modal-v2')?.classList.remove('view-only');
     $('editTransactionModal').querySelectorAll('input,select,textarea').forEach(el => el.disabled = false);
     $('editTransactionModalTitle').textContent = _userTitle('新增转账');
@@ -407,7 +417,7 @@ function openEditTransaction(id) {
     switchTransTab(t.type, true);
     // 加载分录
     if (t.items && t.items.length > 1) {
-        loadInlineItems(t.items, t.type);
+        loadInlineItems(t.items);
     } else {
         resetInlineItems();
         $('edit-trans-category').value = t.category;
@@ -429,6 +439,7 @@ function openEditTransaction(id) {
         el.disabled = readOnly;
     });
     $('editTransactionModal').querySelector('.trans-modal-v2')?.classList[readOnly ? 'add' : 'remove']('view-only');
+    transFormUiInit(readOnly ? 'view' : 'edit');
     new bootstrap.Modal($('editTransactionModal')).show();
 }
 

@@ -418,7 +418,7 @@ $('account-form').addEventListener('submit', (e) => {
                 const adjCategory = getOrCreateBalanceAdjCategory(adjType);
                 transactions.unshift({
                     id: Date.now() + Math.random(),
-                    date: new Date().toISOString().split('T')[0],
+                    date: formatLocal(new Date()),
                     type: adjType,
                     accountId: id, amount: diff, category: adjCategory,
                     desc: `余额调整 (${oldBalance.toFixed(2)} → ${balance.toFixed(2)})`,

@@ -150,3 +150,70 @@
 }
 #expenseCategoryChart, #tagStatsChart, #categoryTrendChart,
 #totalExpenseTrendChart, #monthlyTrendChart { cursor: pointer; }
+
+/* ═══════════ 5.1.2：统计页 —— 概览卡、分类占比、更多图表折叠、图表开关设置 ═══════════ */
+/* 概览卡沿用 .stats-hero 的底色/圆角/各主题的数字配色，这里只补布局 */
+.stats-hero.stats-overview { padding: 16px 18px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.so-top { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--app-hero-muted); }
+.stats-overview .so-amount.stat-number {
+    font-size: var(--app-hero-amount-size, clamp(1.75rem, 5vw, 2.35rem));
+    font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin-top: 4px;
+}
+.so-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.so-chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+    font-size: 0.76rem; color: var(--app-hero-text); background: rgba(127, 127, 127, 0.16);
+}
+.so-chip small { margin-left: 2px; font-size: 0.68rem; opacity: 0.72; }
+.so-chip.is-up { color: var(--app-expense); background: color-mix(in srgb, var(--app-expense) 16%, transparent); }
+.so-chip.is-down { color: var(--app-income); background: color-mix(in srgb, var(--app-income) 16%, transparent); }
+.so-budget { margin-top: 10px; }
+.so-track { height: 7px; border-radius: 4px; background: rgba(127, 127, 127, 0.24); overflow: hidden; }
+.so-fill { height: 100%; border-radius: 4px; background: var(--app-hero-fill, var(--app-primary)); }
+.so-fill.is-warn { background: var(--app-warning, #F59E0B); }
+.so-fill.is-over { background: var(--app-expense); }
+.so-budget-text { display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.72rem; color: var(--app-hero-muted); }
+.so-row { display: flex; gap: 22px; margin-top: 12px; }
+.so-key { margin-right: 6px; font-size: 0.74rem; color: var(--app-hero-muted); }
+.so-row b.stat-number { display: inline; font-size: 1rem; }
+
+/* 主图表卡片不需要旧的 300px 最小高度 */
+#chart-card-category .chart-card, #chart-card-trend .chart-card, #chart-card-daily .chart-card { min-height: 0; }
+
+/* 分类占比 */
+.cat-donut { position: relative; height: 190px; max-width: 230px; margin: 0 auto; }
+.cat-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.cdc-label { font-size: 0.72rem; color: var(--bs-secondary-color); }
+.cat-donut-center b { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cat-share-list { margin-top: 10px; }
+.cs-row {
+    display: grid; grid-template-columns: 10px 1fr auto auto; align-items: center; gap: 4px 10px;
+    padding: 9px 2px 8px; border-top: 1px solid var(--bs-border-color); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.cs-row:first-child { border-top: 0; }
+.cs-dot { width: 10px; height: 10px; border-radius: 50%; }
+.cs-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; font-weight: 600; }
+.cs-pct { font-size: 0.78rem; color: var(--bs-secondary-color); font-variant-numeric: tabular-nums; }
+.cs-amt { min-width: 5.2em; text-align: right; font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cs-bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: rgba(127, 127, 127, 0.16); overflow: hidden; }
+.cs-bar i { display: block; height: 100%; border-radius: 2px; }
+.cs-more { width: 100%; padding: 10px 0 2px; border: 0; background: transparent; color: var(--bs-primary); font-size: 0.8rem; }
+
+/* 更多图表（折叠） */
+.stats-more-toggle {
+    width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
+    border: 1px dashed var(--bs-border-color); border-radius: var(--app-radius-card, 16px); background: transparent;
+    color: var(--bs-body-color); font-weight: 600; font-size: 0.92rem;
+}
+.stats-more-count { margin-left: 6px; font-size: 0.78rem; font-weight: 400; color: var(--bs-secondary-color); }
+.stats-more-body { margin-top: 12px; }
+
+/* 设置 → 统计图表 */
+.chart-switch-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--bs-border-color); }
+.chart-switch-list .chart-switch-row:first-child { border-top: 0; }
+.chart-switch-text { flex: 1; min-width: 0; }
+.chart-switch-name { font-size: 0.95rem; font-weight: 600; }
+.chart-switch-desc { margin-top: 1px; font-size: 0.76rem; line-height: 1.35; color: var(--bs-secondary-color); }
+.chart-switch-row .form-switch { margin: 0; padding-left: 0; min-height: 0; display: flex; }
+.chart-switch-row .form-switch .form-check-input { margin: 0; float: none; width: 2.6em; height: 1.4em; }
+.chart-switch-open { margin-top: 6px; }

@@ -3,21 +3,38 @@
 
 $('editTransactionModal').addEventListener('hidden.bs.modal', onSubModalHide);
 
-$('edit-transaction-form').addEventListener('submit', (e) => {
+$('edit-transaction-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const keepOpen = _transKeepOpen;      // “保存并再记”：保存后窗口不关
+    _transKeepOpen = false;
+    commitTransAmount();                  // 金额框里如果是算式 (12+8.5)，先算成数字
     const mode = $('edit-trans-mode').value;
     if (mode === 'view') return; // 只读模式不保存
     const date = $('edit-trans-date').value;
     const type = $('edit-trans-type').value;
     const accountId = $('edit-trans-account').value;
-    const tags = $('edit-trans-tags').value;
-    const desc = $('edit-trans-desc').value;
     const attachmentId = $('edit-trans-attachment-id')?.value || '';
-    
+
     // 取分录（内联多笔）
-    const itemsData = getInlineItems();
+    let itemsData = getInlineItems();
     // 拆分模式下如果 getInlineItems 返回 null，说明验证未通过（alert已弹），直接停止
     if (_inSplitMode && itemsData === null) return;
+
+    // 只剩一条有效分录：先确认，再按单笔保存（否则“拆分至少两条”会把用户困死在拆分模式里）
+    if (itemsData && itemsData.length === 1) {
+        const ok = await uiConfirm('当前只有一条有效分录，是否按单笔交易保存？', {
+            okText: '按单笔保存', cancelText: '返回补充'
+        });
+        if (!ok) return;
+        convertSplitToSingle(itemsData[0]);
+        itemsData = null;
+    }
+
+    // 拆分交易的标签/备注由各分录自己保存，不再写一份到顶层；
+    // 否则导出 CSV 时，没填标签的分录会继承整笔标签，和应用内显示不一致
+    const tags = itemsData ? '' : $('edit-trans-tags').value;
+    const desc = itemsData ? '' : $('edit-trans-desc').value;
+
     let category, finalAmount;
     if (itemsData) {
         finalAmount = roundMoney(itemsData.reduce((s, it) => s + it.amount, 0));
@@ -57,9 +74,16 @@ $('edit-transaction-form').addEventListener('submit', (e) => {
         $('edit-trans-desc').value = '';
         const hintEl = $('edit-trans-desc-hint');
         if (hintEl) hintEl.style.display = 'none';
+        hideDescSuggest();
         resetAttachmentUI();
-        if (verboseToast) showToast('已添加', 'success', 1500);
+        if (verboseToast) showToast(keepOpen ? '已添加，继续记下一笔' : '已添加', 'success', 1500);
         if ($('view-stats').classList.contains('active-view')) renderStats();
+        if (keepOpen) {
+            amountPadReset();             // 金额清空，账户/日期/分类保留，数字键盘回到可用状态
+        } else {
+            bootstrap.Modal.getInstance($('editTransactionModal')).hide();   // 普通“保存”：保存后关闭
+            maybeReturnToDetail();
+        }
     } else {
         const id = parseFloat($('edit-trans-id').value);
         const t = transactions.find(x => x.id === id);

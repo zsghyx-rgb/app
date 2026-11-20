@@ -354,9 +354,9 @@ function initAppUI() {
         currentStatsFilter.user = 'all';
     }
 
-    const today = new Date();
     const plannedStartDate = $('planned-start-date');
-    if (plannedStartDate) plannedStartDate.valueAsDate = today;
+    // 用本地日期字符串：valueAsDate 按 UTC 换算，东八区凌晨会填成“昨天”
+    if (plannedStartDate) plannedStartDate.value = formatLocal(new Date());
 
     renderAllTransactions();
     renderCategorySettings();

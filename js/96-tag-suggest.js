@@ -8,7 +8,7 @@ function getRecentTags() {
     const tagSet = new Map();
     const cutoff = Date.now() - RECENT_TAGS_WINDOW_DAYS * 24 * 60 * 60 * 1000;
     const recent = transactions.filter(t => {
-        const ts = t.date ? new Date(t.date).getTime() : NaN;
+        const ts = t.date ? new Date(t.date + 'T00:00:00').getTime() : NaN;
         return !isNaN(ts) && ts >= cutoff;
     });
     const sorted = recent.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));

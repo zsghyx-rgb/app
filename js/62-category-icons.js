@@ -219,6 +219,11 @@ function updateAmountCurrencySymbol() {
     if (!accSel || !symEl) return;
     const acc = accounts.find(a => a.id == accSel.value);
     symEl.textContent = acc ? (CURRENCY_SYMBOLS[acc.currency] || acc.currency) : '¥';
+    // 拆分分录的金额前缀和合计也跟着账户币种变
+    if (_inSplitMode) {
+        document.querySelectorAll('#split-items-list .split-amt-sym').forEach(el => el.textContent = symEl.textContent);
+        refreshSplitTotal();
+    }
 }
 
 // 转账 转出/转入 金额前的货币符号随各自所选账户的币种变化
@@ -244,10 +249,8 @@ function updateEditFormCategories() {
     updateAmountTypeClass(type);
     // 附件区域和相机按钮只在支出时显示
     const attachSec = $('attachment-section');
-    const attachBtn = $('attachment-btn');
     const isExpense = type === 'expense';
     if (attachSec) attachSec.style.display = isExpense ? '' : 'none';
-    if (attachBtn) attachBtn.style.display = isExpense ? '' : 'none';
 }
 
 // 编辑弹窗关闭时：若来自账户详情，刷新详情视图

@@ -26,6 +26,8 @@
     flex: 1 !important;
     min-height: 0;
     padding-top: 6px !important;
+    /* 底部不再留 16px：保存栏一直贴到屏幕底边，给中间的分类/备注/标签区腾出空间 */
+    padding-bottom: 0 !important;
     touch-action: pan-y;
     overscroll-behavior-x: none;
 }
@@ -66,23 +68,144 @@
 #split-items-section.split-active {
     display: flex;
 }
+/* 拆分头部：项数 + 添加分录 + 退出拆分，固定在列表上方不随滚动 */
+#split-mode-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 2px 6px;
+}
+.split-mode-title {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+}
+.split-mode-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.split-add-btn,
+.split-exit-btn {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 0.74rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.split-add-btn {
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.35);
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+}
+.split-exit-btn {
+    border: 1px solid var(--bs-border-color);
+    background: transparent;
+    color: var(--bs-secondary-color);
+}
+.split-add-btn:active, .split-exit-btn:active { transform: scale(0.97); }
+
 #split-items-list {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    padding: 4px 0;
+    padding: 2px 0 4px;
 }
-/* 分录卡片 Grid 布局 — 两行共用列宽 */
+/* 分录卡片 Grid：分类 / 金额 / 删除 一行，标签 / 备注 第二行 */
 .split-item-card .split-card-grid {
     display: grid;
-    grid-template-columns: 2fr 1.2fr 1.5fr 30px;
-    gap: 4px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 28px;
+    gap: 6px;
     align-items: center;
-    margin-bottom: 4px;
 }
+.split-card-cat  { grid-column: 1; }
+.split-card-amt  { grid-column: 2; }
+.split-card-del  { grid-column: 3; display: flex; justify-content: center; }
 .split-card-tags { grid-column: 1; }
 .split-card-desc { grid-column: 2 / 4; }
-.split-card-del  { grid-column: 4; display: flex; justify-content: center; }
+.split-card-tags, .split-card-desc { margin-top: 6px; }
+
+/* 金额输入：币种符号 + 输入框，与左侧下拉同高（2.1rem） */
+.split-amt-wrap {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 2.1rem;
+    padding: 0 6px;
+    min-width: 0;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius, 0.375rem);
+    background: var(--bs-body-bg);
+}
+.split-amt-wrap:focus-within {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.18rem rgba(var(--bs-primary-rgb), 0.15);
+}
+.split-amt-sym {
+    flex-shrink: 0;
+    font-size: 0.76rem;
+    color: var(--bs-secondary-color);
+}
+.split-amt-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 0.9rem;
+    color: var(--bs-body-color);
+    font-variant-numeric: tabular-nums;
+}
+.split-amt-input::placeholder { color: var(--bs-secondary-color); opacity: 0.55; }
+.split-card-del button:disabled { opacity: 0.3; pointer-events: none; }
+
+/* 底部合计：固定在分录列表下方 */
+.split-summary {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 2px 2px;
+    border-top: 1px solid var(--bs-border-color);
+    font-size: 0.8rem;
+}
+.split-summary-label { color: var(--bs-secondary-color); }
+.split-summary-total {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--app-expense);
+    font-variant-numeric: tabular-nums;
+}
+#split-target-hint { font-size: 0.74rem; margin-left: auto; }
+#split-target-hint.is-done  { color: var(--app-income); }
+#split-target-hint.is-short { color: var(--bs-secondary-color); }
+#split-target-hint.is-over  { color: var(--app-expense); }
+.split-fill-btn {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 7px;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.35);
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+/* 拆分模式：顶部金额卡片隐藏（金额由分录合计得出），空间让给分录；
+   附件卡片排到分录前面，让“合计”始终贴着保存栏 */
+#edit-transaction-form.split-mode #trans-amount-card { display: none; }
+#edit-transaction-form.split-mode .trans-scroll-area > #attachment-section { order: 1; }
+#edit-transaction-form.split-mode .trans-scroll-area > #split-items-section { order: 2; }
+.trans-modal-v2.view-only .split-mode-actions,
+.trans-modal-v2.view-only #split-fill-btn { display: none !important; }
 
 /* 分录条目高亮：左侧彩色竖线 + 极淡底色 */
 .split-item-card {
@@ -146,7 +269,6 @@
     border-top: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg);
 }
-.trans-amount-bar.split-mode .amount-input-row { display: none; }
 
 /* 日期 / 账户 / 拆分 chip 行 */
 .trans-chip-row { display: flex; gap: 6px; margin-bottom: 10px; align-items: stretch; }
@@ -522,7 +644,18 @@
 }
 .tm-cat-card .cat-icon-circle { width: 40px; height: 40px; font-size: 1rem; }
 .tm-cat-card .cat-grid-item .cat-name { font-size: 0.64rem; }
-.tm-split-btn { width: 26px; height: 26px; border-radius: 8px; font-size: 0.8rem; }
+/* 拆分入口：分类卡头部的文字按钮（原 26px 图标太小，手机上不好点） */
+.tm-split-btn {
+    width: auto;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
 
 /* 备注行 */
 .tm-desc-row { cursor: text; }
@@ -575,4 +708,73 @@
 /* 底部固定栏：仅保留操作按钮（金额已移至顶部卡片）。顶部内边距缩小，
    让分隔线贴近按钮；额外的留白空间改由 .trans-scroll-area 的底部内边距承担，
    这样空白会留在"图片区和分隔线之间"，而不是"分隔线和按钮之间" */
-.trans-amount-bar.tm-footer-bar { padding-top: 10px; }
+.trans-amount-bar.tm-footer-bar {
+    padding-top: 8px;
+    /* 去掉按钮后面那条深色底板：按钮直接浮在弹窗背景上，和上方内容连成一片 */
+    background: transparent;
+    border-top: none;
+}
+
+/* ═══════════ 5.1.1：新增/编辑收支 —— 大金额、数字键盘、日期快捷、保存并再记、备注联想 ═══════════ */
+.tm-amount-card.tm-amount-big { padding: 14px 16px 10px; cursor: pointer; }
+/* 收支金额字号与转账金额保持一致（转账实际显示：符号 1.6rem / 数字 1.6rem） */
+.tm-amount-card.tm-amount-big .amount-currency { font-size: 1.6rem; }
+.tm-amount-card.tm-amount-big .amount-input-v2 {
+    font-size: 1.6rem; font-weight: 700; text-align: left;
+    flex: 1; min-width: 0; padding: 0; line-height: 1.15;
+}
+.tm-amount-card.tm-amount-big .amount-input-v2::placeholder { color: var(--bs-secondary-color); opacity: .45; }
+.amount-kb-toggle {
+    flex-shrink: 0; border: 0; background: transparent; padding: 5px 8px; border-radius: 10px;
+    color: var(--bs-secondary-color); font-size: 1.25rem; line-height: 1;
+}
+.amount-kb-toggle.active { color: var(--bs-primary); background: rgba(var(--bs-primary-rgb), 0.12); }
+.amount-expr-hint { text-align: right; padding-top: 2px; font-size: 0.95rem; font-weight: 600; color: var(--bs-secondary-color); font-variant-numeric: tabular-nums; }
+.amount-expr-hint.is-bad { color: var(--app-expense); }
+
+.amount-keypad {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    flex: none; padding: 8px 10px 6px;
+    border-top: 1px solid var(--bs-border-color);
+}
+.amount-keypad button {
+    height: 46px; border: 0; border-radius: 12px;
+    background: var(--bs-tertiary-bg); color: var(--bs-body-color);
+    font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none; user-select: none;
+}
+.amount-keypad button:active { background: rgba(var(--bs-primary-rgb), 0.2); }
+.amount-keypad .kp-fn { color: var(--bs-secondary-color); font-size: 1.1rem; }
+.amount-keypad .kp-op { color: var(--bs-primary); font-size: 1.35rem; }
+.amount-keypad .kp-eq { color: var(--bs-secondary-color); }
+.amount-keypad .kp-eq.is-ready { background: var(--bs-primary); color: var(--app-on-primary); }
+.amount-keypad button:disabled { opacity: .4; }
+
+.tm-date-chips { display: flex; gap: 6px; padding: 8px 2px 2px; }
+.tm-date-chips button {
+    flex: 1; white-space: nowrap; padding: 4px 6px;
+    border: 1px solid var(--bs-border-color); border-radius: 999px; background: transparent;
+    color: var(--bs-body-color); font-size: 0.8rem;
+}
+.tm-date-chips button.active { background: rgba(var(--bs-primary-rgb), 0.14); border-color: var(--bs-primary); color: var(--bs-primary); font-weight: 600; }
+
+.btn-save-again {
+    flex: 1; padding: 10px 0; border-radius: 10px;
+    border: 1px solid var(--bs-primary); background: transparent; color: var(--bs-primary);
+    font-weight: 600; font-size: 0.9rem; white-space: nowrap;
+}
+.btn-save-again:active { background: rgba(var(--bs-primary-rgb), 0.12); }
+
+.desc-suggest-wrap { position: relative; }
+.desc-suggest-list {
+    display: none; position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 1060;
+    margin: 0; padding: 4px 0; list-style: none; max-height: 224px; overflow-y: auto;
+    background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+.desc-suggest-list.open { display: block; }
+.desc-suggest-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 14px; cursor: pointer; }
+.desc-suggest-list li:active { background: rgba(var(--bs-primary-rgb), 0.1); }
+.desc-suggest-list .ds-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.92rem; }
+.desc-suggest-list .ds-meta { flex-shrink: 0; font-size: 0.74rem; color: var(--bs-secondary-color); }

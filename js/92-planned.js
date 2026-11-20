@@ -18,7 +18,7 @@ function renderPlannedTransactions() {
         const acc = accounts.find(a => a.id == plan.accountId);
         if (!acc) return;
         const nextDate = getNextGenerationDate(plan);
-        const isActive = !plan.endDate || new Date(plan.endDate) >= new Date();
+        const isActive = !plan.endDate || plan.endDate >= formatLocal(new Date());
         const card = document.createElement('div');
         card.className = 'card mb-3 shadow-sm';
         card.innerHTML = `
@@ -72,7 +72,7 @@ function openNewPlanned() {
     $('planned-amount').value = '';
     $('planned-recurrence').value = 'monthly';
     $('planned-day-of-month').value = '1';
-    $('planned-start-date').value = new Date().toISOString().split('T')[0];
+    $('planned-start-date').value = formatLocal(new Date());
     $('planned-end-date').value = '';
     $('planned-desc').value = '';
     $('planned-tags').value = '';
@@ -166,7 +166,7 @@ function deletePlanned(id) {
 async function manualGeneratePlanned(id) {
     const plan = plannedTransactions.find(p => p.id === id);
     if (!plan) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocal(new Date());
     const nextDate = getNextGenerationDate(plan);
     let msg = `立即生成交易「${plan.name}」\n\n`;
     if (nextDate) msg += `计划下次生成日期：${nextDate}\n`;

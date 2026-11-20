@@ -40,7 +40,7 @@
         }
     })();
     </script>
-    <title id="app-title">记一笔 v5.1.0</title>
+    <title id="app-title">记一笔 v5.1.4</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -207,7 +207,7 @@
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.0</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.4</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -506,49 +506,79 @@
 
             <!-- 概览子页 -->
             <div id="stats-pane-overview" class="stats-sub-pane active">
-                <div class="stats-hero clickable-amount" onclick="toggleAmountVisibility()">
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <div class="stat-label">收入</div>
-                            <span class="stat-number is-income" id="stat-income-display">0.00</span>
-                        </div>
-                        <div class="col-4">
-                            <div class="stat-label">支出</div>
-                            <span class="stat-number is-expense" id="stat-expense-display">0.00</span>
-                        </div>
-                        <div class="col-4">
-                            <div class="stat-label">结余</div>
-                            <span class="stat-number is-net" id="stat-net-display">0.00</span>
-                        </div>
+                <!-- 5.1.2 概览卡：本月（所选期间）支出大字 + 对比上期 + 日均 + 预算进度；点击切换金额显示（沿用三态） -->
+                <div class="stats-overview stats-hero clickable-amount" id="stats-overview" onclick="toggleAmountVisibility()" title="点击隐藏/显示金额">
+                    <div class="so-top"><span id="so-label">本月支出</span><span id="so-sub"></span></div>
+                    <div class="so-amount stat-number is-expense" id="stat-expense-display">0.00</div>
+                    <div class="so-chips" id="so-chips"></div>
+                    <div class="so-budget" id="so-budget" style="display:none;"></div>
+                    <div class="so-row">
+                        <div><span class="so-key">收入</span><b class="stat-number is-income" id="stat-income-display">0.00</b></div>
+                        <div><span class="so-key">结余</span><b class="stat-number is-net" id="stat-net-display">0.00</b></div>
                     </div>
                 </div>
                 <div class="row g-3" id="charts-container">
-                    <div class="col-md-6">
+                    <!-- 主图表 -->
+                    <div class="col-12 stats-chart-slot" id="chart-card-category">
                         <div class="card shadow-sm chart-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                                    <h6 class="card-title mb-0">分类占比</h6>
+                                    <span class="text-muted small" id="cat-share-sub"></span>
+                                </div>
+                                <div class="cat-donut"><canvas id="categoryShareChart"></canvas><div class="cat-donut-center" id="cat-donut-center"></div></div>
+                                <div class="cat-share-list" id="cat-share-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 stats-chart-slot" id="chart-card-trend">
+                        <div class="card shadow-sm chart-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                                    <h6 class="card-title mb-0" id="trend6-title">月度收支趋势</h6>
+                                    <span class="text-muted small">点柱子切换到该月</span>
+                                </div>
+                                <div style="height:210px;"><canvas id="trend6Chart"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 stats-chart-slot" id="chart-card-daily">
+                        <div class="card shadow-sm chart-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                                    <h6 class="card-title mb-0" id="daily-title">每日支出</h6>
+                                    <span class="text-muted small" id="daily-sub"></span>
+                                </div>
+                                <div style="height:150px;"><canvas id="dailyChart"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 更多图表（折叠）：设置 → 统计图表 里可以逐个开关，也可以设为默认展开 -->
+                    <div class="col-12" id="stats-more-wrap">
+                        <button type="button" class="stats-more-toggle" id="stats-more-toggle" onclick="toggleStatsMore()">
+                            <span><i class="bi bi-grid-1x2"></i> 更多图表 <span class="stats-more-count" id="stats-more-count"></span></span>
+                            <i class="bi bi-chevron-down" id="stats-more-chevron"></i>
+                        </button>
+                        <div class="stats-more-body" id="stats-more-body" style="display:none;">
+                            <div class="row g-3 mt-0">
+                        <div class="col-12 stats-chart-slot" id="chart-card-ranking">
+                            <div class="card shadow-sm chart-card">
                             <div class="card-body">
                                 <h6 class="card-title">支出排行</h6>
                                 <div style="height:350px;"><canvas id="expenseCategoryChart"></canvas></div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card shadow-sm chart-card">
+                        </div>
+                        <div class="col-12 stats-chart-slot" id="chart-card-tags">
+                            <div class="card shadow-sm chart-card">
                             <div class="card-body">
                                 <h6 class="card-title">标签统计</h6>
                                 <div style="height:350px;"><canvas id="tagStatsChart"></canvas></div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="card shadow-sm chart-card">
-                            <div class="card-body">
-                                <h6 class="card-title">月度收支趋势</h6>
-                                <div class="chart-scroll-container" style="height:350px;"><canvas id="monthlyTrendChart"></canvas></div>
-                            </div>
                         </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="card shadow-sm chart-card">
+                        <div class="col-12 stats-chart-slot" id="chart-card-catTrend">
+                            <div class="card shadow-sm chart-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <h6 class="card-title mb-0">单类别趋势</h6>
@@ -557,17 +587,17 @@
                                 <div class="chart-scroll-container" style="height:300px;"><canvas id="categoryTrendChart"></canvas></div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="card shadow-sm chart-card">
+                        </div>
+                        <div class="col-12 stats-chart-slot" id="chart-card-totalTrend">
+                            <div class="card shadow-sm chart-card">
                             <div class="card-body">
                                 <h6 class="card-title">总支出趋势</h6>
                                 <div class="chart-scroll-container" style="height:300px;"><canvas id="totalExpenseTrendChart"></canvas></div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="card shadow-sm chart-card">
+                        </div>
+                        <div class="col-12 stats-chart-slot" id="chart-card-assets">
+                            <div class="card shadow-sm chart-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <h6 class="card-title mb-0">历史资产趋势</h6>
@@ -585,6 +615,9 @@
                                 <div id="history-chart-wrapper" class="d-none" style="height:350px;">
                                     <canvas id="assetHistoryChart"></canvas>
                                 </div>
+                            </div>
+                        </div>
+                        </div>
                             </div>
                         </div>
                     </div>
@@ -621,8 +654,74 @@
                     <i class="bi bi-chevron-right"></i>
                 </div>
 
-                <!-- 5.0.4 新增：主题风格 + 外观（仅保存在本机，不写入加密数据、不参与同步） -->
-                <div class="settings-section-title">外观</div>
+                <div class="settings-section-title">记账</div>
+                <div class="settings-menu-list">
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('planned')">
+                        <i class="bi bi-calendar-check"></i>
+                        <span>计划交易</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('categories')">
+                        <i class="bi bi-tags"></i>
+                        <span>分类管理</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('exchange-rate')">
+                        <i class="bi bi-currency-exchange"></i>
+                        <span>汇率设置</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                </div>
+
+                <div class="settings-section-title">数据</div>
+                <div class="settings-menu-list">
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('users')">
+                        <i class="bi bi-people"></i>
+                        <span>账户与用户</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('advanced')">
+                        <i class="bi bi-gear-wide-connected"></i>
+                        <span>高级功能</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                </div>
+
+                <div class="settings-section-title">其他</div>
+                <div class="settings-menu-list">
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('appearance')">
+                        <i class="bi bi-palette"></i>
+                        <span>外观与主题</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('stats-charts')">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span>统计图表</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="settings-menu-item" onclick="showSettingsSubpage('about')">
+                        <i class="bi bi-info-circle"></i>
+                        <span>关于</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                </div>
+
+                <div class="settings-menu-footer">
+                    <button class="btn btn-outline-secondary w-100 mb-2" onclick="switchUser()">
+                        <i class="bi bi-arrow-left-right"></i> 切换用户
+                    </button>
+                    <button class="btn btn-outline-danger w-100" onclick="logout()">
+                        <i class="bi bi-box-arrow-left"></i> 退出登录（<span id="mobile-current-user"></span>）
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sub-page: 外观与主题（5.1.1 起放进二级菜单；以下设置只保存在本机，不写入加密数据、不参与同步） -->
+            <div id="settings-sub-appearance" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>外观与主题</span>
+                </div>
                 <div class="appearance-block">
                     <div class="appearance-block-head">
                         <span class="appearance-block-title">主题风格</span>
@@ -668,56 +767,38 @@
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="sync-bar-reset-btn" onclick="resetSyncBarPos()" disabled>恢复默认</button>
                     </div>
                 </div>
+            </div>
 
-                <div class="settings-section-title">记账</div>
-                <div class="settings-menu-list">
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('planned')">
-                        <i class="bi bi-calendar-check"></i>
-                        <span>计划交易</span>
-                        <i class="bi bi-chevron-right"></i>
+            <!-- Sub-page: 统计图表（5.1.2；只保存在本机，不写入加密数据、不参与同步） -->
+            <div id="settings-sub-stats-charts" class="settings-subpage">
+                <div class="subpage-header">
+                    <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
+                    <span>统计图表</span>
+                </div>
+                <div class="appearance-block">
+                    <div class="appearance-block-head">
+                        <span class="appearance-block-title">主要图表</span>
+                        <span class="appearance-block-hint">统计页“概览”里直接显示</span>
                     </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('categories')">
-                        <i class="bi bi-tags"></i>
-                        <span>分类管理</span>
-                        <i class="bi bi-chevron-right"></i>
+                    <div class="chart-switch-list" id="chart-switch-main"></div>
+                </div>
+                <div class="appearance-block">
+                    <div class="appearance-block-head">
+                        <span class="appearance-block-title">更多图表</span>
+                        <span class="appearance-block-hint">收在“更多图表”折叠区里</span>
                     </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('exchange-rate')">
-                        <i class="bi bi-currency-exchange"></i>
-                        <span>汇率设置</span>
-                        <i class="bi bi-chevron-right"></i>
+                    <div class="chart-switch-list" id="chart-switch-more"></div>
+                    <div class="chart-switch-row chart-switch-open">
+                        <div class="chart-switch-text">
+                            <div class="chart-switch-name">“更多图表”默认展开</div>
+                            <div class="chart-switch-desc">关闭时进入统计页只显示主要图表，需要时再点开</div>
+                        </div>
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chart-switch-moreopen" onchange="setStatsMoreOpenDefault(this.checked)"></div>
                     </div>
                 </div>
-
-                <div class="settings-section-title">数据</div>
-                <div class="settings-menu-list">
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('users')">
-                        <i class="bi bi-people"></i>
-                        <span>账户与用户</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('advanced')">
-                        <i class="bi bi-gear-wide-connected"></i>
-                        <span>高级功能</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                </div>
-
-                <div class="settings-section-title">其他</div>
-                <div class="settings-menu-list">
-                    <div class="settings-menu-item" onclick="showSettingsSubpage('about')">
-                        <i class="bi bi-info-circle"></i>
-                        <span>关于</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                </div>
-
-                <div class="settings-menu-footer">
-                    <button class="btn btn-outline-secondary w-100 mb-2" onclick="switchUser()">
-                        <i class="bi bi-arrow-left-right"></i> 切换用户
-                    </button>
-                    <button class="btn btn-outline-danger w-100" onclick="logout()">
-                        <i class="bi bi-box-arrow-left"></i> 退出登录（<span id="mobile-current-user"></span>）
-                    </button>
+                <div class="px-1 pt-1">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetStatsChartPrefs()"><i class="bi bi-arrow-counterclockwise"></i> 恢复默认</button>
+                    <span class="text-muted small ms-2">概览卡（支出 / 收入 / 结余）始终显示</span>
                 </div>
             </div>
 
@@ -979,7 +1060,7 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.1.0</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.1.4</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -1264,11 +1345,13 @@
                     <div class="trans-scroll-area">
 
                         <!-- 金额卡片 -->
-                        <div class="tm-card tm-amount-card" id="trans-amount-card">
+                        <div class="tm-card tm-amount-card tm-amount-big" id="trans-amount-card" onclick="amountPadShow()">
                             <div class="amount-input-row-v3">
                                 <span class="amount-currency" id="amount-currency-symbol">¥</span>
-                                <input type="text" inputmode="decimal" placeholder="0.00" class="amount-input-v2 decimal-input" id="edit-trans-amount" required="">
+                                <input type="text" inputmode="none" readonly placeholder="0.00" class="amount-input-v2 decimal-input" id="edit-trans-amount" required="">
+                                <button type="button" class="amount-kb-toggle" id="amount-kb-toggle" title="切换系统键盘 / 数字键盘" onclick="event.stopPropagation();toggleAmountKeyboard()"><i class="bi bi-keyboard"></i></button>
                             </div>
+                            <div class="amount-expr-hint" id="amount-expr-hint" style="display:none;"></div>
                         </div>
 
                         <!-- 账户 / 日期 卡片（同一行） -->
@@ -1288,6 +1371,12 @@
                                     <input type="date" class="tm-date-input-hidden" id="edit-trans-date" required="" onchange="syncDateLabels()">
                                 </div>
                             </div>
+                            <div class="tm-date-chips" id="trans-date-chips">
+                                <button type="button" data-off="0" onclick="setTransDateOffset(0)">今天</button>
+                                <button type="button" data-off="1" onclick="setTransDateOffset(1)">昨天</button>
+                                <button type="button" data-off="2" onclick="setTransDateOffset(2)">前天</button>
+                                <button type="button" data-off="pick" onclick="pickTransDate()"><i class="bi bi-calendar3"></i> <span id="trans-date-chip-pick">选日期</span></button>
+                            </div>
                         </div>
 
                         <!-- 单笔：类别图标网格 -->
@@ -1296,7 +1385,7 @@
                                 <div class="tm-card-header d-flex justify-content-between align-items-center">
                                     <span>所有分类</span>
                                     <button type="button" id="split-toggle-btn" class="chip-split-btn tm-split-btn" title="拆分账单" onclick="handleSplitBtn()">
-                                        <i class="bi bi-scissors"></i>
+                                        <i class="bi bi-scissors"></i><span>拆分</span>
                                     </button>
                                 </div>
                                 <select class="form-select" id="edit-trans-category" required="" style="display:none;"></select>
@@ -1304,16 +1393,23 @@
                             </div>
                         </div>
 
-                        <!-- 拆分模式分录区 -->
+                        <!-- 拆分模式分录区（5.1.4）：固定头部（项数/添加/退出）+ 可滚动分录 + 固定合计 -->
                         <div id="split-items-section">
+                            <div id="split-mode-bar">
+                                <span class="split-mode-title" id="split-mode-title">拆分账单</span>
+                                <div class="split-mode-actions" id="split-mode-actions">
+                                    <button type="button" class="split-add-btn" id="split-add-btn" onclick="addSplitItemRow()">
+                                        <i class="bi bi-plus-lg"></i> 添加分录
+                                    </button>
+                                    <button type="button" class="split-exit-btn" id="split-exit-btn" onclick="requestExitSplitMode()">退出拆分</button>
+                                </div>
+                            </div>
                             <div id="split-items-list"></div>
-                            <div class="d-flex align-items-center gap-2 py-2 border-top">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="split-attach-btn"
-                                        onclick="document.getElementById('attachment-file-input').click()">
-                                    <i class="bi bi-image"></i> 添加附件
-                                </button>
-                                <span class="ms-auto small text-muted">合计：</span>
-                                <span id="split-total-amt" class="fw-bold text-danger" style="font-size:1rem;">0.00</span>
+                            <div class="split-summary" id="split-summary">
+                                <span class="split-summary-label">合计</span>
+                                <span id="split-total-amt" class="split-summary-total"></span>
+                                <span id="split-target-hint" class="split-summary-hint"></span>
+                                <button type="button" id="split-fill-btn" class="split-fill-btn" style="display:none;" onclick="fillSplitRemainder()">补足</button>
                             </div>
                         </div>
 
@@ -1321,11 +1417,16 @@
                         <div id="single-meta-section">
 
                             <!-- 备注 -->
-                            <div class="tm-card tm-meta-box" id="desc-collapse-wrap" onclick="$('edit-trans-desc').focus()">
-                                <input type="text" class="tm-meta-input" id="edit-trans-desc"
-                                       oninput="updateDescHint('edit-trans-desc','edit-trans-desc-hint','edit-trans-type','edit-trans-category','edit-trans-account')"
-                                       placeholder="添加备注...">
-                                <i class="bi bi-chevron-right tm-row-chevron"></i>
+                            <div class="desc-suggest-wrap">
+                                <div class="tm-card tm-meta-box" id="desc-collapse-wrap" onclick="$('edit-trans-desc').focus()">
+                                    <input type="text" class="tm-meta-input" id="edit-trans-desc" autocomplete="off"
+                                           oninput="onTransDescInput()"
+                                           onfocus="onTransDescInput()"
+                                           onblur="scheduleCloseDescSuggest()"
+                                           placeholder="添加备注...">
+                                    <i class="bi bi-chevron-right tm-row-chevron"></i>
+                                </div>
+                                <ul class="desc-suggest-list" id="desc-suggest-list"></ul>
                             </div>
                             <div id="edit-trans-desc-hint" style="display:none;align-items:center;gap:6px;margin-top:-2px;margin-bottom:6px;padding:3px 8px;border-radius:5px;background:rgba(var(--bs-primary-rgb),0.08);border:1px solid rgba(var(--bs-primary-rgb),0.2);font-size:0.78rem;"></div>
 
@@ -1360,12 +1461,33 @@
                         </div>
                     </div>
 
+                    <!-- 数字键盘（5.1.1）：支出/收入的金额用它输入，支持 + − 算式；点备注/标签时自动收起 -->
+                    <div class="amount-keypad" id="amount-keypad" role="group" aria-label="数字键盘">
+                        <button type="button" data-k="7">7</button>
+                        <button type="button" data-k="8">8</button>
+                        <button type="button" data-k="9">9</button>
+                        <button type="button" data-k="back" class="kp-fn" aria-label="退格"><i class="bi bi-backspace"></i></button>
+                        <button type="button" data-k="4">4</button>
+                        <button type="button" data-k="5">5</button>
+                        <button type="button" data-k="6">6</button>
+                        <button type="button" data-k="+" class="kp-op">＋</button>
+                        <button type="button" data-k="1">1</button>
+                        <button type="button" data-k="2">2</button>
+                        <button type="button" data-k="3">3</button>
+                        <button type="button" data-k="-" class="kp-op">－</button>
+                        <button type="button" data-k="clear" class="kp-fn">C</button>
+                        <button type="button" data-k="0">0</button>
+                        <button type="button" data-k=".">.</button>
+                        <button type="button" data-k="=" class="kp-eq" id="kp-eq">=</button>
+                    </div>
+
                     <!-- 底部保存栏（金额已移至顶部卡片） -->
                     <div class="trans-amount-bar tm-footer-bar" id="trans-amount-bar">
                         <div class="trans-action-row">
                             <button type="button" class="btn-delete-immersive" id="edit-trans-delete-btn" onclick="deleteCurrentTransaction()" style="display:none!important;">
                                 <i class="bi bi-trash"></i> 删除
                             </button>
+                            <button type="button" class="btn-save-again" id="edit-trans-save-again-btn" onclick="submitTransAndContinue()" style="display:none;"><i class="bi bi-plus-lg"></i> 保存并再记</button>
                             <button type="submit" class="btn-save-immersive" id="edit-trans-submit-btn"><i class="bi bi-check-lg"></i> 保存</button>
                         </div>
                     </div>
@@ -1528,6 +1650,7 @@
 <script src="js/56-transfer-pair.js"></script>
 <script src="js/57-transfer-ui.js"></script>
 <script src="js/58-split-items.js"></script>
+<script src="js/59-trans-form-ui.js"></script>
 <script src="js/60-budget.js"></script>
 <script src="js/62-category-icons.js"></script>
 <script src="js/64-transaction-submit.js"></script>
@@ -1536,6 +1659,7 @@
 <script src="js/68-transaction-list.js"></script>
 <script src="js/70-attachments-hints.js"></script>
 <script src="js/75-stats-core.js"></script>
+<script src="js/76-stats-overview.js"></script>
 <script src="js/78-backup-restore.js"></script>
 <script src="js/80-charts.js"></script>
 <script src="js/85-navigation-settings.js"></script>

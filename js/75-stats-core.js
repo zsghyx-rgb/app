@@ -271,15 +271,9 @@ function renderStats() {
         _statsCache = { key: cacheKey, filtered, inc, exp };
     }
 
-    const hiddenClass = summaryHidden ? 'amount-hidden' : '';   // 统计页顶部汇总：收入 / 支出 / 结余
-    // 顶部三个金额跟随币种选择显示货币单位（与账户页、交易页一致）
-    const statSymbol = CURRENCY_SYMBOLS[currentStatsFilter.currency] || currentStatsFilter.currency || '';
-    $('stat-income-display').className = `stat-number is-income ${hiddenClass}`;
-    $('stat-expense-display').className = `stat-number is-expense ${hiddenClass}`;
-    $('stat-net-display').className = `stat-number is-net ${hiddenClass}`;
-    $('stat-income-display').innerText = statSymbol + formatAmount(inc, currentStatsFilter.currency);
-    $('stat-expense-display').innerText = statSymbol + formatAmount(Math.abs(exp), currentStatsFilter.currency);
-    $('stat-net-display').innerText = statSymbol + formatAmount(inc + exp, currentStatsFilter.currency);
+    // 概览卡（js/76-stats-overview.js）：支出大字 + 对比上期 + 日均 + 预算进度；收入 / 结余
+    renderStatsOverview(inc, exp);
+    applyStatsChartPrefs();     // 按设置里的图表开关显示/隐藏各图表卡片
 
     // 概览子页才需要图表；在预算子页时只刷新预算
     if (!$('stats-pane-overview')?.classList.contains('active')) {
@@ -293,18 +287,24 @@ function renderStats() {
     }
 
     // 同一份数据、同一组筛选条件：图表已经是正确的，直接复用，避免切来切去反复重画
-    const chartKey = [cacheKey, sel ? sel.value : ''].join('~');
+    const chartKey = [cacheKey, sel ? sel.value : '', _statsPrefsSig(), formatLocal(new Date()), summaryHidden ? 1 : 0, amountsHidden ? 1 : 0, statsNavMode, statsNavYear, statsNavMonth].join('~');
     if (_statsRenderedKey === chartKey) {
         if ($('stats-pane-budget')?.classList.contains('active')) renderBudgetPane();
         return;
     }
 
-    renderExpenseChart(filtered);
-    renderTagChart(filtered);
-    renderTrendChart(filtered);
-    renderAssetHistoryChart();
-    renderCategoryTrendChart(filtered);
-    renderTotalExpenseTrendChart(filtered);
+    // 只画“开着”且看得见的图表（关掉的不算；折叠区没展开时里面的图也先不画）
+    const P = getStatsChartPrefs();
+    if (P.charts.category) renderCategoryShare(filtered);
+    if (P.charts.trend) renderTrend6Chart();
+    if (P.charts.daily) renderDailyChart();
+    if (_statsMoreOpen) {
+        if (P.charts.ranking) renderExpenseChart(filtered);
+        if (P.charts.tags) renderTagChart(filtered);
+        if (P.charts.assets) renderAssetHistoryChart();
+        if (P.charts.catTrend) renderCategoryTrendChart(filtered);
+        if (P.charts.totalTrend) renderTotalExpenseTrendChart(filtered);
+    }
     _statsRenderedKey = chartKey;
 
     // 预算子页若当前可见，同步刷新（集中在此处理，避免各个筛选入口各自维护一份遗漏）

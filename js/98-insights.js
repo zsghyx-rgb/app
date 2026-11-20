@@ -12,7 +12,7 @@ let _insightCurrentTab = 'monthly';
 function _insightMonthKey() { return `insight_month_${currentUserName}_${_yyyyMM(new Date())}`; }
 function _insightDayKey()   { return `insight_day_${_ymd(new Date())}`; }
 function _yyyyMM(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
-function _ymd(d)    { return d.toISOString().split('T')[0]; }
+function _ymd(d)    { return formatLocal(d); }
 function _monthlyShown()  { try { return !!localStorage.getItem(_insightMonthKey()); } catch(_){return false;} }
 function _dailyShown()    { try { return !!localStorage.getItem(_insightDayKey());   } catch(_){return false;} }
 function _markMonthlyShown() { try { localStorage.setItem(_insightMonthKey(), '1'); } catch(_){} }

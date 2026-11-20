@@ -7,7 +7,7 @@ async function exportJsonData() {
     const blob = new Blob([JSON.stringify(inMemoryLoadedData, null, 2)], {type: 'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `ledger_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `ledger_backup_${formatLocal(new Date())}.json`;
     a.click();
     clearUnsavedFlag();
     if (verboseToast) showToast('JSON已导出', 'success');
@@ -32,7 +32,7 @@ function exportTransactionCsv() {
     const blob = new Blob(['\ufeff' + csv], {type: 'text/csv'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `transactions_${currentUserName}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `transactions_${currentUserName}_${formatLocal(new Date())}.csv`;
     a.click();
 }
 
@@ -60,7 +60,7 @@ function exportTransferCsv() {
     const blob = new Blob(['\ufeff' + csv], {type: 'text/csv'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `transfers_${currentUserName}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `transfers_${currentUserName}_${formatLocal(new Date())}.csv`;
     a.click();
 }
 

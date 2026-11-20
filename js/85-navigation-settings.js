@@ -60,6 +60,8 @@ function showSettingsSubpage(name) {
     $$('.settings-subpage').forEach(function(el) { el.classList.remove('active'); });
     var sub = $('settings-sub-' + name);
     if (sub) sub.classList.add('active');
+    if (name === 'stats-charts') renderStatsChartSettings();   // 5.1.2：统计图表开关
+    if (name === 'appearance') renderThemeSettings();     // 5.1.1：外观设置放进二级菜单，打开时刷新当前选中状态
     if (name === 'exchange-rate') renderExchangeRateSettings();
     if (name === 'categories') renderCategorySettings();
     if (name === 'users') { renderUserManagement(); initPasswordHint(); renderHiddenAccountsList(); }
