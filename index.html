@@ -40,7 +40,7 @@
         }
     })();
     </script>
-    <title id="app-title">记一笔 v5.1.4</title>
+    <title id="app-title">记一笔 v5.1.5</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -207,7 +207,7 @@
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.4</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.5</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -954,6 +954,12 @@
                             <button class="btn btn-primary" onclick="syncToDrive(true)">
                                 <i class="bi bi-cloud-upload"></i> 立即同步到 Google 表格
                             </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="jibiShowSelfCheck()">
+                                <i class="bi bi-clipboard-check"></i> 数据自检（多设备数字对不上时先点这里）
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="rebuildFromCloud()">
+                                <i class="bi bi-arrow-repeat"></i> 从云端重建本机数据
+                            </button>
                             <button class="btn btn-outline-secondary btn-sm" onclick="purgeCloudDeletedRows(this)">
                                 <i class="bi bi-eraser"></i> 清理云端表格中的已删除行
                             </button>
@@ -1060,7 +1066,7 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.1.4</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.1.5</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -1669,6 +1675,7 @@
 <script src="js/92-planned.js"></script>
 <script src="js/94-user-management.js"></script>
 <script src="js/96-tag-suggest.js"></script>
+<script src="js/97-diagnostics.js"></script>
 <script src="js/98-insights.js"></script>
 <script src="js/99-account-select.js"></script>
 <script src="js/99-html-escape.js"></script>

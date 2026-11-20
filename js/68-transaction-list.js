@@ -91,7 +91,11 @@ function renderTransactionsHero() {
     const over = expense > totalBudget;
     budgetWrap.style.display = '';
     const label = $('tx-hero-budget-label');
-    if (label) label.textContent = over ? '本月预算 · 已超支' : '本月预算';
+    if (label) label.textContent = over ? '本月预算已超支 · 我的支出' : '本月预算 · 我的支出';
+    // 口径说明：预算总额是全部用户设置的，进度只统计当前用户的支出（统计页默认是全部用户，所以两边数字本来就不同）
+    budgetWrap.title = currentUserName
+        ? `预算为全部用户设置；这里只统计「${currentUserName}」的支出`
+        : '预算为全部用户设置；这里只统计当前用户的支出';
     const text = $('tx-hero-budget-text');
     if (text) {
         text.textContent = `${pct}% · ${over ? '超' : '余'} ${_fmtMoney(Math.abs(totalBudget - expense))}`;

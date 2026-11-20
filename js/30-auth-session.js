@@ -74,19 +74,30 @@ function onDataLoaded() {
     categoryIcons = inMemoryLoadedData.categoryIcons || {};
     userPins = inMemoryLoadedData.userPins || {};
 
-    // 从数据文件读取用户列表（兼容旧格式：只有allUserData没有users字段）
-    if (inMemoryLoadedData.users && inMemoryLoadedData.users.length > 0) {
-        dataUsers = inMemoryLoadedData.users;
-    } else if (inMemoryLoadedData.allUserData) {
-        dataUsers = Object.keys(inMemoryLoadedData.allUserData);
-    } else {
-        dataUsers = [];
-    }
-
     // 确保 allUserData 存在
     if (!inMemoryLoadedData.allUserData) {
         inMemoryLoadedData.allUserData = {};
     }
+
+    // 用户列表（5.1.5）：配置文件里的用户 ∪ 数据桶里的名字。
+    // 以前只认 users 字段，一旦这份列表被别的设备的旧配置覆盖，桶里的数据就整体“消失”了；
+    // 现在桶里有数据就一定能显示出来（removedUsers 里的名字只是不再显示，除非它还有数据）。
+    const removed = inMemoryLoadedData.removedUsers || {};
+    const names = [], seenName = new Set();
+    const pushName = (u, force) => {
+        if (typeof u !== 'string' || !u || seenName.has(u)) return;
+        if (!force && Number(removed[u]) > 0) return;   // 正数 = 已删除；负数 = 重新添加过
+        seenName.add(u); names.push(u);
+    };
+    (inMemoryLoadedData.users || []).forEach(u => pushName(u));
+    Object.keys(inMemoryLoadedData.allUserData).forEach(u => {
+        const ud = inMemoryLoadedData.allUserData[u] || {};
+        const hasData = (ud.accounts && ud.accounts.length) ||
+                        (ud.transactions && ud.transactions.length) ||
+                        (ud.plannedTransactions && ud.plannedTransactions.length);
+        pushName(u, !!hasData);
+    });
+    dataUsers = names;
 
     // 为每个用户初始化空数据（如果不存在）
     dataUsers.forEach(u => {
@@ -366,27 +377,74 @@ function initAppUI() {
     renderExchangeRateSettings();
 }
 
+/** 本机账本里“应该出现的用户名”：用户列表 ∪ 数据桶名（顺序：先用户列表，再补桶名） */
+function bookUserNames() {
+    const out = [], seen = new Set();
+    const add = u => { if (typeof u === 'string' && u && !seen.has(u)) { seen.add(u); out.push(u); } };
+    (dataUsers || []).forEach(add);
+    Object.keys((inMemoryLoadedData && inMemoryLoadedData.allUserData) || {}).forEach(add);
+    return out;
+}
+
+/** 按 id 去重：同一 id 只保留一份（同步层是按 id 全局唯一的）。
+ *  归属冲突时保留 updatedAt 较新的；时间相同则保留用户列表里更靠前的那份。 */
+function _pickWinner(map, id, ts, idx) {
+    const cur = map.get(id);
+    if (!cur) { map.set(id, { ts: ts, idx: idx }); return true; }
+    if (ts > cur.ts || (ts === cur.ts && idx < cur.idx)) { map.set(id, { ts: ts, idx: idx }); return true; }
+    return false;
+}
+
 function loadAllData() {
     accounts = [];
     transactions = [];
     plannedTransactions = [];
 
-    dataUsers.forEach(u => {
+    const users = bookUserNames();
+    const uIndex = {};
+    users.forEach((u, i) => { uIndex[u] = i; });
+
+    // 第一遍：算出每个 id 的“归属赢家”
+    const winners = { accounts: new Map(), transactions: new Map(), plannedTransactions: new Map() };
+    users.forEach(u => {
         const uData = inMemoryLoadedData.allUserData[u];
-        if (uData) {
-            accounts.push(...(uData.accounts || []).map(a => ({...a, ownerName: u})));
-            transactions.push(...(uData.transactions || []).map(t => ({...t, ownerName: u})));
-            if (uData.plannedTransactions) {
-                plannedTransactions.push(...uData.plannedTransactions.map(p => ({...p, ownerName: u})));
-            }
-        }
+        if (!uData) return;
+        const idx = uIndex[u] === undefined ? 9999 : uIndex[u];
+        ['accounts', 'transactions', 'plannedTransactions'].forEach(kind => {
+            (uData[kind] || []).forEach(rec => {
+                if (rec == null || rec.id == null) return;
+                _pickWinner(winners[kind], String(rec.id), Number(rec.updatedAt) || 0, idx);
+            });
+        });
     });
 
+    // 第二遍：按顺序装载，非赢家（跨桶重复的那份）直接丢掉
+    const emitted = { accounts: new Set(), transactions: new Set(), plannedTransactions: new Set() };
+    users.forEach(u => {
+        const uData = inMemoryLoadedData.allUserData[u];
+        if (!uData) return;
+        const myIdx = uIndex[u] === undefined ? 9999 : uIndex[u];
+        const take = (kind, rec) => {
+            if (rec == null || rec.id == null) return false;
+            const id = String(rec.id);
+            if (emitted[kind].has(id)) return false;
+            const w = winners[kind].get(id);
+            if (!w || w.idx !== myIdx) return false;
+            emitted[kind].add(id);
+            return true;
+        };
+        (uData.accounts || []).forEach(a => { if (take('accounts', a)) accounts.push({ ...a, ownerName: u }); });
+        (uData.transactions || []).forEach(t => { if (take('transactions', t)) transactions.push({ ...t, ownerName: u }); });
+        if (uData.plannedTransactions) {
+            uData.plannedTransactions.forEach(p => { if (take('plannedTransactions', p)) plannedTransactions.push({ ...p, ownerName: u }); });
+        }
+    });
 }
 
 function saveUserData() {
     if (!currentUser) return;
-    dataUsers.forEach(u => {
+    // 回写范围 = 用户列表 ∪ 数据桶名，保证“桶里有数据但不在用户列表”的记录不会被写丢
+    bookUserNames().forEach(u => {
         // 保留已有的 accountOrder，不覆盖
         const prevOrder = (inMemoryLoadedData.allUserData[u] || {}).accountOrder;
         inMemoryLoadedData.allUserData[u] = {

@@ -125,7 +125,8 @@ function mergeData(local, remote) {
     const deletedIdSet = new Set(mergedDeletedLog.map(e => String(e.id)));
 
     const merged = {
-        users: local.users || remote.users || [],
+        users: [],                       // 5.1.5：下面按「并集」重新算，不再直接取某一边的列表
+        removedUsers: {},
         categories: local.categories,
         exchangeRates: local.exchangeRates,
         userPins: {},
@@ -175,6 +176,62 @@ function mergeData(local, remote) {
             ...(mergedOrder ? { accountOrder: mergedOrder } : {})
         };
     });
+
+    // ── 跨桶去重（5.1.5）：同步层是按 id 全局唯一的，同一 id 在两处会让余额被算两次 ──
+    const kinds = ['accounts', 'transactions', 'plannedTransactions'];
+    const bucketNames = Object.keys(merged.allUserData);
+    const winners = { accounts: new Map(), transactions: new Map(), plannedTransactions: new Map() };
+    bucketNames.forEach((u, i) => {
+        kinds.forEach(kind => {
+            (merged.allUserData[u][kind] || []).forEach(rec => {
+                if (rec == null || rec.id == null) return;
+                const id = String(rec.id), ts = Number(rec.updatedAt) || 0;
+                const cur = winners[kind].get(id);
+                if (!cur || ts > cur.ts || (ts === cur.ts && i < cur.idx)) winners[kind].set(id, { ts, idx: i });
+            });
+        });
+    });
+    bucketNames.forEach((u, i) => {
+        kinds.forEach(kind => {
+            const arr = merged.allUserData[u][kind] || [];
+            if (!arr.length) return;
+            const kept = new Set();
+            merged.allUserData[u][kind] = arr.filter(rec => {
+                if (rec == null || rec.id == null) return true;
+                const id = String(rec.id);
+                if (kept.has(id)) return false;
+                const w = winners[kind].get(id);
+                if (!w || w.idx !== i) return false;
+                kept.add(id);
+                return true;
+            });
+        });
+    });
+
+    // ── 用户列表：并集（本机 ∪ 远端 ∪ 有数据的桶），减去主动删除的标记 ──
+    const removedMerged = {};
+    [local.removedUsers, remote && remote.removedUsers].forEach(m => {
+        if (!m || typeof m !== 'object') return;
+        Object.keys(m).forEach(k => {
+            const cur = Number(removedMerged[k]) || 0;
+            const v = Number(m[k]) || 0;
+            if (!cur || Math.abs(v) > Math.abs(cur)) removedMerged[k] = v;   // 正数=删除，负数=重新添加，取更晚的
+        });
+    });
+    merged.removedUsers = removedMerged;
+    const userSeen = new Set(), userList = [];
+    const addUser = (u, force) => {
+        if (typeof u !== 'string' || !u || userSeen.has(u)) return;
+        if (!force && Number(removedMerged[u]) > 0) return;
+        userSeen.add(u); userList.push(u);
+    };
+    (local.users || []).forEach(u => addUser(u));
+    ((remote && remote.users) || []).forEach(u => addUser(u));
+    Object.keys(merged.allUserData).forEach(u => {
+        const ud = merged.allUserData[u];
+        addUser(u, !!(ud.accounts.length || ud.transactions.length || ud.plannedTransactions.length));
+    });
+    merged.users = userList;
 
     // ── 数据完整性统计：供调用方检测"合并后交易数量异常骤降"的情况 ──
     const localTxnTotal  = Object.values(local.allUserData || {}).reduce((s, u) => s + (u.transactions || []).length, 0);
