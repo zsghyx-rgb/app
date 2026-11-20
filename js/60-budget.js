@@ -47,7 +47,6 @@ function renderBudgetPane() {
             还没有设置预算<br>
             <span style="font-size:0.8rem;">点击上方「添加预算」开始追踪每月支出</span>
         </div>`;
-        if (typeof renderTransactionsHero === 'function') renderTransactionsHero();
         return;
     }
 
@@ -100,7 +99,6 @@ function renderBudgetPane() {
             </div>
         </div>`;
     }).join('');
-    if (typeof renderTransactionsHero === 'function') renderTransactionsHero();
 }
 
 // 在预算弹窗里把货币单位标出来，避免用户填错单位

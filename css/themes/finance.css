@@ -215,7 +215,6 @@ html[data-app-theme="finance"] .tx-day-label {
 }
 
 html[data-app-theme="finance"] .app-hero,
-html[data-app-theme="finance"] .tx-hero,
 html[data-app-theme="finance"] .stats-hero {
     background: var(--app-hero-bg);
     color: var(--app-hero-text);
@@ -224,22 +223,14 @@ html[data-app-theme="finance"] .stats-hero {
     box-shadow: var(--app-shadow);
 }
 
-html[data-app-theme="finance"] .tx-hero .tx-hero-label,
-html[data-app-theme="finance"] .tx-hero .tx-hero-meta span,
 html[data-app-theme="finance"] .app-hero .hero-eyebrow,
 html[data-app-theme="finance"] .app-hero .hero-split span,
 html[data-app-theme="finance"] .stats-hero .text-muted {
     color: var(--app-hero-muted) !important;
 }
 
-html[data-app-theme="finance"] .tx-hero-amount,
-html[data-app-theme="finance"] .hero-big,
-html[data-app-theme="finance"] .tx-hero-meta b {
+html[data-app-theme="finance"] .hero-big {
     color: var(--app-hero-text);
-}
-
-html[data-app-theme="finance"] .tx-hero-amount {
-    color: var(--app-gold);
 }
 
 html[data-app-theme="finance"] .settings-menu-list {
@@ -340,7 +331,6 @@ html[data-app-theme="finance"] .stats-hero .stat-number.is-income { color: #3DDC
 html[data-app-theme="finance"] .stats-hero .stat-number.is-expense { color: #FF7A8A; }
 html[data-app-theme="finance"] .stats-hero .stat-number.is-net { color: #E5B567; }
 
-html[data-app-theme="finance"] .tx-hero-amount,
 html[data-app-theme="finance"] .hero-big,
 html[data-app-theme="finance"] .mobile-transaction-card .amount-expense,
 html[data-app-theme="finance"] .mobile-transaction-card .amount-income,

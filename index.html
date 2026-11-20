@@ -40,7 +40,7 @@
         }
     })();
     </script>
-    <title id="app-title">记一笔 v5.1.6</title>
+    <title id="app-title">记一笔 v5.1.7</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -207,7 +207,7 @@
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.6</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.7</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -402,23 +402,6 @@
                             <span id="transfer-mode-text">收支+转账</span>
                         </button>
                     </div>
-                </div>
-            </div>
-
-            <!-- 首页概览：本月支出 / 收入 / 结余 / 预算进度（没有预算时不显示进度） -->
-            <div class="tx-hero clickable-amount" id="tx-hero" onclick="toggleAmountVisibility()" title="点击隐藏/显示金额">
-                <div class="tx-hero-label"><span id="tx-hero-month">本月</span> · 支出</div>
-                <div class="tx-hero-amount" id="tx-hero-expense">¥0.00</div>
-                <div class="tx-hero-meta">
-                    <span>收入 <b id="tx-hero-income">¥0.00</b></span>
-                    <span>结余 <b id="tx-hero-net">¥0.00</b></span>
-                </div>
-                <div class="tx-hero-budget" id="tx-hero-budget" style="display:none;">
-                    <div class="tx-hero-budget-head">
-                        <span id="tx-hero-budget-label">本月预算</span>
-                        <span id="tx-hero-budget-text"></span>
-                    </div>
-                    <div class="tx-hero-budget-bar"><i id="tx-hero-budget-fill" style="width:0%"></i></div>
                 </div>
             </div>
 
@@ -1073,7 +1056,7 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.1.6</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.1.7</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>

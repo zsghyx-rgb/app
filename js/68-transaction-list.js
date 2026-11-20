@@ -1,5 +1,5 @@
 // @file js/68-transaction-list.js
-// 首页概览（本月支出/收入/结余/预算）+ 按日期分组的交易列表 + “加载更多”。
+// 交易列表：按日期分组的流水卡片 + 每日合计 + “加载更多”。
 
 /* ─────────────────────────────────────────────────── */
 
@@ -34,78 +34,6 @@ function _txDateLabel(dateStr) {
 function _fmtMoney(n) {
     const cur = currentStatsFilter.currency || 'RMB';
     return (CURRENCY_SYMBOLS[cur] || '') + formatAmount(Math.abs(Number(n) || 0), cur);
-}
-
-/** 首页概览：本月支出大数字、收入、结余、预算进度（没有预算就不显示进度条）。 */
-function renderTransactionsHero() {
-    const expEl = $('tx-hero-expense');
-    if (!expEl) return;
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const start = formatLocal(new Date(y, m, 1));
-    const end = formatLocal(new Date(y, m + 1, 0));
-
-    let income = 0, expense = 0;
-    const accMap = new Map(accounts.map(a => [String(a.id), a]));
-    for (let i = 0; i < transactions.length; i++) {
-        const t = transactions[i];
-        if (t._isBaseline || t.isTransfer) continue;
-        if (currentUserName && t.ownerName !== currentUserName) continue;
-        if (t.date < start || t.date > end) continue;
-        const acc = accMap.get(String(t.accountId));
-        if (!acc) continue;
-        const v = convertAmt(parseFloat(t.amount) || 0, acc.currency);
-        if (v < 0) expense += -v; else income += v;
-    }
-
-    const hidden = summaryHidden ? 'amount-hidden' : '';   // 首页顶部汇总：本月支出 / 收入 / 结余 / 预算
-    const monthEl = $('tx-hero-month');
-    if (monthEl) monthEl.textContent = `${m + 1}月`;
-    expEl.textContent = _fmtMoney(expense);
-    expEl.className = 'tx-hero-amount ' + hidden;
-    const incEl = $('tx-hero-income');
-    if (incEl) { incEl.textContent = _fmtMoney(income); incEl.className = hidden; }
-    const netEl = $('tx-hero-net');
-    if (netEl) { netEl.textContent = _fmtMoney(income - expense); netEl.className = hidden; }
-
-    // 预算进度：只有设置过预算才显示；总预算优先，否则把各分类预算相加
-    const budgetWrap = $('tx-hero-budget');
-    if (!budgetWrap) return;
-    let totalBudget = 0;
-    if (Array.isArray(budgets) && budgets.length) {
-        const totalRow = budgets.find(b => b.category === '__total__');
-        if (totalRow) {
-            totalBudget = convertAmt(parseFloat(totalRow.amount) || 0, totalRow.currency || 'RMB');
-        } else {
-            budgets.forEach(b => {
-                totalBudget += convertAmt(parseFloat(b.amount) || 0, b.currency || 'RMB');
-            });
-        }
-    }
-    if (!(totalBudget > 0)) {
-        budgetWrap.style.display = 'none';
-        return;
-    }
-    const pct = Math.min(100, Math.round((expense / totalBudget) * 100));
-    const over = expense > totalBudget;
-    budgetWrap.style.display = '';
-    const label = $('tx-hero-budget-label');
-    if (label) label.textContent = over ? '本月预算已超支 · 我的支出' : '本月预算 · 我的支出';
-    // 口径说明：预算总额是全部用户设置的，进度只统计当前用户的支出（统计页默认是全部用户，所以两边数字本来就不同）
-    budgetWrap.title = currentUserName
-        ? `预算为全部用户设置；这里只统计「${currentUserName}」的支出`
-        : '预算为全部用户设置；这里只统计当前用户的支出';
-    const text = $('tx-hero-budget-text');
-    if (text) {
-        text.textContent = `${pct}% · ${over ? '超' : '余'} ${_fmtMoney(Math.abs(totalBudget - expense))}`;
-        text.className = hidden;
-    }
-    const fill = $('tx-hero-budget-fill');
-    if (fill) {
-        fill.style.width = pct + '%';
-        fill.classList.toggle('is-over', over);
-    }
 }
 
 /** 某个日期在筛选结果里的当日合计（转账不计入）。 */
@@ -249,7 +177,6 @@ function _buildTransactionCard(t, accMap, batchEditMode, batchSelectedIds, isOrp
 
 function renderAllTransactions() {
     _statsDataVersion++; // 交易数据可能已变化，使统计页缓存失效
-    renderTransactionsHero();
 
     const mobileContainer = $('mobile-transaction-cards');
     if (mobileContainer) mobileContainer.innerHTML = '';

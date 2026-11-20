@@ -267,86 +267,8 @@ a { color: var(--app-link, var(--app-primary)); }
 
 .btn-link { --bs-btn-color: var(--app-primary); --bs-btn-hover-color: var(--app-primary); }
 
-/* ── 首页：本月概览 ──────────────────────────────────────── */
-.tx-hero {
-    position: relative;
-    margin: 10px 0 6px;
-    padding: 16px 20px 14px;
-    background: var(--app-hero-bg);
-    color: var(--app-hero-text);
-    border-radius: var(--app-radius-card, 22px);
-    box-shadow: var(--app-shadow-soft);
-    cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease;
-}
-
-.tx-hero:active { transform: scale(0.995); }
-
-.tx-hero-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--app-hero-muted);
-    letter-spacing: 0.02em;
-}
-
-/* 页面顶部大金额（账户页 .hero-big / 交易页 .tx-hero-amount）共用同一个字号，只改这一处 */
+/* 页面顶部大金额（账户页 .hero-big / 统计页汇总）共用同一个字号，只改这一处 */
 :root { --app-hero-amount-size: clamp(1.75rem, 5vw, 2.35rem); }
-
-.tx-hero-amount {
-    margin-top: 2px;
-    font-size: var(--app-hero-amount-size);
-    line-height: 1.08;
-    font-weight: 800;
-    color: var(--app-hero-text);
-    letter-spacing: -0.03em;
-}
-
-.tx-hero-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 22px;
-    margin-top: 8px;
-    font-size: 0.78rem;
-    color: var(--app-hero-muted);
-}
-
-.tx-hero-meta b {
-    color: var(--app-hero-text);
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-}
-
-.tx-hero-budget {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid color-mix(in srgb, var(--app-hero-muted) 28%, transparent);
-}
-
-.tx-hero-budget-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 0.74rem;
-    color: var(--app-hero-muted);
-    margin-bottom: 6px;
-}
-
-.tx-hero-budget-bar {
-    height: 6px;
-    border-radius: 99px;
-    background: color-mix(in srgb, var(--app-hero-muted) 24%, transparent);
-    overflow: hidden;
-}
-
-.tx-hero-budget-bar > i {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--app-primary);
-    transition: width 0.3s ease;
-}
-
-.tx-hero-budget-bar > i.is-over { background: var(--app-expense); }
 
 /* 通用 hero（账户页净资产 / 统计页汇总） */
 .app-hero {
@@ -996,8 +918,6 @@ a { color: var(--app-link, var(--app-primary)); }
     body { background: var(--app-bg); }
 
     .page-title { font-size: 1.2rem; }
-
-    .tx-hero { margin: 10px 0 6px; padding: 14px 18px 12px; }
 
     .app-hero, .stats-hero { padding: 17px 18px; }
 

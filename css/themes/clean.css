@@ -203,7 +203,6 @@ html[data-app-theme="clean"] .tx-row-icon {
 }
 
 html[data-app-theme="clean"] .app-hero,
-html[data-app-theme="clean"] .tx-hero,
 html[data-app-theme="clean"] .stats-hero {
     background: var(--app-hero-bg);
     border-radius: var(--app-radius-card);
@@ -283,7 +282,6 @@ html[data-app-theme="clean"] .tm-card {
     border-radius: 18px;
 }
 
-html[data-app-theme="clean"] .tx-hero-amount,
 html[data-app-theme="clean"] .hero-big,
 html[data-app-theme="clean"] .mobile-transaction-card .amount-expense,
 html[data-app-theme="clean"] .mobile-transaction-card .amount-income,

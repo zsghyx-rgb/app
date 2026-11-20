@@ -7,9 +7,8 @@ function toggleAmountVisibility() {
     else if (amountsHidden) { amountsHidden = false; summaryHidden = true; }
     else { summaryHidden = false; }
     renderAccounts();
-    // 重绘列表，让首页概览、每日合计和每一行金额同时套用隐藏状态
+    // 重绘列表，让每日合计和每一行金额同时套用隐藏状态
     if (typeof renderAllTransactions === 'function') renderAllTransactions();
-    else renderTransactionsHero();
     if ($('view-stats').classList.contains('active-view')) renderStats();
 }
 

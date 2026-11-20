@@ -208,8 +208,7 @@ html[data-app-theme="cute"] .tx-day-head {
     padding-left: 6px;
 }
 
-html[data-app-theme="cute"] .app-hero,
-html[data-app-theme="cute"] .tx-hero {
+html[data-app-theme="cute"] .app-hero {
     background: var(--app-hero-bg);
     border-radius: 26px;
     border: none;
@@ -218,8 +217,7 @@ html[data-app-theme="cute"] .tx-hero {
     overflow: hidden;
 }
 
-html[data-app-theme="cute"] .app-hero::after,
-html[data-app-theme="cute"] .tx-hero::after {
+html[data-app-theme="cute"] .app-hero::after {
     content: "";
     position: absolute;
     right: -34px;
@@ -231,8 +229,7 @@ html[data-app-theme="cute"] .tx-hero::after {
     pointer-events: none;
 }
 
-html[data-app-theme="cute"][data-bs-theme="dark"] .app-hero::after,
-html[data-app-theme="cute"][data-bs-theme="dark"] .tx-hero::after {
+html[data-app-theme="cute"][data-bs-theme="dark"] .app-hero::after {
     background: rgba(255, 164, 91, 0.10);
 }
 
@@ -357,7 +354,6 @@ html[data-app-theme="cute"] .stats-sub-tab-btn.active {
     box-shadow: var(--app-shadow-soft);
 }
 
-html[data-app-theme="cute"] .tx-hero-amount,
 html[data-app-theme="cute"] .hero-big,
 html[data-app-theme="cute"] .mobile-transaction-card .amount-expense,
 html[data-app-theme="cute"] .mobile-transaction-card .amount-income,
