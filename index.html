@@ -40,7 +40,7 @@
         }
     })();
     </script>
-    <title id="app-title">记一笔 v5.1.7</title>
+    <title id="app-title">记一笔 v5.1.8</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -73,6 +73,8 @@
 
 <!-- 统一通知 toast -->
 <div id="app-toast"></div>
+<!-- 5.1.8：底部导航上方的一行同步细线（平时不显示，不占位置） -->
+<div id="sync-line" data-state="idle" aria-hidden="true"></div>
 <div id="sync-bar" role="status" aria-live="polite">
     <span class="sb-icon"></span>
     <span class="sb-text"></span>
@@ -207,7 +209,7 @@
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.7</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.1.8</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -923,42 +925,95 @@
                     <i class="bi bi-arrow-left" onclick="showSettingsSubpage('advanced')"></i>
                     <span>数据与同步</span>
                 </div>
+
+                <!-- 同步状态 -->
                 <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-transparent fw-bold">数据导出 &amp; 同步</div>
-                    <div class="card-body">
-                        <p class="text-muted small mb-3">
-                            <i class="bi bi-info-circle"></i>
-                            数据保存在 Google 表格中，每条记录由本机加密后上传；本机保留加密缓存，以便离线查看。
-                        </p>
-                        <div id="offline-mode-badge" class="alert alert-warning py-1 px-2 small mb-2" style="display:none;">
-                            <i class="bi bi-wifi-off"></i> 当前为 <strong>离线模式</strong>，自动同步已关闭。手动点击下方按钮可主动同步。
+                    <div class="card-body py-3">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div class="min-w-0">
+                                <div class="fw-bold"><i class="bi bi-cloud-check"></i> 同步状态</div>
+                                <div class="small text-muted mt-1" id="ds-status-sub">—</div>
+                            </div>
+                            <span class="ds-pill ds-pill-ok" id="ds-status-pill">—</span>
                         </div>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary" onclick="syncToDrive(true)">
-                                <i class="bi bi-cloud-upload"></i> 立即同步到 Google 表格
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="jibiShowSelfCheck()">
-                                <i class="bi bi-clipboard-check"></i> 数据自检（多设备数字对不上时先点这里）
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="rebuildFromCloud()">
-                                <i class="bi bi-arrow-repeat"></i> 从云端重建本机数据
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="jibiOverwriteCloud()">
-                                <i class="bi bi-cloud-arrow-up-fill"></i> 用本机数据覆盖云端（危险）
-                            </button>
-                            <button class="btn btn-outline-warning btn-sm" onclick="jibiRecoverCloudDeleted()">
-                                <i class="bi bi-arrow-counterclockwise"></i> 恢复云端已删除的记录
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="purgeCloudDeletedRows(this)">
-                                <i class="bi bi-eraser"></i> 清理云端表格中的已删除行
-                            </button>
+                        <div class="ds-status-grid mt-3">
+                            <div><div class="ds-k">上次同步</div><div class="ds-v" id="ds-last-sync">—</div></div>
+                            <div><div class="ds-k">本机记录</div><div class="ds-v" id="ds-record-count">—</div></div>
+                            <div><div class="ds-k">待同步</div><div class="ds-v" id="ds-pending">—</div></div>
                         </div>
+                        <div id="offline-mode-badge" class="alert alert-warning py-1 px-2 small mb-0 mt-3" style="display:none;">
+                            <i class="bi bi-wifi-off"></i> 当前为 <strong>离线模式</strong>，自动同步已关闭。
+                        </div>
+                        <button class="btn btn-primary w-100 mt-3" onclick="syncToDrive(true)">
+                            <i class="bi bi-cloud-upload"></i> 立即同步
+                        </button>
                         <p class="text-muted small mb-0 mt-2">
-                            删除交易后，云端表格会保留一行“已删除”标记（用于多设备同步）。这里可以把这些残留行真正清掉，减小表格体积。<br>
-                            <strong>用本机数据覆盖云端</strong>：把本机这份完整数据整体写进 Google 表格，用于云端被误删、或某台设备数据乱了的时候。<strong>恢复云端已删除的记录</strong>：把云端标记为删除、但本机没有的记录找回来。
+                            <i class="bi bi-info-circle"></i>
+                            数据保存在 Google 表格中，每条记录由本机加密后上传，本机保留加密缓存以便离线查看。
+                            改完数据 4 秒后自动同步；底部导航上方的一条细线会提示进度：琥珀色＝待同步、蓝色＝同步中、绿色＝已完成。
                         </p>
                     </div>
                 </div>
+
+                <!-- 检查与修复 -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-transparent fw-bold">
+                        <i class="bi bi-tools"></i> 检查与修复
+                    </div>
+                    <div class="card-body p-0">
+                        <button type="button" class="ds-action" onclick="jibiShowSelfCheck()">
+                            <i class="bi bi-clipboard-check"></i>
+                            <span class="ds-action-main">
+                                <span class="ds-action-title">数据自检</span>
+                                <span class="ds-action-desc">多设备数字对不上时先点这里，只读检查、不改数据</span>
+                            </span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <button type="button" class="ds-action" onclick="rebuildFromCloud()">
+                            <i class="bi bi-arrow-repeat"></i>
+                            <span class="ds-action-main">
+                                <span class="ds-action-title">从云端重建本机数据</span>
+                                <span class="ds-action-desc">丢弃本机同步进度，重新从云端拉一份完整数据</span>
+                            </span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <button type="button" class="ds-action" onclick="jibiRecoverCloudDeleted()">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            <span class="ds-action-main">
+                                <span class="ds-action-title">恢复云端已删除的记录</span>
+                                <span class="ds-action-desc">误删的记录还在云端留有删除标记，可在这里找回来</span>
+                            </span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 危险操作 -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-transparent fw-bold text-danger">
+                        <i class="bi bi-exclamation-triangle"></i> 危险操作
+                    </div>
+                    <div class="card-body p-0">
+                        <button type="button" class="ds-action ds-danger" onclick="jibiOverwriteCloud()">
+                            <i class="bi bi-cloud-arrow-up-fill"></i>
+                            <span class="ds-action-main">
+                                <span class="ds-action-title">用本机数据覆盖云端</span>
+                                <span class="ds-action-desc">云端被误删或某台设备数据乱了时使用；覆盖前会自动留一份安全副本</span>
+                            </span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <button type="button" class="ds-action" onclick="purgeCloudDeletedRows(this)">
+                            <i class="bi bi-eraser"></i>
+                            <span class="ds-action-main">
+                                <span class="ds-action-title">清理云端表格中的已删除行</span>
+                                <span class="ds-action-desc">把删除后残留的标记行真正清掉，减小表格体积</span>
+                            </span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 云端备份 -->
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-transparent fw-bold">
                         <i class="bi bi-clock-history"></i> 云端备份（Google 表格副本）
@@ -973,34 +1028,41 @@
                         <div id="backup-list-container" class="mt-1" style="max-height:220px;overflow-y:auto;font-size:0.85rem;"></div>
                     </div>
                 </div>
+
+                <!-- 导入 / 导出 -->
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-transparent fw-bold">
-                        <i class="bi bi-file-earmark-code"></i> 导出数据
+                        <i class="bi bi-file-earmark-arrow-down"></i> 导出 / 导入
                     </div>
                     <div class="card-body">
-                        <div class="d-grid gap-2">
+                        <div class="ds-section-label">导出</div>
+                        <div class="d-grid gap-2 mb-3">
+                            <button class="btn btn-success" onclick="exportJsonData()">
+                                <i class="bi bi-download"></i> 导出 JSON（完整备份）
+                            </button>
                             <div class="btn-group">
-                                <button class="btn btn-success" onclick="exportJsonData()">
-                                    <i class="bi bi-download"></i> 导出 JSON
+                                <button class="btn btn-outline-info btn-sm" onclick="exportTransactionCsv()">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> 交易 CSV
                                 </button>
-                                <button class="btn btn-info" onclick="exportTransactionCsv()">
-                                    <i class="bi bi-file-earmark-spreadsheet"></i> 导出交易CSV
-                                </button>
-                                <button class="btn btn-info" onclick="exportTransferCsv()">
-                                    <i class="bi bi-file-earmark-spreadsheet"></i> 导出转账CSV
+                                <button class="btn btn-outline-info btn-sm" onclick="exportTransferCsv()">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> 转账 CSV
                                 </button>
                             </div>
-                            <div class="btn-group">
-                                <button class="btn btn-primary" onclick="$('transaction-csv-input').click()">
-                                    <i class="bi bi-file-earmark-arrow-up"></i> 导入交易CSV
-                                </button>
-                                <button class="btn btn-primary" onclick="$('transfer-csv-input').click()">
-                                    <i class="bi bi-file-earmark-arrow-up"></i> 导入转账CSV
-                                </button>
-                            </div>
-                            <input type="file" id="transaction-csv-input" class="d-none" accept=".csv" onchange="importTransactionCsv()">
-                            <input type="file" id="transfer-csv-input" class="d-none" accept=".csv" onchange="importTransferCsv()">
                         </div>
+                        <div class="ds-section-label">导入</div>
+                        <div class="btn-group w-100">
+                            <button class="btn btn-outline-primary btn-sm" onclick="$('transaction-csv-input').click()">
+                                <i class="bi bi-file-earmark-arrow-up"></i> 交易 CSV
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="$('transfer-csv-input').click()">
+                                <i class="bi bi-file-earmark-arrow-up"></i> 转账 CSV
+                            </button>
+                        </div>
+                        <input type="file" id="transaction-csv-input" class="d-none" accept=".csv" onchange="importTransactionCsv()">
+                        <input type="file" id="transfer-csv-input" class="d-none" accept=".csv" onchange="importTransferCsv()">
+                        <p class="text-muted small mb-0 mt-2">
+                            JSON 为明文完整备份（含密码保护的内容）；CSV 只含交易或转账记录，用于导入到其他工具。
+                        </p>
                     </div>
                 </div>
             </div>
@@ -1056,7 +1118,7 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.1.7</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.1.8</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -1620,7 +1682,7 @@
             </div>
             <div class="modal-footer py-2">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-warning btn-sm" onclick="changeDataPassword()">
+                <button type="button" class="btn btn-warning btn-sm" id="pwd-change-btn" onclick="changeDataPassword()">
                     <i class="bi bi-check-lg"></i> 确认修改
                 </button>
             </div>

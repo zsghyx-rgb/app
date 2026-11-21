@@ -46,11 +46,14 @@ function scheduleDraftSave() {
 }
 
 function triggerAutoSave() {
+    if (!hasUnsavedChanges) _unsavedSince = Date.now();
     hasUnsavedChanges = true;
+    _editSeq++;
     if (currentUserName) {
         saveUserData();        // 内存立即生效（渲染、同步都读内存）
         scheduleDraftSave();   // 落盘合并成一次
     }
+    if (typeof scheduleAutoSync === 'function') scheduleAutoSync();   // 5.1.8：4 秒后自动同步
     syncBarRender();
 }
 
@@ -59,6 +62,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) flush
 
 function clearUnsavedFlag() {
     hasUnsavedChanges = false;
+    _unsavedSince = 0;
+    if (typeof cancelAutoSync === 'function') cancelAutoSync();   // 已经同步过了，不再排一次
     if (_draftTimer) { clearTimeout(_draftTimer); _draftTimer = null; }   // 取消尚未落盘的草稿写入
     try { localStorage.setItem('APP_last_sync_time', String(Date.now())); } catch(_) {}
     

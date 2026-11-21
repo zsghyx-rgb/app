@@ -370,13 +370,18 @@ function renderTrend6Chart() {
         type: 'bar',
         data: { labels, datasets: [
             { label: '收入', data: keys.map(k => agg[k].inc), backgroundColor: keys.map(k => shade(th.income, k)), borderRadius: 4 },
-            { label: '支出', data: keys.map(k => agg[k].exp), backgroundColor: keys.map(k => shade(th.expense, k)), borderRadius: 4 }
+            { label: '支出', data: keys.map(k => agg[k].exp), backgroundColor: keys.map(k => shade(th.expense, k)), borderRadius: 4 },
+            // 5.1.8：结余（收入 − 支出）趋势线，和柱状图共用一条纵轴，负值会落在 0 以下
+            { type: 'line', label: '结余', data: keys.map(k => agg[k].inc - agg[k].exp),
+              borderColor: th.primary, backgroundColor: chartAlpha(th.primary, 0.14),
+              borderWidth: 2.5, pointRadius: 2.5, pointHoverRadius: 5, pointBackgroundColor: th.primary,
+              tension: 0.32, fill: false, borderDash: [] }
         ] },
         options: {
             maintainAspectRatio: false, animation: { duration: 0 },
             plugins: {
                 legend: { display: true, position: 'bottom', labels: { color: th.text, boxWidth: 10, boxHeight: 10 } },
-                tooltip: { callbacks: { label: c => ` ${c.dataset.label} ${sym}${formatAmount(c.parsed.y, cur)}` } }
+                tooltip: { callbacks: { label: c => ` ${c.dataset.label} ${sym}${formatAmount(c.parsed.y, cur)}${c.dataset.label === '结余' && c.parsed.y < 0 ? '（超支）' : ''}` } }
             },
             scales: { x: { grid: { display: false }, ticks: { color: th.muted } }, y: { beginAtZero: true, grid: { color: th.grid }, ticks: { color: th.muted, callback: v => sym + _compactMoney(v) } } },
             onClick(e, els) { if (els.length) { const x = months[els[0].index]; if (x) statsGoToMonth(x.y, x.m); } }
@@ -385,6 +390,11 @@ function renderTrend6Chart() {
     chart.data.labels = labels;
     chart.data.datasets[0].data = keys.map(k => agg[k].inc); chart.data.datasets[0].backgroundColor = keys.map(k => shade(th.income, k));
     chart.data.datasets[1].data = keys.map(k => agg[k].exp); chart.data.datasets[1].backgroundColor = keys.map(k => shade(th.expense, k));
+    if (chart.data.datasets[2]) {
+        chart.data.datasets[2].data = keys.map(k => agg[k].inc - agg[k].exp);
+        chart.data.datasets[2].borderColor = th.primary;
+        chart.data.datasets[2].backgroundColor = chartAlpha(th.primary, 0.14);
+    }
     chart.update('none');
 }
 

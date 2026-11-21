@@ -9,10 +9,14 @@ function renderPlannedTransactions() {
         container.innerHTML = '<div class="alert alert-secondary">暂无计划交易，点击上方"新增计划"按钮创建。</div>';
         return;
     }
+    // 按“下次生成日期”从近到远排列（5.1.8 恢复）：已结束/无法再生成的排在最后，再按开始日期。
     const sortedPlans = [...userPlannedTransactions].sort((a, b) => {
-        const la = a.lastGenerated || '0000-00-00';
-        const lb = b.lastGenerated || '0000-00-00';
-        return la.localeCompare(lb);
+        const na = getNextGenerationDate(a);
+        const nb = getNextGenerationDate(b);
+        if (na && nb) return na.localeCompare(nb) || String(a.startDate || '').localeCompare(String(b.startDate || ''));
+        if (na) return -1;
+        if (nb) return 1;
+        return String(b.startDate || '').localeCompare(String(a.startDate || ''));
     });
     sortedPlans.forEach(plan => {
         const acc = accounts.find(a => a.id == plan.accountId);

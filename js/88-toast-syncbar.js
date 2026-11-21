@@ -21,19 +21,13 @@ function showToast(msg, type = 'success', duration = 3000) {
     let showTop = true;
     // 需要用户处理的错误（duration 为 0，或“同步失败 / 同步已中止 / 加载失败”这类同步错误，不管传入多长时间）：底部持久显示（带重试 / 关闭），顶部不再重复
     if (type === 'error' && (duration === 0 || /^(同步失败|同步已中止|加载失败)/.test(msg))) {
-        _barError = { msg, retry: /同步/.test(msg) };
+        // 同步失败不立刻弹条：先靠底部细线提示，连续失败超过 BAR_ERROR_DELAY_MS 才弹出文字条
+        _barError = { msg, retry: /同步/.test(msg), at: Date.now(), delayed: /^同步失败/.test(msg) };
         toastMs = 5000;
         if (barVisible) showTop = false;
     } else if (type === 'success') {
+        // 任何成功提示都说明刚才的操作完成了：清掉旧的同步失败提示（同步成功的反馈交给底部绿线）
         _barError = null;
-        if (/已同步|同步成功|迁移完成/.test(msg)) { // 同步完成：底部状态条变绿并显示这句话，顶部不再重复
-            const long = msg.length > 16;
-            const ms = long ? Math.min(Math.max(duration, 3000), 8000) : 1800;
-            _barOkText = msg;
-            _barOkUntil = Date.now() + ms;
-            setTimeout(syncBarRender, ms + 100);
-            if (barVisible) showTop = false;
-        }
     }
     if (type === 'progress') toastMs = 0;           // 弹窗内的操作进度（如附件上传）：留在顶部、不自动消失，直到下一条提示替换它
     else {
@@ -57,6 +51,88 @@ function showToast(msg, type = 'success', duration = 3000) {
     syncBarRender();
 }
 
+/* ───────── 5.1.8：底部导航上方的一行细线同步指示 + 改完 4 秒自动同步 ─────────
+ * 状态完全由全局变量推导，平时不显示、不占位置：
+ *   有修改未同步 → 琥珀色细线（改完立刻出现，4 秒后自动同步）
+ *   同步中       → 蓝色细线来回流动
+ *   同步成功     → 绿色细线，约 1.5 秒后淡出
+ *   长时间同步不成功 → 才弹出底部文字状态条（#sync-bar）
+ */
+const AUTO_SYNC_DELAY_MS = 4000;        // 改完多久后自动同步
+const BAR_ERROR_DELAY_MS = 8000;        // 同步连续失败多久后弹文字提示条
+const SYNC_LINE_OK_MS = 1500;           // 绿色细线停留时间
+let _lineOkUntil = 0;
+let _lineState = '';
+let _lineOkTimer = null;
+
+function syncLineRender() {
+    const line = $('sync-line');
+    if (!line) return;
+    const loginVisible = !!$('login-overlay') && !$('login-overlay').classList.contains('d-none');
+    let st = 'idle';
+    if (currentUser && !loginVisible) {
+        if (driveIsSyncing) st = 'syncing';
+        else if (Date.now() < _lineOkUntil) st = 'ok';
+        else if (hasUnsavedChanges && !offlineMode && cloudConfigured()) st = 'unsaved';   // 纯本地使用（没配 GAS）时不提示“待同步”
+    }
+    if (st === _lineState) return;
+    _lineState = st;
+    line.dataset.state = st;
+    line.classList.toggle('show', st !== 'idle');
+}
+
+/** 自动同步成功后调用：绿色细线停留约 1.5 秒再淡出 */
+function syncLineOk() {
+    _lineOkUntil = Date.now() + SYNC_LINE_OK_MS;
+    _lineState = '';
+    syncLineRender();
+    if (_lineOkTimer) clearTimeout(_lineOkTimer);
+    _lineOkTimer = setTimeout(() => {
+        _lineOkUntil = 0;
+        _lineState = '';
+        syncLineRender();
+    }, SYNC_LINE_OK_MS + 60);
+}
+
+function cancelAutoSync() {
+    if (_autoSyncTimer) { clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
+    _autoSyncAgain = false;
+}
+
+/** 每次改动后调用：把自动同步往后推 4 秒（连续编辑只同步一次） */
+function scheduleAutoSync() {
+    if (!currentUser || offlineMode || !cloudConfigured() || !userPassword) return;
+    if (driveIsSyncing) { _autoSyncAgain = true; return; }    // 正在同步：结束后再排一次
+    if (_autoSyncTimer) clearTimeout(_autoSyncTimer);
+    _autoSyncTimer = setTimeout(() => {
+        _autoSyncTimer = null;
+        autoSyncNow();
+    }, AUTO_SYNC_DELAY_MS);
+    syncLineRender();
+}
+
+async function autoSyncNow() {
+    if (!currentUser || offlineMode || !cloudConfigured() || !userPassword) return;
+    if (driveIsSyncing) { _autoSyncAgain = true; return; }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;   // 离线：等 online 事件
+    if (!hasUnsavedChanges) return;
+    await incSync(false);
+}
+
+window.addEventListener('online', () => {
+    syncLineRender();
+    if (hasUnsavedChanges) scheduleAutoSync();      // 网络恢复：4 秒内自动补同步
+});
+window.addEventListener('offline', syncLineRender);
+
+/** 同步进行中又有改动时，scheduleAutoSync 只记下 _autoSyncAgain 标记（不能并发）。
+ *  同步结束后由下面的 800ms 兜底定时器调用这里补排下一次，保证改动最终会被上传。 */
+function resumeAutoSyncIfNeeded() {
+    if (!_autoSyncAgain || driveIsSyncing) return;
+    _autoSyncAgain = false;
+    if (hasUnsavedChanges) scheduleAutoSync();
+}
+
 /* ───────── 底部同步状态条（未同步 / 同步中 / 同步失败 / 无网络） ─────────
  * 状态由全局变量“推导”出来（而不是各处手动开关），所以不会出现状态残留或互相覆盖：
  *   同步中 > 失败 > 无网络/未同步 > 刚同步完成（短暂）> 隐藏
@@ -66,12 +142,17 @@ function syncBarDerive() {
     if (_barBusy && Date.now() - _barBusy.at > 90000) _barBusy = null;   // 保险：90 秒还没结束就当作已结束
     let s = { state: 'idle', text: '', btn: '', close: false, loginVisible };
     if (_barBusy) s = { ...s, state: 'syncing', text: _barBusy.msg };
-    else if (_barError) s = { ...s, state: 'error', text: _barError.msg, btn: _barError.retry ? '重试' : '', close: true };
-    else if (currentUser && !offlineMode && hasUnsavedChanges) {
-        if (driveIsSyncing) s = { ...s, state: 'syncing', text: '正在同步…' };
-        else if (typeof navigator !== 'undefined' && navigator.onLine === false) s = { ...s, state: 'offline', text: '无网络，修改已保存在本机，联网后同步' };
-        else s = { ...s, state: 'unsaved', text: '有修改尚未同步', btn: '立即同步' };
-    } else if (Date.now() < _barOkUntil) s = { ...s, state: 'ok', text: _barOkText || '已同步' };
+    else if (_barError) {
+        // 5.1.8：同步失败先只显示底部细线，连续失败超过 BAR_ERROR_DELAY_MS 才弹出文字条
+        const ripe = !_barError.delayed || (Date.now() - (_barError.at || 0) >= BAR_ERROR_DELAY_MS);
+        if (ripe) s = { ...s, state: 'error', text: _barError.msg, btn: _barError.retry ? '重试' : '', close: true };
+    } else if (currentUser && !offlineMode && hasUnsavedChanges) {
+        // 有修改未同步 / 正在自动同步：只显示细线，不占屏幕
+        if (typeof navigator !== 'undefined' && navigator.onLine === false
+            && Date.now() - (_unsavedSince || 0) > BAR_ERROR_DELAY_MS) {
+            s = { ...s, state: 'offline', text: '无网络，修改已保存在本机，联网后自动同步' };
+        }
+    }
     return s;
 }
 
@@ -248,5 +329,8 @@ function syncBarDismiss() { _barError = null; syncBarRender(); }
     initSyncBarDrag();
     window.addEventListener('online', syncBarRender);
     window.addEventListener('offline', syncBarRender);
-    setInterval(syncBarRender, 800);   // 兜底：hasUnsavedChanges / driveIsSyncing 等变量被各处直接修改时，也能及时反映
+    syncLineRender();
+    // 兜底：hasUnsavedChanges / driveIsSyncing 等变量被各处直接修改时，也能及时反映；
+    // 同时把“同步期间又改了数据”而暂缓的自动同步补排上
+    setInterval(() => { syncBarRender(); syncLineRender(); resumeAutoSyncIfNeeded(); }, 800);
 })();

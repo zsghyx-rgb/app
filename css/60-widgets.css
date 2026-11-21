@@ -124,6 +124,77 @@
   border-top: 1px solid var(--bs-border-color);
 }
 
+/* ───────── 设置 › 数据与同步（5.1.8 整理） ───────── */
+.ds-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.ds-status-grid > div {
+  background: var(--bs-tertiary-bg);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+.ds-k { font-size: 0.72rem; color: var(--bs-secondary-color); }
+.ds-v {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ds-pill {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.ds-pill-ok   { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+.ds-pill-warn { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+.ds-pill-err  { background: var(--bs-danger-bg-subtle);  color: var(--bs-danger-text-emphasis); }
+.ds-pill-off  { background: var(--bs-secondary-bg-subtle); color: var(--bs-secondary-text-emphasis); }
+.ds-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--bs-border-color);
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-action:last-child { border-bottom: 0; }
+.ds-action:hover { background: var(--bs-tertiary-bg); }
+.ds-action:active { background: var(--bs-secondary-bg); }
+.ds-action > i:first-child {
+  flex: 0 0 auto;
+  width: 22px;
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--bs-secondary-color);
+}
+.ds-action-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ds-action-title { font-size: 0.9rem; font-weight: 600; }
+.ds-action-desc { font-size: 0.75rem; color: var(--bs-secondary-color); line-height: 1.35; }
+.ds-action > i:last-child { flex: 0 0 auto; color: var(--bs-secondary-color); font-size: 0.8rem; }
+.ds-action.ds-danger .ds-action-title { color: var(--bs-danger-text-emphasis); }
+.ds-action.ds-danger > i:first-child { color: var(--bs-danger); }
+.ds-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--bs-secondary-color);
+  margin-bottom: 6px;
+}
+
 .cat-sort-list { display: flex; flex-direction: column; gap: 0; }
 .cat-sort-item .cat-icon-mini { font-size: 1.1rem; }
 .cat-sort-item .btn { font-size: 0.75rem; }

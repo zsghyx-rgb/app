@@ -9,7 +9,8 @@ async function exportJsonData() {
     a.href = URL.createObjectURL(blob);
     a.download = `ledger_backup_${formatLocal(new Date())}.json`;
     a.click();
-    clearUnsavedFlag();
+    // 导出不会上传数据：不要用 clearUnsavedFlag 把“待同步”标记清掉（5.1.8 起它还会取消自动同步），
+    // 否则刚改完就导出，改动会被误认为已同步而永远不再上传。
     if (verboseToast) showToast('JSON已导出', 'success');
 }
 

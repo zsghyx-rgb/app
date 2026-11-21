@@ -66,6 +66,7 @@ function showSettingsSubpage(name) {
     if (name === 'categories') renderCategorySettings();
     if (name === 'users') { renderUserManagement(); initPasswordHint(); renderHiddenAccountsList(); }
     if (name === 'password') initPasswordHint();
+    if (name === 'data-sync') renderDataSyncStatus();   // 5.1.8：同步状态卡片
     if (name === 'planned') renderPlannedTransactions();
     if (name === 'orphan-attachments') { $('orphan-attachments-result').innerHTML = ''; }
 }

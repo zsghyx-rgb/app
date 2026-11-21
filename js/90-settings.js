@@ -29,20 +29,42 @@ function openChangePwdModal() {
     }, 350);
 }
 
+/**
+ * 修改数据密码：把云端每一行都改用新密码加密，本机缓存也一起重写。
+ *  - 本机记录：走 push，ts 取「至少不早于云端原值」——服务端只拒绝严格更旧的 ts，相同 ts 会接受；
+ *  - 云端有、本机没有的正常行（本机删过、墓碑还没推上去）：走 rekey，只换密文，不动 ts / 归属 / seq，
+ *    这样既换掉了密文，又不会把本机已经删掉的记录“复活”；
+ *  - 已删除的墓碑行：只能走 rekey（push 对 deleted=1 的行是“已删除：不可复活”，直接跳过），
+ *    否则改密后「恢复云端已删除的记录」就再也解不开这些行了；
+ *  - 写完全量回读，确认每条正常行都能用新密码解开，才真正切换密码；失败会把写过的行改回旧密码。
+ */
 function changeDataPassword() {
     const currentInput = $('pwd-current').value;
     const newPwd       = $('pwd-new').value;
     const confirmPwd   = $('pwd-confirm').value;
     const msgEl        = $('pwd-change-msg');
+    const btn          = $('pwd-change-btn');
 
     const showMsg = (text, type) => {
+        if (!msgEl) return;
         msgEl.style.display = 'block';
         msgEl.className = `small mb-2 text-${type}`;
         msgEl.innerHTML = text;
     };
+    const setBusy = busy => {
+        if (!btn) return;
+        btn.disabled = busy;
+        btn.innerHTML = busy
+            ? '<span class="spinner-border spinner-border-sm me-1"></span>处理中…'
+            : '<i class="bi bi-check-lg"></i> 确认修改';
+    };
 
     if (offlineMode) {
         showMsg('<i class="bi bi-x-circle"></i> 离线模式下无法重新加密云端数据，请先切换到在线模式', 'danger');
+        return;
+    }
+    if (driveIsSyncing) {
+        showMsg('<i class="bi bi-hourglass-split"></i> 正在同步中，请等这次同步结束后再修改密码', 'warning');
         return;
     }
     if (userPassword && currentInput !== userPassword) {
@@ -61,51 +83,145 @@ function changeDataPassword() {
         showMsg('<i class="bi bi-x-circle"></i> 两次输入的密码不一致', 'danger');
         return;
     }
+    if (newPwd === userPassword) {
+        showMsg('<i class="bi bi-info-circle"></i> 新密码和当前密码相同，不需要修改', 'warning');
+        return;
+    }
 
-    // 改密必须把云端每一行都用新密码重新加密，否则新旧密码混合会导致之后无法解密。
+    // 整个过程中 userPassword 保持旧值，只有校验全部通过后才切换，
+    // 这样中途失败（网络断开等）时本机缓存和内存数据仍然是旧密码，不会出现“本机也一半新一半旧”。
     (async () => {
         const oldPwd = userPassword;
-        saveUserData();
-
+        let rewriteAll = null;
+        let rewritten = false;
+        setBusy(true);
+        driveIsSyncing = true;          // 期间不要让自动同步插进来
         try {
-            showMsg('<i class="bi bi-hourglass-split"></i> 正在核对云端数据…', 'warning');
+            saveUserData();
             const state = incLoadState();
-            // 先用旧密码拉取一次，确保本机包含云端最新数据
-            const rows = await incPullRows(state.lastSeq);
-            incApplyRows(inMemoryLoadedData, incDecryptRows(rows, oldPwd), state);
+
+            showMsg('<i class="bi bi-hourglass-split"></i> 正在读取云端全部数据…', 'warning');
+            const firstRows = await incPullRows(0);
+
+            // 用旧密码解开云端每一行（含已删除的墓碑行——它们的密文同样要换掉）。
+            // 个别旧密码也解不开的行（以前改密留下的残留、别的工具写入）先记下来：
+            // 它们不参与后面的校验，也不阻断这次改密。
+            const cloudRec = new Map();      // id -> 明文（只换密文的重写要用）
+            const broken = new Set();        // 旧密码解不开的 id
+            const decrypted = [];
+            firstRows.forEach(row => {
+                try {
+                    const rec = incDec(row.enc, oldPwd);
+                    cloudRec.set(String(row.id), rec);
+                    if (!row.deleted) decrypted.push({ row, rec });
+                } catch (_) {
+                    broken.add(String(row.id));
+                    if (row.deleted) decrypted.push({ row, rec: null });
+                }
+            });
+
+            // 先把云端最新数据合并进本机，待重加密的每一行都是最新版本
+            incApplyRows(inMemoryLoadedData, decrypted, state);
+            incRefreshAfterMerge({ changed: 1, configChanged: true });
             saveUserData();
 
-            userPassword = newPwd;
-            showMsg('<i class="bi bi-hourglass-split"></i> 正在用新密码重新加密云端数据…', 'warning');
+            const baseTs = new Map(firstRows.map(r => [String(r.id), Number(r.ts) || 0]));
+            const firstRowsById = new Map();
+            firstRows.forEach(r => firstRowsById.set(String(r.id), r));
 
-            let verified = false;
-            let lastErr = null;
-            for (let attempt = 1; attempt <= 3 && !verified; attempt++) {
+            // 用 pw 重写一次云端：本机记录全部 push，云端独有的行和墓碑行只换密文。
+            // forceTs > 0 时给所有行一个“现在”的 ts（重试时用，保证服务端一定接受）。
+            rewriteAll = async (pw, forceTs) => {
                 const local = incCollectLocal(inMemoryLoadedData);
-                const upserts = Array.from(local.values()).map(item => ({ item, sig: incSig(item.payload) }));
-                await incPushUpserts(upserts, state);
+                const upserts = [];
+                local.forEach((item, id) => {
+                    upserts.push({
+                        item, sig: incSig(item.payload),
+                        ts: Math.max(forceTs || 0, incTsOf(item), baseTs.get(id) || 0)
+                    });
+                });
+                const pushedRes = await incPushUpserts(upserts, state, pw);
 
+                const rekeyRows = [];
+                const cloudOnly = [];
+                firstRowsById.forEach((row, id) => {
+                    const rec = cloudRec.get(id);
+                    if (rec == null) return;                       // 旧密码就解不开：没有明文可重写
+                    if (row.deleted) {                             // 墓碑行：只换密文
+                        rekeyRows.push({ id, enc: incEnc(rec, pw) });
+                        return;
+                    }
+                    if (local.has(id)) return;                     // 本机记录已经 push 过了
+                    if (row.kind !== 'acc' && row.kind !== 'txn' && row.kind !== 'plan') return;
+                    rekeyRows.push({ id, enc: incEnc(rec, pw) });
+                    cloudOnly.push({
+                        item: { id, kind: row.kind, owner: row.owner, payload: rec },
+                        sig: incSig(rec), ts: Math.max(forceTs || 0, Number(row.ts) || 0)
+                    });
+                });
+                let rekey = { updated: 0, unsupported: false, tooLarge: 0 };
+                if (rekeyRows.length) rekey = await incRekeyRows(rekeyRows);
+                if (rekey.unsupported && cloudOnly.length) {
+                    // 服务端还是旧版 Code.gs（没有 rekey）：这些本机没有的行只能也 push 一遍（内容不变）
+                    await incPushUpserts(cloudOnly, state, pw);
+                }
+                return { pushed: pushedRes.pushed, rekey };
+            };
+
+            // 最多写 3 次并回读校验：所有“旧密码本来能解开”的正常行都必须能用新密码解开
+            let verified = false, lastBad = 0, lastStat = null;
+            for (let attempt = 1; attempt <= 3 && !verified; attempt++) {
+                showMsg(`<i class="bi bi-hourglass-split"></i> 正在用新密码重新加密云端数据…（第 ${attempt}/3 次）`, 'warning');
+                lastStat = await rewriteAll(newPwd, attempt > 1 ? Date.now() : 0);
+                rewritten = true;
                 const checkRows = await incPullRows(0);
-                try {
-                    incDecryptRows(checkRows, newPwd);
+                const bad = checkRows.filter(r => !r.deleted && !broken.has(String(r.id)) && !incCanDecrypt(r.enc, newPwd));
+                if (bad.length) {
+                    lastBad = bad.length;
+                } else {
                     checkRows.forEach(r => { if (r.seq > state.lastSeq) state.lastSeq = r.seq; });
                     verified = true;
-                } catch (e) {
-                    lastErr = e;
                 }
             }
-            if (!verified) throw lastErr || new Error('校验失败');
+            if (!verified) throw new Error(`还有 ${lastBad} 条云端记录没能改用新密码`);
 
+            // 校验通过，才真正切换密码：内存、本机缓存（APP_raw_cache）一起换成新密码
+            userPassword = newPwd;
             incPersistLocal(state, true);
             clearUnsavedFlag();
-            bootstrap.Modal.getInstance($('changePwdModal')).hide();
+            hasUnsavedChanges = false;
+            try { bootstrap.Modal.getInstance($('changePwdModal')).hide(); } catch (_) {}
             initPasswordHint();
-            showToast('密码已更新，云端数据已用新密码重新加密；其他设备下次同步需输入新密码', 'success', 6000);
+
+            let extra = '';
+            if (lastStat && lastStat.rekey && lastStat.rekey.unsupported) {
+                extra += '；服务端还是旧版 Code.gs，云端已删除的记录仍是旧密码（重新部署 Code.gs 后请再改一次密码）';
+            }
+            if (lastStat && lastStat.rekey && lastStat.rekey.tooLarge) {
+                extra += `；有 ${lastStat.rekey.tooLarge} 条记录内容过大，密文无法重写`;
+            }
+            if (broken.size) {
+                extra += `；另有 ${broken.size} 条记录原本就无法用当前密码解开，本次未改动`;
+            }
+            showToast(`密码已更新，云端 ${(lastStat && lastStat.pushed) || 0} 条记录已用新密码重新加密；其他设备下次登录需输入新密码${extra}`, 'success', 7000);
         } catch (e) {
-            // 不自动恢复旧密码：可能已有部分行写入了新密码，恢复旧密码会让这些行无法解密。
-            showMsg('<i class="bi bi-x-circle"></i> 修改未完成：' + _escHtml(e.message) +
-                '<br>请保持当前页面不要退出，再点一次「修改密码」重试（新密码保持不变）。', 'danger');
-            showToast('密码修改未完成，请重试', 'error', 0);
+            // 失败回滚：把这次写过的行再用旧密码写回去，避免云端留下半新半旧的数据。
+            // 回滚也失败时不切换本机密码，提示用户留在本页重试（重试会从头再写一遍）。
+            let rolledBack = false;
+            if (rewritten && rewriteAll) {
+                try { await rewriteAll(oldPwd, Date.now()); rolledBack = true; } catch (_) {}
+            }
+            showMsg('<i class="bi bi-x-circle"></i> 修改未完成：' + _escHtml(e.message) + '<br>' +
+                (rolledBack
+                    ? '已把这次写入的部分改回原密码，云端没有留下半新半旧的数据，请稍后重试。'
+                    : '请保持本页面不要退出，稍后再点一次「确认修改」重试（表单内容不用改）。'), 'danger');
+            showToast('密码修改未完成', 'error', 0);
+        } finally {
+            driveIsSyncing = false;
+            setBusy(false);
+            syncBarRender();
+            // 失败时本机可能还有没上传的改动：恢复自动同步，让它在旧密码下正常把改动推上去
+            if (hasUnsavedChanges && typeof scheduleAutoSync === 'function') scheduleAutoSync();
         }
     })();
 }
@@ -114,6 +230,56 @@ function initPasswordHint() {
     const hint = $('pwd-status-hint');
     if (!hint) return;
     hint.textContent = userPassword ? '云端数据使用密码加密' : '当前没有加密密码';
+}
+
+/* ───────── 设置 › 数据与同步：状态卡片（5.1.8） ───────── */
+function _dsFmtTime(ts) {
+    const n = Number(ts);
+    if (!n) return '—';
+    const d = new Date(n);
+    if (isNaN(d.getTime())) return '—';
+    const p = x => String(x).padStart(2, '0');
+    const hm = `${p(d.getHours())}:${p(d.getMinutes())}`;
+    const today = new Date();
+    if (d.toDateString() === today.toDateString()) return '今天 ' + hm;
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${hm}`;
+}
+
+function renderDataSyncStatus() {
+    const sub = $('ds-status-sub'), pill = $('ds-status-pill');
+    if (!sub || !pill) return;
+    const lastEl = $('ds-last-sync'), cntEl = $('ds-record-count'), pendEl = $('ds-pending');
+    const badge = $('offline-mode-badge');
+    if (badge) badge.style.display = offlineMode ? '' : 'none';
+
+    let records = 0;
+    const all = (inMemoryLoadedData && inMemoryLoadedData.allUserData) || {};
+    Object.values(all).forEach(ud => {
+        records += (ud.accounts || []).length + (ud.transactions || []).length + (ud.plannedTransactions || []).length;
+    });
+
+    // 待同步数量：和同步时同一套差异算法，但不改任何状态
+    let pending = 0;
+    try {
+        if (inMemoryLoadedData) {
+            const d = incDiffLocal(inMemoryLoadedData, incLoadState(), false);
+            pending = d.upserts.length + d.tombstones.length;
+        }
+    } catch (_) {}
+
+    if (lastEl) lastEl.textContent = _dsFmtTime(localStorage.getItem('APP_last_sync_time'));
+    if (cntEl) cntEl.textContent = records + ' 条';
+    if (pendEl) pendEl.textContent = pending > 0 ? pending + ' 项' : '无';
+
+    let cls = 'ok', text = '已同步', subText = '数据已与云端一致，无需操作';
+    if (!userPassword) { cls = 'off'; text = '未登录'; subText = '输入数据密码后才能同步'; }
+    else if (offlineMode) { cls = 'off'; text = '离线'; subText = '离线模式只读写本机缓存，不会联网'; }
+    else if (_barError) { cls = 'err'; text = '同步失败'; subText = _barError.msg || '同步失败'; }
+    else if (driveIsSyncing) { cls = 'warn'; text = '同步中'; subText = '正在和 Google 表格同步…'; }
+    else if (hasUnsavedChanges || pending > 0) { cls = 'warn'; text = '待同步'; subText = '改动会在 4 秒后自动上传，也可以点下面的按钮立即同步'; }
+    pill.className = 'ds-pill ds-pill-' + cls;
+    pill.textContent = text;
+    sub.textContent = subText;
 }
 
 const FOREIGN_CURRENCIES = [
