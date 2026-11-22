@@ -380,6 +380,7 @@ async function restoreFromBackup(fileName, dateStr) {
         const after = await incPullRows(0);
         incApplyRows(inMemoryLoadedData, incDecryptRows(after, userPassword), state);
         userPins = inMemoryLoadedData.userPins || userPins || {};
+        pendingDeletesClear();   // 5.1.9：云端已按备份重写，旧的删除登记作废
         incPersistLocal(state, true);
         clearUnsavedFlag();
         loadAllData();

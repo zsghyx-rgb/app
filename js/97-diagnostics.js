@@ -226,6 +226,7 @@ async function jibiOverwriteCloud() {
         const after = await incPullRows(0);
         incApplyRows(inMemoryLoadedData, incDecryptRows(after, userPassword), state);
         userPins = inMemoryLoadedData.userPins || userPins || {};
+        pendingDeletesClear();   // 5.1.9：云端已按本机重写，旧的删除登记作废
         incPersistLocal(state, true);
         clearUnsavedFlag();
         loadAllData();
@@ -309,6 +310,8 @@ async function jibiRecoverCloudDeleted() {
         if (arr.some(x => String(x.id) === String(row.id))) return;
         rec.updatedAt = now;
         arr.push(rec);
+        memTouched();                                   // 5.1.9：内存变了，界面数组需要对账
+        pendingDeletesForget([String(row.id)]);         // 5.1.9：加回来的记录不再是“已删除”
         items.push({ item: { id: String(row.id), kind: row.kind, owner: row.owner, payload: rec }, sig: incSig(rec) });
     });
 
@@ -329,6 +332,7 @@ async function jibiRecoverCloudDeleted() {
         const failedN = up.rejected.length;
         showToast(`已恢复 ${up.pushed} 条记录` + (failedN ? `，${failedN} 条被云端拒绝（时间戳较旧）` : ''), failedN ? 'warning' : 'success', 6000);
     } catch (e) {
+        loadAllData(); filterUserData();   // 5.1.9：先让界面数组跟上内存（含刚加回的记录），再保存，避免旧数组把它们覆盖掉
         saveUserData();
         hasUnsavedChanges = true;
         if (typeof syncBarRender === 'function') syncBarRender();

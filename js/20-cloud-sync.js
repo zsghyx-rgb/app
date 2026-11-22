@@ -249,7 +249,7 @@ async function incRenameOwnerEverywhere(oldName, newName) {
  *  只要其中一条的删除没有送达（推送中断、旧版本删除、清理云端已删除行等），另一半就会孤零零地留下。
  *  所以收到某条转账记录的删除时，本机把同一笔转账的另一半和手续费一并删掉；
  *  这些被连带删除的记录之后会在本机的差异计算里变成墓碑，补发给云端和其他设备。 */
-function incRemoveTransferCompanions(data, gone) {
+function incRemoveTransferCompanions(data, gone, outIds) {
     if (!gone || !gone.isTransfer) return 0;
     const pairKey = gone.transferPairId != null ? String(gone.transferPairId) : null;
     const feeKey = pairKey != null ? pairKey : (gone.type === 'expense' ? String(gone.id) : null);
@@ -262,7 +262,7 @@ function incRemoveTransferCompanions(data, gone) {
             const r = arr[i];
             const samePair = pairKey != null && r.isTransfer && r.transferPairId != null && String(r.transferPairId) === pairKey;
             const isFee = feeKey != null && r.transferFeeFor != null && String(r.transferFeeFor) === feeKey;
-            if (samePair || isFee) { arr.splice(i, 1); n++; }
+            if (samePair || isFee) { arr.splice(i, 1); n++; if (outIds) outIds.push(String(r.id)); }
         }
     });
     return n;
@@ -390,6 +390,8 @@ function incDecryptRows(rows, pw) {
  */
 function incApplyRows(data, decrypted, state) {
     const res = { newItems: 0, changed: 0, configChanged: false, removed: 0 };
+    if (data === inMemoryLoadedData && typeof memTouched === 'function') memTouched();   // 5.1.9：内存即将变化，界面数组需要对账
+    const companionIds = [];
     const local = incCollectLocal(data);
 
     decrypted.sort((a, b) => a.row.seq - b.row.seq).forEach(({ row, rec }) => {
@@ -399,7 +401,7 @@ function incApplyRows(data, decrypted, state) {
         if (row.deleted) {
             const gone = row.kind === 'txn' ? incFindLocalById(data, id) : null;   // 先取到记录再删，才能找到它的另一半
             if (incRemoveLocalById(data, id)) { res.removed++; res.changed++; }
-            if (gone) { const extra = incRemoveTransferCompanions(data, gone); if (extra) { res.removed += extra; res.changed += extra; } }
+            if (gone) { const extra = incRemoveTransferCompanions(data, gone, companionIds); if (extra) { res.removed += extra; res.changed += extra; } }
             state.synced[id] = 'X';
             return;
         }
@@ -470,22 +472,42 @@ function incApplyRows(data, decrypted, state) {
     });
     // 整轮合并之后：改名留下的旧名字空桶在这里清掉（记录已经全部挪到新名字下）
     if (incPruneRemovedUsers(data)) res.changed++;
+    // 5.1.9：转账连带删除的另一半/手续费要补发墓碑，墓碑只认“显式删除”，所以在这里登记
+    if (companionIds.length && typeof pendingDeletesGet === 'function') {
+        const pd = pendingDeletesGet(), now = Date.now();
+        companionIds.forEach(id => { if (state.synced[id] !== 'X') pd[id] = now; });
+        pendingDeletesSave();
+    }
     return res;
 }
 
 /* ── 推送 ── */
 function incDiffLocal(data, state, force) {
     const local = incCollectLocal(data);
-    const upserts = [], tombstones = [];
+    const upserts = [], tombstones = [], lost = [];
     local.forEach((item, id) => {
         const sig = incSigCached(id, item.payload);
         if (!force && state.synced[id] === sig) return;
         upserts.push({ item, sig });
     });
+    // 5.1.9：墓碑只来自“用户显式删除”（pendingDeletes / deletedLog）。
+    // 以前是“synced 里有、本机没有 = 删除”，任何让本机丢记录的 bug 都会被放大成云端删除（5.1.6 事故）。
+    // 现在本机缺失但没有删除登记的记录一律当作“本机丢了”，同步时从云端取回，绝不发墓碑。
+    // order: 行（账户排序）不是用户记录，沿用原来的推断。
+    const explicit = explicitDeleteIds();
     Object.keys(state.synced).forEach(id => {
-        if (state.synced[id] !== 'X' && !local.has(id)) tombstones.push(id);
+        if (state.synced[id] === 'X' || local.has(id)) return;
+        if (id.startsWith('order:') || explicit.has(id)) tombstones.push(id);
+        else lost.push(id);
     });
-    return { upserts, tombstones };
+    // 登记过但云端从没有过（建了又删）/ 云端已是墓碑的 id：登记已经没有用了，清掉免得越攒越多
+    const pd = pendingDeletesGet(); let pruned = false;
+    Object.keys(pd).forEach(id => {
+        const v = state.synced[id];
+        if ((v === undefined || v === 'X') && !local.has(id)) { delete pd[id]; pruned = true; }
+    });
+    if (pruned) pendingDeletesSave();
+    return { upserts, tombstones, lost };
 }
 
 /** pw 可选：改密码时用新密码加密，其它调用沿用全局 userPassword。
@@ -515,6 +537,7 @@ async function incPushTombstones(ids, state) {
         const part = ids.slice(i, i + 200);
         await sheetCall({}, { action: 'tombstone', ids: part, ts: Date.now() });
         part.forEach(id => { state.synced[id] = 'X'; });
+        pendingDeletesForget(part);   // 5.1.9：墓碑已送达，登记可以撤掉
     }
 }
 
@@ -559,9 +582,25 @@ async function incSyncCore(options = {}) {
     summary.newItems += applied.newItems;
     summary.changed += applied.changed;
     summary.configChanged = applied.configChanged;
+    // 5.1.9：内存刚被改写，界面数组必须在同一个 tick 里跟上。后面还有网络等待，
+    // 期间用户的任何编辑都会走 saveUserData()，它不能再拿旧数组去覆盖刚拉到的记录。
+    if (applied.changed > 0) incReloadGlobals();
 
     // 2) 计算本机改动
     const diff = incDiffLocal(data, state, !!options.force);
+
+    // 2.5) 本机丢失的记录：synced 里有、本机没有、又不是用户删的 → 从云端取回（不发墓碑）
+    if (diff.lost.length) {
+        const back = await incPullByIds(diff.lost);
+        diff.lost.forEach(id => { delete state.synced[id]; });   // 先清掉，才会按“新记录”装回
+        const liveBack = back.filter(r => !r.deleted).length;
+        const a3 = incApplyRows(data, incDecryptRows(back, pullPw), state);
+        summary.restored = liveBack;
+        summary.newItems += a3.newItems;
+        summary.changed += a3.changed;
+        summary.configChanged = summary.configChanged || a3.configChanged;
+        if (a3.changed > 0) incReloadGlobals();
+    }
 
     // 3) 熔断：一次要删除的云端记录异常多时，先确认
     const knownCount = Object.keys(state.synced).length;
@@ -575,7 +614,8 @@ async function incSyncCore(options = {}) {
         }
         if (!ok) {
             summary.aborted = `检测到异常删除（${diff.tombstones.length} 条），已中止推送`;
-            incSaveState(state);
+            // 5.1.9：前面已经把云端数据合进内存，必须先写缓存、后写状态，否则 lastSeq 前进了而缓存里没有这些记录
+            incPersistLocal(state, summary.changed > 0);
             return summary;
         }
     }
@@ -596,6 +636,7 @@ async function incSyncCore(options = {}) {
         summary.newItems += a2.newItems;
         summary.changed += a2.changed;
         summary.configChanged = summary.configChanged || a2.configChanged;
+        if (a2.changed > 0) incReloadGlobals();
     }
 
     summary.state = state;
@@ -620,8 +661,10 @@ function incPersistLocal(state, rewriteCache) {
 }
 
 /** 把合并结果刷新到界面（与原 syncToDrive 的刷新逻辑一致） */
-function incRefreshAfterMerge(summary) {
-    if (!summary.changed) return;
+/** 5.1.9：只刷新“数据”（配置全局 + 界面数组），不碰 DOM。同步把云端数据写进内存后必须立刻调用，
+ *  即使记账表单正开着也一样——表单保存时按 id 重新取记录，不依赖旧数组。
+ *  返回 false 表示还没登录（没有界面数组可刷新）。 */
+function incReloadGlobals() {
     _configUpdatedAt = inMemoryLoadedData.configUpdatedAt || Date.now();
     categories    = inMemoryLoadedData.categories    || DEFAULT_CATEGORIES;
     exchangeRates = inMemoryLoadedData.exchangeRates || DEFAULT_RATES;
@@ -629,16 +672,28 @@ function incRefreshAfterMerge(summary) {
     budgets       = inMemoryLoadedData.budgets       || [];
     userPins      = inMemoryLoadedData.userPins      || {};
     if (inMemoryLoadedData.users && inMemoryLoadedData.users.length) dataUsers = inMemoryLoadedData.users;
-    if (!currentUser) { // 还在登录界面（例如迁移时）：只刷新用户列表
+    if (!currentUser) return false;
+    loadAllData();
+    filterUserData();
+    return true;
+}
+
+/** 把合并结果刷新到界面（数据刷新 incReloadGlobals + 重新渲染；表单打开时由调用方推迟渲染） */
+function incRefreshAfterMerge(summary) {
+    if (!summary.changed) return;
+    if (!incReloadGlobals()) { // 还在登录界面（例如迁移时）：只刷新用户列表
         window._suppressAutoLogin = true;
         onDataLoaded();
         return;
     }
-    loadAllData();
-    filterUserData();
     renderAllTransactions();
     renderAccounts();
     if (summary.configChanged) renderCategorySettings();
+}
+
+/** 5.1.9：有记录在本机丢失、已从云端取回时提示一次（正常情况下不会出现） */
+function incNoteRestored(s) {
+    if (s && s.restored > 0) showToast(`有 ${s.restored} 条记录在本机丢失，已从云端恢复`, 'info', 5000);
 }
 
 /** 手动 / 自动同步入口（对应原 syncToDrive）
@@ -655,8 +710,9 @@ async function incSync(manual = false, forcePush = false) {
     saveUserData();
     try {
         const s = await incSyncCore({ manual, force: forcePush });
-        if (s.aborted) { showToast('同步已中止：' + s.aborted, 'error', 0); return; }
+        if (s.aborted) { incRefreshAfterMerge(s); showToast('同步已中止：' + s.aborted, 'error', 0); return; }
         incRefreshAfterMerge(s);
+        incNoteRestored(s);
         incPersistLocal(s.state, s.changed > 0 || s.pushed > 0 || s.deleted > 0);
         clearUnsavedFlag();
         incEnsureBackup();
@@ -692,7 +748,11 @@ async function incBackgroundSync() {
         // 即使表单打开、稍后才刷新界面，也先把配置里的 PIN 同步到全局变量，
         // 否则随后保存表单时可能用旧的 userPins 覆盖云端的新值。
         userPins = inMemoryLoadedData.userPins || userPins || {};
-        if (s.aborted) { showToast('后台同步已中止：' + s.aborted, 'warning', 4000); return; }
+        if (s.aborted) {
+            if (s.changed > 0) { const open = $('add-transaction-section') && $('add-transaction-section').classList.contains('show'); if (open) window._pendingUIRefresh = true; else incRefreshAfterMerge(s); }
+            showToast('后台同步已中止：' + s.aborted, 'warning', 4000); return;
+        }
+        incNoteRestored(s);
         incPersistLocal(s.state, s.changed > 0 || s.pushed > 0 || s.deleted > 0);
         clearUnsavedFlag();
         incEnsureBackup();
@@ -758,6 +818,7 @@ async function incInitialLoad(password) {
         _configUpdatedAt = data.configUpdatedAt || Date.now();
         window._incPendingInitial = false;
         if (errEl) errEl.classList.add('d-none');
+        pendingDeletesClear();   // 5.1.9：本机状态整体重建，旧的删除登记作废
         incPersistLocal(state, true);
         localStorage.setItem('APP_last_sync_time', String(Date.now()));
         showToast('数据已从 Google 表格加载', 'success', 2500);

@@ -439,10 +439,138 @@ function loadAllData() {
             uData.plannedTransactions.forEach(p => { if (take('plannedTransactions', p)) plannedTransactions.push({ ...p, ownerName: u }); });
         }
     });
+    // 5.1.9：界面数组此刻与内存一致，记下版本和“已知记录”，供 saveUserData 对账用
+    _globalsVersion = _memVersion;
+    _recordGlobalsKnown();
+}
+
+/* ═══ 5.1.9：内存数据（inMemoryLoadedData）↔ 界面数组（accounts / transactions / plannedTransactions）对账 ═══
+ * 背景：同步层把云端新数据写进内存，界面数组要等刷新才更新；这期间 saveUserData() 若用旧数组整体覆盖内存，
+ *      拉到的记录就丢了，而同步进度已前进，随后又被当成“本机删除”发墓碑到云端（5.1.6 事故的根因）。
+ * 规则：
+ *   1. 同步层每次改内存都调用 memTouched()（_memVersion +1）；loadAllData / saveUserData 完成时令 _globalsVersion = _memVersion。
+ *   2. saveUserData 发现两个版本不一致，先 reconcileGlobalsFromMemory()（按 id 三方合并），再写回。
+ *   3. 写回时对比前后的 id 集合：消失的登记为“显式删除”（pendingDeletes），重新出现的（撤销）移除。
+ *      墓碑只来自显式删除；本机缺失但没有登记的记录，同步时从云端取回（见 20-cloud-sync.js 的 incDiffLocal / incSyncCore）。 */
+let _memVersion = 0;
+let _globalsVersion = 0;
+const _REC_KINDS = ['accounts', 'transactions', 'plannedTransactions'];
+let _globalsKnown = { accounts: new Map(), transactions: new Map(), plannedTransactions: new Map() };   // id -> updatedAt（界面数组上次与内存一致时）
+
+function memTouched() { _memVersion++; }
+
+function _recordGlobalsKnown() {
+    const src = { accounts: accounts, transactions: transactions, plannedTransactions: plannedTransactions };
+    _REC_KINDS.forEach(kind => {
+        const m = new Map();
+        (src[kind] || []).forEach(r => { if (r && r.id != null) m.set(String(r.id), Number(r.updatedAt) || 0); });
+        _globalsKnown[kind] = m;
+    });
+}
+
+function _memRecordIds() {
+    const set = new Set();
+    const all = (inMemoryLoadedData && inMemoryLoadedData.allUserData) || {};
+    Object.values(all).forEach(ud => {
+        if (!ud) return;
+        _REC_KINDS.forEach(kind => (ud[kind] || []).forEach(r => { if (r && r.id != null) set.add(String(r.id)); }));
+    });
+    return set;
+}
+
+/* 显式删除登记：本机私有、持久化（localStorage），不进同步数据 */
+const PENDING_DEL_KEY = 'APP_pending_deletes';
+let _pendingDeletes = null;
+function pendingDeletesGet() {
+    if (_pendingDeletes) return _pendingDeletes;
+    try { const o = JSON.parse(localStorage.getItem(PENDING_DEL_KEY) || 'null'); _pendingDeletes = (o && typeof o === 'object') ? o : {}; }
+    catch (_) { _pendingDeletes = {}; }
+    return _pendingDeletes;
+}
+function pendingDeletesSave() {
+    try { localStorage.setItem(PENDING_DEL_KEY, JSON.stringify(_pendingDeletes || {})); } catch (e) { console.warn('[pd] 保存失败', e); }
+}
+function pendingDeletesClear() {
+    _pendingDeletes = {};
+    try { localStorage.removeItem(PENDING_DEL_KEY); } catch (_) {}
+}
+/** 墓碑允许的“显式删除”证据：pendingDeletes ∪ 近期 deletedLog（兼容升级前已经删除、还没推送的记录） */
+function explicitDeleteIds() {
+    const set = new Set(Object.keys(pendingDeletesGet()));
+    const log = (inMemoryLoadedData && inMemoryLoadedData.deletedLog) || [];
+    log.forEach(e => { if (e && e.id != null) set.add(String(e.id)); });
+    return set;
+}
+function pendingDeletesForget(ids) {
+    const pd = pendingDeletesGet(); let n = 0;
+    (ids || []).forEach(id => { if (pd[String(id)] !== undefined) { delete pd[String(id)]; n++; } });
+    if (n) pendingDeletesSave();
+}
+function _registerDeletions(before, after) {
+    const pd = pendingDeletesGet(); let dirty = false; const now = Date.now();
+    before.forEach(id => { if (!after.has(id) && pd[id] === undefined) { pd[id] = now; dirty = true; } });
+    if (Object.keys(pd).length) after.forEach(id => { if (pd[id] !== undefined) { delete pd[id]; dirty = true; } });
+    if (dirty) pendingDeletesSave();
+}
+
+/** 三方合并：把“同步已写入内存、界面数组还没跟上”的变化并进界面数组（只在版本不一致时调用） */
+function reconcileGlobalsFromMemory() {
+    const mem = inMemoryLoadedData;
+    if (!mem || !mem.allUserData) return;
+    const users = bookUserNames();
+    const cur = { accounts: accounts, transactions: transactions, plannedTransactions: plannedTransactions };
+    const next = {};
+    _REC_KINDS.forEach(kind => {
+        // 内存侧：id -> {rec, owner}（跨桶重复取 updatedAt 大的，平手取靠前的用户，与 loadAllData 一致）
+        const memMap = new Map();
+        users.forEach(u => {
+            const ud = mem.allUserData[u]; if (!ud) return;
+            (ud[kind] || []).forEach(rec => {
+                if (rec == null || rec.id == null) return;
+                const id = String(rec.id), c = memMap.get(id);
+                if (!c || (Number(rec.updatedAt) || 0) > (Number(c.rec.updatedAt) || 0)) memMap.set(id, { rec, owner: u });
+            });
+        });
+        const known = _globalsKnown[kind] || new Map();
+        const out = [], seen = new Set();
+        (cur[kind] || []).forEach(g => {
+            if (g == null || g.id == null) return;
+            const id = String(g.id); seen.add(id);
+            const m = memMap.get(id);
+            if (!m) {
+                // 内存里没有：界面新建的 → 留；界面上次已知、现在内存没了（远端删除）→ 丢，除非本机之后又改过
+                if (!known.has(id) || (Number(g.updatedAt) || 0) > known.get(id)) out.push(g);
+                return;
+            }
+            // 内存里有：内存版本更新（同步拉到的）→ 采用；否则保留界面上的（本机改动）
+            if ((Number(m.rec.updatedAt) || 0) > (Number(g.updatedAt) || 0)) out.push({ ...m.rec, ownerName: m.owner });
+            else out.push(g);
+        });
+        memMap.forEach((m, id) => {
+            if (seen.has(id)) return;
+            if (known.has(id)) return;            // 界面上次已知、本机删掉了 → 不复活
+            out.push({ ...m.rec, ownerName: m.owner });   // 同步新拉到的
+        });
+        next[kind] = out;
+    });
+    accounts = next.accounts; transactions = next.transactions; plannedTransactions = next.plannedTransactions;
+    // 配置：内存里的配置更新（同步拉到的）就采用，否则保留界面上的（本机刚改的）
+    if ((Number(mem.configUpdatedAt) || 0) > (Number(_configUpdatedAt) || 0)) {
+        if (mem.categories) categories = mem.categories;
+        if (mem.exchangeRates) exchangeRates = mem.exchangeRates;
+        if (mem.budgets) budgets = mem.budgets;
+        if (mem.categoryIcons) categoryIcons = mem.categoryIcons;
+        if (mem.userPins) userPins = mem.userPins;
+        if (mem.users && mem.users.length) dataUsers = mem.users;
+        _configUpdatedAt = mem.configUpdatedAt;
+    }
 }
 
 function saveUserData() {
     if (!currentUser) return;
+    // 5.1.9：同步刚往内存里写过东西、界面数组还没跟上 → 先对账，绝不能用旧数组覆盖掉同步拉到的数据
+    if (_globalsVersion !== _memVersion) reconcileGlobalsFromMemory();
+    const idsBefore = _memRecordIds();
     // 回写范围 = 用户列表 ∪ 数据桶名，保证“桶里有数据但不在用户列表”的记录不会被写丢
     bookUserNames().forEach(u => {
         // 保留已有的 accountOrder，不覆盖
@@ -461,6 +589,10 @@ function saveUserData() {
     inMemoryLoadedData.budgets = budgets;
     inMemoryLoadedData.categoryIcons = categoryIcons;
     inMemoryLoadedData.configUpdatedAt = _configUpdatedAt;
+    // 5.1.9：写回前内存里有、写回后没有的 = 用户显式删除，登记后才会向云端发墓碑；重新出现的（撤销）从登记里移除
+    _registerDeletions(idsBefore, _memRecordIds());
+    _globalsVersion = _memVersion;
+    _recordGlobalsKnown();
 }
 
 /** 获取当前用户的账户顺序数组，不存在则返回 null */
