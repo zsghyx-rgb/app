@@ -51,16 +51,18 @@ function showToast(msg, type = 'success', duration = 3000) {
     syncBarRender();
 }
 
-/* ───────── 5.1.8：底部导航上方的一行细线同步指示 + 改完 4 秒自动同步 ─────────
+/* ───────── 5.1.8：底部导航上方的一行细线同步指示 + 改完 3 秒自动同步 ─────────
  * 状态完全由全局变量推导，平时不显示、不占位置：
- *   有修改未同步 → 琥珀色细线（改完立刻出现，4 秒后自动同步）
+ *   有修改未同步 → 琥珀色细线（改完立刻出现，3 秒后自动同步）
  *   同步中       → 蓝色细线来回流动
  *   同步成功     → 绿色细线，约 1.5 秒后淡出
  *   长时间同步不成功 → 才弹出底部文字状态条（#sync-bar）
  */
-const AUTO_SYNC_DELAY_MS = 4000;        // 改完多久后自动同步
+const AUTO_SYNC_DELAY_MS = 3000;        // 改完多久后自动同步（5.2.0：4 秒 → 3 秒）
 const BAR_ERROR_DELAY_MS = 8000;        // 同步连续失败多久后弹文字提示条
 const SYNC_LINE_OK_MS = 1500;           // 绿色细线停留时间
+const AUTO_SYNC_MODAL_HOLD_MAX_MS = 60000;   // 5.2.0：弹窗开着时，自动同步最多暂缓多久（忘了关窗也不会一直不上传）
+let _autoSyncHeldAt = 0;                // >0：有一次自动同步因弹窗打开而暂缓，值为首次暂缓的时间
 let _lineOkUntil = 0;
 let _lineState = '';
 let _lineOkTimer = null;
@@ -97,9 +99,23 @@ function syncLineOk() {
 function cancelAutoSync() {
     if (_autoSyncTimer) { clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
     _autoSyncAgain = false;
+    _autoSyncHeldAt = 0;
 }
 
-/** 每次改动后调用：把自动同步往后推 4 秒（连续编辑只同步一次） */
+/** 5.2.0：是否有弹窗（记账 / 账户 / 计划交易 / 预算…）正开着。记账窗口是 Bootstrap 弹窗 #editTransactionModal */
+function isAnyModalOpen() {
+    return typeof document !== 'undefined' && !!document.querySelector('.modal.show');
+}
+
+/** 5.2.0：自动同步现在该不该先等一等？弹窗开着就等（避免输入时同步卡顿、也让连续记账合并成一次同步），
+ *  但页面在后台时不等，暂缓也有上限。数据安全不依赖这个判断（5.1.9 起同步随时都安全）。 */
+function autoSyncShouldHold(now) {
+    if (typeof document !== 'undefined' && document.hidden) return false;
+    if (!isAnyModalOpen()) return false;
+    return !_autoSyncHeldAt || (now - _autoSyncHeldAt) < AUTO_SYNC_MODAL_HOLD_MAX_MS;
+}
+
+/** 每次改动后调用：把自动同步往后推 3 秒（连续编辑只同步一次） */
 function scheduleAutoSync() {
     if (!currentUser || offlineMode || !cloudConfigured() || !userPassword) return;
     if (driveIsSyncing) { _autoSyncAgain = true; return; }    // 正在同步：结束后再排一次
@@ -116,21 +132,60 @@ async function autoSyncNow() {
     if (driveIsSyncing) { _autoSyncAgain = true; return; }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;   // 离线：等 online 事件
     if (!hasUnsavedChanges) return;
+    // 5.2.0：弹窗开着 → 先不同步，只记下“被暂缓”；关窗后由 resumeAutoSyncAfterModal 重新排 3 秒，
+    // 暂缓超过上限由 resumeAutoSyncIfNeeded 照常同步
+    if (autoSyncShouldHold(Date.now())) { if (!_autoSyncHeldAt) _autoSyncHeldAt = Date.now(); return; }
+    _autoSyncHeldAt = 0;
     await incSync(false);
 }
 
 window.addEventListener('online', () => {
     syncLineRender();
-    if (hasUnsavedChanges) scheduleAutoSync();      // 网络恢复：4 秒内自动补同步
+    if (hasUnsavedChanges) scheduleAutoSync();      // 网络恢复：3 秒内自动补同步
 });
 window.addEventListener('offline', syncLineRender);
 
 /** 同步进行中又有改动时，scheduleAutoSync 只记下 _autoSyncAgain 标记（不能并发）。
  *  同步结束后由下面的 800ms 兜底定时器调用这里补排下一次，保证改动最终会被上传。 */
 function resumeAutoSyncIfNeeded() {
+    // 5.2.0：被弹窗暂缓的自动同步——弹窗关了就补排（再给 3 秒），暂缓到上限就照常同步
+    if (_autoSyncHeldAt && hasUnsavedChanges && !driveIsSyncing && !_autoSyncTimer) {
+        if (!isAnyModalOpen()) { _autoSyncHeldAt = 0; scheduleAutoSync(); }
+        else if (Date.now() - _autoSyncHeldAt >= AUTO_SYNC_MODAL_HOLD_MAX_MS) autoSyncNow();
+    }
     if (!_autoSyncAgain || driveIsSyncing) return;
     _autoSyncAgain = false;
     if (hasUnsavedChanges) scheduleAutoSync();
+}
+
+/** 5.2.0：后台同步遇到弹窗时只推迟“渲染”（数据早已刷新），弹窗都关了再补渲染 */
+function flushPendingUIRefresh() {
+    if (!window._pendingUIRefresh || isAnyModalOpen()) return;
+    window._pendingUIRefresh = false;
+    if (!currentUser) return;
+    loadAllData();
+    filterUserData();
+    renderAllTransactions();
+    renderAccounts();
+    if (typeof verboseToast !== 'undefined' && verboseToast) showToast('已刷新最新数据', 'success', 2500);
+}
+
+/** 弹窗关闭后：还有没上传的改动、而且没有排着的同步 → 排一次（关窗后 3 秒，连续记账合并成一次；取消关闭也算） */
+function resumeAutoSyncAfterModal() {
+    if (isAnyModalOpen() || !hasUnsavedChanges || driveIsSyncing || _autoSyncTimer) return;
+    _autoSyncHeldAt = 0;
+    scheduleAutoSync();
+}
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('hidden.bs.modal', () => { flushPendingUIRefresh(); resumeAutoSyncAfterModal(); });
+    // 页面切到后台（手机切应用 / 锁屏）：不再等弹窗，立刻同步（草稿已由 flushDraftNow 落盘，这里是尽力而为）
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden || !hasUnsavedChanges) return;
+        if (_autoSyncTimer) { clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
+        _autoSyncHeldAt = 0;
+        autoSyncNow();
+    });
 }
 
 /* ───────── 底部同步状态条（未同步 / 同步中 / 同步失败 / 无网络） ─────────
@@ -332,5 +387,5 @@ function syncBarDismiss() { _barError = null; syncBarRender(); }
     syncLineRender();
     // 兜底：hasUnsavedChanges / driveIsSyncing 等变量被各处直接修改时，也能及时反映；
     // 同时把“同步期间又改了数据”而暂缓的自动同步补排上
-    setInterval(() => { syncBarRender(); syncLineRender(); resumeAutoSyncIfNeeded(); }, 800);
+    setInterval(() => { syncBarRender(); syncLineRender(); resumeAutoSyncIfNeeded(); flushPendingUIRefresh(); }, 800);
 })();

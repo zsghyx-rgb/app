@@ -737,6 +737,9 @@ async function incSync(manual = false, forcePush = false) {
     }
 }
 
+/** 5.2.0：有弹窗（含记账窗口）开着吗？实现在 js/88-toast-syncbar.js 的 isAnyModalOpen（脚本都加载完才会调用） */
+function incModalOpen() { return typeof isAnyModalOpen === 'function' && isAnyModalOpen(); }
+
 /** 登录后的后台静默同步（对应原 backgroundSyncAfterLogin） */
 async function incBackgroundSync() {
     if (!userPassword || driveIsSyncing) return;
@@ -749,16 +752,16 @@ async function incBackgroundSync() {
         // 否则随后保存表单时可能用旧的 userPins 覆盖云端的新值。
         userPins = inMemoryLoadedData.userPins || userPins || {};
         if (s.aborted) {
-            if (s.changed > 0) { const open = $('add-transaction-section') && $('add-transaction-section').classList.contains('show'); if (open) window._pendingUIRefresh = true; else incRefreshAfterMerge(s); }
+            if (s.changed > 0) { if (incModalOpen()) window._pendingUIRefresh = true; else incRefreshAfterMerge(s); }
             showToast('后台同步已中止：' + s.aborted, 'warning', 4000); return;
         }
         incNoteRestored(s);
         incPersistLocal(s.state, s.changed > 0 || s.pushed > 0 || s.deleted > 0);
         clearUnsavedFlag();
         incEnsureBackup();
-        const isFormOpen = $('add-transaction-section') && $('add-transaction-section').classList.contains('show');
-        if (isFormOpen) {
-            if (s.changed > 0) { window._pendingUIRefresh = true; showToast(s.newItems > 0 ? `后台已合并 ${s.newItems} 条云端新数据，关闭表单后自动刷新` : '后台已合并云端改动', 'info', 3000); }
+        if (incModalOpen()) {
+            // 5.2.0：以前这里查的是页面里并不存在的 #add-transaction-section，永远判成“没开”，推迟渲染从未生效
+            if (s.changed > 0) { window._pendingUIRefresh = true; showToast(s.newItems > 0 ? `后台已合并 ${s.newItems} 条云端新数据，关闭窗口后自动刷新` : '后台已合并云端改动', 'info', 3000); }
         } else {
             incRefreshAfterMerge(s);
             if (s.newItems > 0) showToast(`云端有 ${s.newItems} 条新数据已合并`, 'success', 3000);

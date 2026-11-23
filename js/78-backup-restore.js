@@ -332,14 +332,11 @@ function diffBackupVsCurrent(backupData, currentData) {
     return result;
 }
 
-async function restoreFromBackup(fileName, dateStr) {
-    if (!window._pendingRestoreData) return;
-    if (!(await uiConfirm(`确认从备份「${dateStr}」恢复？\n\n恢复会用该备份完全覆盖本机和云端的当前数据，操作不可撤销。\n（云端会先自动留一份恢复前的安全副本）`, { title: '从备份恢复', okText: '确认恢复', danger: true }))) return;
-
-    const backup = window._pendingRestoreData;
-    window._pendingRestoreData = null;
-    closeBackupDrawer();
-
+/** 把备份装进内存，并让界面数组和配置全局按备份重建。
+ *  5.2.0：以前是 inMemoryLoadedData = backup; saveUserData(); loadAllData()——saveUserData 会用当前界面数组
+ *  （和当前的分类/汇率/预算等全局）把刚装入的备份覆盖掉，恢复等于没做（5.1.8 起就有，只有“刚同步过、版本号不一致”时才被对账救回，
+ *  而且救不回配置）。正确顺序：先把备份当作内存真数据，再让全局数组按它重建，中间不经过 saveUserData。 */
+function applyBackupLocally(backup) {
     // 统一把时间戳提到现在：让恢复的内容在各设备上都算“最新”，覆盖旧版本
     const now = Date.now();
     Object.values(backup.allUserData || {}).forEach(ud => {
@@ -349,16 +346,25 @@ async function restoreFromBackup(fileName, dateStr) {
     });
     backup.configUpdatedAt = now;
 
-    inMemoryLoadedData = backup;
-    _configUpdatedAt = now;
+    const idsBefore = _memRecordIds();   // 恢复前本机有、备份里没有的记录 = 用户主动用备份覆盖掉的，登记为显式删除
+    inMemoryLoadedData = backup;         // （写回云端失败时，下一次普通同步才会把它们的墓碑补上；成功则登记会被清空）
     // 备份里带 PIN 就用备份的；旧备份没有该字段时保留当前 PIN，避免恢复后变成无 PIN
-    userPins = (inMemoryLoadedData.userPins && Object.keys(inMemoryLoadedData.userPins).length)
-        ? inMemoryLoadedData.userPins
-        : (userPins || {});
-    inMemoryLoadedData.userPins = userPins;
-    saveUserData();
-    loadAllData();
-    filterUserData();
+    inMemoryLoadedData.userPins = (backup.userPins && Object.keys(backup.userPins).length) ? backup.userPins : (userPins || {});
+    memTouched();
+    incReloadGlobals();                  // 配置全局（分类/汇率/预算/PIN/用户/configUpdatedAt）+ 界面数组 一起按备份重建
+    _registerDeletions(idsBefore, _memRecordIds());
+    return now;
+}
+
+async function restoreFromBackup(fileName, dateStr) {
+    if (!window._pendingRestoreData) return;
+    if (!(await uiConfirm(`确认从备份「${dateStr}」恢复？\n\n恢复会用该备份完全覆盖本机和云端的当前数据，操作不可撤销。\n（云端会先自动留一份恢复前的安全副本）`, { title: '从备份恢复', okText: '确认恢复', danger: true }))) return;
+
+    const backup = window._pendingRestoreData;
+    window._pendingRestoreData = null;
+    closeBackupDrawer();
+
+    applyBackupLocally(backup);
     renderAllTransactions();
     renderAccounts();
     showToast('正在把备份写回云端…', 'syncing', 0);

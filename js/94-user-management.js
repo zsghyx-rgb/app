@@ -44,8 +44,7 @@ function renderUserManagement() {
     }
 
     dataUsers.forEach(u => {
-        const hasData = (accounts.some(a => a.ownerName === u) ||
-                         transactions.some(t => t.ownerName === u));
+        const hasData = userHasData(u);
         const row = document.createElement('div');
         row.className = 'd-flex align-items-center gap-2 mb-2';
         row.innerHTML = `
@@ -148,11 +147,16 @@ async function renameUser(oldName) {
     })();
 }
 
+/** 该用户名下有没有数据（账户 / 交易 / 计划交易）。删除按钮是否可点和 removeUser 的拦截共用它，避免两处判断不一致。
+ *  计划交易也算数据：整桶一删会静默丢掉它们。 */
+function userHasData(name) {
+    return accounts.some(a => a.ownerName === name) ||
+           transactions.some(t => t.ownerName === name) ||
+           plannedTransactions.some(p => p.ownerName === name);
+}
+
 async function removeUser(name) {
-    const hasData = accounts.some(a => a.ownerName === name) ||
-                    transactions.some(t => t.ownerName === name) ||
-                    plannedTransactions.some(p => p.ownerName === name);   // 5.1.9：计划交易也算数据（整桶一删会静默丢掉它们）
-    if (hasData) { uiAlert('该用户有账户或交易数据，不可删除。'); return; }
+    if (userHasData(name)) { uiAlert('该用户有账户、交易或计划交易数据，不可删除。'); return; }
     const ok = await uiConfirm(`确定删除用户 "${name}"？`, { okText: '删除用户', danger: true });
     if (!ok) return;
     const snapUsers = dataUsers.slice();

@@ -276,7 +276,7 @@ function renderDataSyncStatus() {
     else if (offlineMode) { cls = 'off'; text = '离线'; subText = '离线模式只读写本机缓存，不会联网'; }
     else if (_barError) { cls = 'err'; text = '同步失败'; subText = _barError.msg || '同步失败'; }
     else if (driveIsSyncing) { cls = 'warn'; text = '同步中'; subText = '正在和 Google 表格同步…'; }
-    else if (hasUnsavedChanges || pending > 0) { cls = 'warn'; text = '待同步'; subText = '改动会在 4 秒后自动上传，也可以点下面的按钮立即同步'; }
+    else if (hasUnsavedChanges || pending > 0) { cls = 'warn'; text = '待同步'; subText = '改动会在 3 秒后自动上传，也可以点下面的按钮立即同步'; }
     pill.className = 'ds-pill ds-pill-' + cls;
     pill.textContent = text;
     sub.textContent = subText;

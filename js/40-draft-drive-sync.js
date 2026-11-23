@@ -53,7 +53,7 @@ function triggerAutoSave() {
         saveUserData();        // 内存立即生效（渲染、同步都读内存）
         scheduleDraftSave();   // 落盘合并成一次
     }
-    if (typeof scheduleAutoSync === 'function') scheduleAutoSync();   // 5.1.8：4 秒后自动同步
+    if (typeof scheduleAutoSync === 'function') scheduleAutoSync();   // 5.1.8：改完后自动同步（延迟见 AUTO_SYNC_DELAY_MS）
     syncBarRender();
 }
 

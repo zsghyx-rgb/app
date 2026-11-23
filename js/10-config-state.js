@@ -46,7 +46,7 @@ let _barOkText = '';             // 状态条在“已同步”状态下显示�
 let _barKey = '';                // 上次渲染的状态指纹（没变化就不动 DOM）
 let driveIsSyncing = false;      // 防并发
 let offlineMode = localStorage.getItem('APP_offline_mode') === 'true'; // 离线模式（只读本机缓存）
-// 5.1.8：改完数据 4 秒后自动同步
+// 5.1.8：改完数据后自动同步（延迟见 AUTO_SYNC_DELAY_MS，5.2.0 起 3 秒）
 let _editSeq = 0;                // 每次改动 +1：同步开始时记一次，结束时就知道“同步期间有没有又改过”
 let _unsavedSince = 0;           // 本轮未同步改动从什么时候开始（状态条延迟提示用）
 let _autoSyncTimer = null;
@@ -78,7 +78,7 @@ let currentUserFilterValue = localStorage.getItem('APP_trans_user_filter') || 'a
 
 // 清理已移除功能（AI / 设备昵称 / 旧整包同步）遗留在本机的配置
 ['ai_api_url', 'ai_api_key', 'ai_model', 'APP_device_name', 'APP_backend', 'APP_drive_version'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-const APP_VERSION = '5.1.9';
+const APP_VERSION = '5.2.0';
 
 // ── 数据同步相关日期常量 ──────────────────────────────────────
 // 约束：STALE_CACHE_DAYS（本地缓存过期天数）必须 ≤ DELETED_LOG_RETENTION_DAYS（删除日志保留天数），
