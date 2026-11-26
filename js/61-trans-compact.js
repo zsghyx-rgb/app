@@ -177,27 +177,31 @@ function tmcCloseTagRow() {
 }
 
 /* ═══════════ 五、系统键盘弹出时：弹窗缩到键盘上方 ═══════════
- * iOS 的 100dvh 不随键盘变化。用 visualViewport 估算键盘高度，写进 --tmc-kb，由 css/45 把弹窗高度减掉，
- * 分类区（弹性）自动变矮，备注/金额行留在键盘上方。尽力而为：没有 visualViewport 或算不出来就保持原行为。 */
+ * iOS 的 100dvh 不随键盘变化，而且 Safari 弹出键盘时底部工具栏会收起，100dvh 和 window.innerHeight 可能差一个工具栏的高度，
+ * 所以不拿它们做减法：直接把 visualViewport.height（真正可见的高度）写进 --tmc-vh，由 css/45 设成弹窗高度，
+ * 弹窗顶部跟着可视区顶部（--tmc-vtop）。分类区（弹性）自动变矮，备注/金额行留在键盘上方。
+ * 键盘高度 --tmc-kb 只用来判断“键盘是否弹出”，并作为 --tmc-vh 不可用时的后备。没有 visualViewport 就保持原行为。 */
 function tmcOnViewport() {
     if (!tmcOn()) return;
     const vv = window.visualViewport;
     const root = document.documentElement;
     const modal = $('editTransactionModal');
-    if (!vv || !modal || !modal.classList.contains('show')) { _tmcKeyboard(root, 0, 0); return; }
+    if (!vv || !modal || !modal.classList.contains('show')) { _tmcKeyboard(root, 0, 0, 0); return; }
     const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-    _tmcKeyboard(root, kb > 120 ? kb : 0, vv.offsetTop);
+    _tmcKeyboard(root, kb > 120 ? kb : 0, vv.offsetTop, vv.height);
 }
-function _tmcKeyboard(root, kb, top) {
+function _tmcKeyboard(root, kb, top, vh) {
     if (kb > 0) {
         root.style.setProperty('--tmc-kb', kb + 'px');
         root.style.setProperty('--tmc-vtop', Math.round(top) + 'px');
+        root.style.setProperty('--tmc-vh', Math.round(vh) + 'px');
         root.classList.add('tmc-kb');
         root.classList.toggle('tmc-pan', top > 1);
     } else {
         root.classList.remove('tmc-kb', 'tmc-pan');
         root.style.removeProperty('--tmc-kb');
         root.style.removeProperty('--tmc-vtop');
+        root.style.removeProperty('--tmc-vh');
     }
 }
 
@@ -254,7 +258,7 @@ function tmcInitEvents() {
     modal.addEventListener('hidden.bs.modal', () => {
         ['tmc-pop-date', 'tmc-pop-att'].forEach(id => { const el = $(id); if (el) el.classList.remove('open'); });
         const row = $('tmc-tagrow'); if (row) row.classList.remove('open');
-        _tmcKeyboard(document.documentElement, 0, 0);
+        _tmcKeyboard(document.documentElement, 0, 0, 0);
         tmcSync();
     });
     if (window.visualViewport) {
