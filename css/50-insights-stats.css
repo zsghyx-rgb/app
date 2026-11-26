@@ -151,7 +151,7 @@
 #expenseCategoryChart, #tagStatsChart, #categoryTrendChart,
 #totalExpenseTrendChart, #monthlyTrendChart { cursor: pointer; }
 
-/* ═══════════ 5.1.2：统计页 —— 概览卡、分类占比、更多图表折叠、图表开关设置 ═══════════ */
+/* ═══════════ 统计页 —— 概览卡、分类占比、更多图表折叠、图表开关设置 ═══════════ */
 /* 概览卡沿用 .stats-hero 的底色/圆角/各主题的数字配色，这里只补布局 */
 .stats-hero.stats-overview { padding: 16px 18px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .so-top { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--app-hero-muted); }

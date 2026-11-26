@@ -124,7 +124,7 @@
   border-top: 1px solid var(--bs-border-color);
 }
 
-/* ───────── 设置 › 数据与同步（5.1.8 整理） ───────── */
+/* ───────── 设置 › 数据与同步 ───────── */
 .ds-status-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

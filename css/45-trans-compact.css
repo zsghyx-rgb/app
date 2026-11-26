@@ -1,0 +1,160 @@
+/* @file css/45-trans-compact.css
+   新增/编辑「支出·收入」的紧凑布局（可选；设置 › 外观与主题 › 记账窗口样式；默认经典）。
+   所有生效规则都限定在 html[data-trans-layout="compact"] 之下，经典布局完全不受影响。
+   以后如果决定只保留一种：删掉本文件 + js/61-trans-compact.js + index.html 里 “tmc:begin … tmc:end” 之间的标记 + 设置页“记账窗口样式”一块 + 59/58/70/99 里调用 tmcSync 等的几行钩子即可（键盘在 css/40 + js/59、大小设置在 js/63，两种布局共用，不用动；详见 ARCHITECTURE.md）。 */
+
+/* ── 经典布局下：新增的容器/按钮一律隐藏 ── */
+.tmc-bar, .tmc-tagrow, .tmc-memo-wrap, .tmc-split-btn { display: none; }
+
+/* ── 紧凑布局 ── */
+:root[data-trans-layout="compact"] #editTransactionModal {
+    --tmc-pill-h: 32px;
+}
+
+/* 标题栏：第一行 标题靠左（新增支出 · 用户名，与经典布局相同）| 关闭靠右；第二行 支出·收入·转账 页签（编辑模式没有页签） */
+html[data-trans-layout="compact"] #editTransactionModal .modal-header {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding: 8px 12px 6px !important; border-bottom: 0;
+}
+html[data-trans-layout="compact"] #editTransactionModal #trans-tab-bar { order: 3; flex: 0 0 100%; min-width: 0; padding: 0 !important; }
+html[data-trans-layout="compact"] #editTransactionModal .modal-title { order: 0; flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-trans-layout="compact"] #editTransactionModal .modal-header .btn-close {
+    order: 1; flex: none; margin: 0 !important; width: 36px; height: 36px; padding: 0;
+    border-radius: 50%; background-color: var(--bs-tertiary-bg);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23212529'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e");
+    background-size: 12px; background-position: center; background-repeat: no-repeat;
+    filter: none !important; opacity: .85;   /* Bootstrap 深色模式的 filter: invert(1) 会把整个按钮（含底色）反色，叉就看不见了 */
+}
+html[data-trans-layout="compact"][data-bs-theme="dark"] #editTransactionModal .modal-header .btn-close {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23f8f9fa'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e");
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-split-btn {
+    order: 2; flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%;
+    background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+}
+html[data-trans-layout="compact"] #editTransactionModal .trans-type-btn { padding: 6px 4px; }
+
+/* 主体：不再整体滚动，只有分类网格在自己的区域里滚 */
+html[data-trans-layout="compact"] #editTransactionModal .modal-body { padding: 0 !important; }
+/* 转账页保持原样：补回 .modal-body 原来的左右内边距 */
+html[data-trans-layout="compact"] #editTransactionModal #edit-transfer-form { padding: 6px 16px 0; }
+html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form .trans-scroll-area { padding-bottom: 0; }
+/* 只作用于支出/收入表单：转账表单的账户 / 日期 / 手续费 / 备注也是 .tm-row-card，不能一起隐藏 */
+html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form .tm-row-card,
+html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form #single-meta-section { display: none !important; }
+
+/* 分类每行个数 / 图标大小：设置页滑块写到 <html> 的 --trans-cat-cols / --trans-cat-icon（js/63-trans-sizes.js；紧凑默认 4 个 / 56px，没设置时用这里的默认值）。 */
+/* 分类：弹性区，占满胶囊行上方的全部空间；保留“所有分类”标题行和拆分按钮（与经典一致） */
+html[data-trans-layout="compact"] #editTransactionModal #single-item-row { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+html[data-trans-layout="compact"] #editTransactionModal #cat-grid-section {
+    flex: 1; min-height: 0; display: flex; flex-direction: column;
+    background: transparent; border-radius: 0; margin: 0; padding: 6px 8px 0;
+    border-top: 1px solid var(--bs-border-color);
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-split-btn { display: none !important; }   /* 与经典一致：拆分按钮放在“所有分类”标题行右侧，标题栏里的剪刀按钮保持隐藏 */
+html[data-trans-layout="compact"] #editTransactionModal #cat-grid-section .cat-grid {
+    flex: 1; min-height: 0; max-height: none; grid-template-columns: repeat(var(--trans-cat-cols, 4), 1fr);
+    align-content: start; grid-auto-rows: max-content;   /* 不让网格把行拉伸去填满高度 */
+    gap: 10px 4px; padding: 6px 0 10px;
+}
+html[data-trans-layout="compact"] #editTransactionModal .cat-grid-item { padding: 1px; gap: 4px; }
+html[data-trans-layout="compact"] #editTransactionModal .cat-grid-item .cat-icon-circle { width: var(--trans-cat-icon, 56px); height: var(--trans-cat-icon, 56px); font-size: calc(var(--trans-cat-icon, 56px) * 0.46); }
+html[data-trans-layout="compact"] #editTransactionModal .cat-grid-item .cat-name { max-width: calc(var(--trans-cat-icon, 56px) + 24px); font-size: 0.74rem; }
+
+/* 胶囊行：账户 · 日期 · 标签 · 图片 */
+html[data-trans-layout="compact"] #editTransactionModal .tmc-bar {
+    display: flex; align-items: center; gap: 8px; flex: none; position: relative;
+    padding: 8px 12px 6px; border-top: 1px solid var(--bs-border-color);
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-pill,
+html[data-trans-layout="compact"] #editTransactionModal #tmc-bar .tm-combo-trigger {
+    flex: none; display: flex; align-items: center; gap: 6px; min-width: 0;
+    height: var(--tmc-pill-h); padding: 0 12px 0 6px; border: 0; border-radius: 999px;
+    background: var(--bs-tertiary-bg); color: var(--bs-body-color);
+    font-size: 0.8rem; font-weight: 500; line-height: 1; cursor: pointer; position: relative;
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-pill { padding: 0 12px; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-pill i { font-size: 0.9rem; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-pill.on { background: rgba(var(--bs-primary-rgb), 0.14); color: var(--bs-primary); font-weight: 600; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-pill.open { box-shadow: 0 0 0 2px var(--bs-primary); }
+html[data-trans-layout="compact"] #editTransactionModal #tmc-bar .tm-row-icon { width: 22px; height: 22px; font-size: 0.7rem; }
+html[data-trans-layout="compact"] #editTransactionModal #tmc-bar .tm-row-value { font-size: 0.8rem; font-weight: 500; flex: 0 1 auto; }
+html[data-trans-layout="compact"] #editTransactionModal #tmc-bar #wrap-edit-trans-account { flex: 0 1 auto; min-width: 0; max-width: 46%; }
+html[data-trans-layout="compact"] #editTransactionModal #tmc-bar #wrap-edit-trans-account .tm-combo-trigger { padding-right: 12px; }
+html[data-trans-layout="compact"] #editTransactionModal #tmc-att-pill { padding-left: 8px; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 92px; }
+
+/* 账户下拉：向上展开（由 99-account-select.js 定位） */
+html[data-trans-layout="compact"] .acc-select-dropdown.acc-up {
+    border-top: 1px solid var(--app-primary); border-bottom: none; border-radius: 8px 8px 0 0;
+}
+
+/* 点胶囊展开的面板（快捷日期 / 附件）：贴在胶囊行上方 */
+html[data-trans-layout="compact"] #editTransactionModal .tmc-pop {
+    display: none; position: absolute; left: 12px; right: 12px; bottom: calc(100% + 6px); z-index: 1055;
+    background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: 14px;
+    padding: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-pop.open { display: block; }
+html[data-trans-layout="compact"] #editTransactionModal #tmc-pop-date .tm-date-chips { padding: 0; position: relative; }
+/* 真正的日期输入框（js 搬进来的 #edit-trans-date）透明地盖在最右边“选日期”按钮上：点它 = 原生点击，iOS / 桌面都能唤起日期选择器 */
+html[data-trans-layout="compact"] #editTransactionModal #tmc-pop-date #edit-trans-date {
+    position: absolute; top: 0; bottom: 0; right: 0; left: auto; width: calc((100% - 18px) / 4); height: auto;
+    opacity: 0; border: 0; padding: 0; margin: 0; cursor: pointer; z-index: 1; pointer-events: auto;
+}
+html[data-trans-layout="compact"] #editTransactionModal #tmc-pop-att #attachment-section { margin: 0; padding: 0; background: transparent; }
+
+/* 标签输入行：点「标签」胶囊后出现，输入后胶囊显示内容 */
+html[data-trans-layout="compact"] #editTransactionModal .tmc-tagrow { display: none; align-items: center; gap: 8px; flex: none; margin: 0 12px 6px; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-tagrow.open { display: flex; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-tagrow #tags-collapse-wrap { flex: 1; margin: 0; height: 42px; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-tag-ok {
+    flex: none; width: 42px; height: 42px; border: 0; border-radius: 12px;
+    background: var(--bs-primary); color: var(--app-on-primary); font-size: 1.2rem;
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-tagrow .tag-suggest-list { top: auto; bottom: calc(100% + 4px); }
+html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form.split-mode .tmc-tagrow,
+html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form.split-mode #tmc-tag-pill { display: none; }
+
+/* 备注 + 金额同一行 */
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-wrap { display: block; flex: none; margin: 0 12px 6px; }
+html[data-trans-layout="compact"] #editTransactionModal #tmc-hint #edit-trans-desc-hint { margin: 0 0 4px !important; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo {
+    display: flex; align-items: center; height: 46px; position: relative;
+    background: var(--bs-tertiary-bg); border-radius: 14px; padding: 0 10px 0 2px;
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left { flex: 1; min-width: 0; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left .desc-suggest-wrap { position: static; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left #desc-collapse-wrap { background: transparent; margin: 0; height: 46px; padding: 0 10px; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left #desc-collapse-wrap .tm-row-chevron { display: none; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left .tm-meta-input { font-size: 0.9rem; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo .desc-suggest-list { top: auto; bottom: calc(100% + 6px); }
+html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form.split-mode #tmc-memo-wrap { display: none; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-right {
+    flex: none; display: flex; align-items: center; margin-left: 4px; padding-left: 10px;
+    border-left: 1px solid var(--bs-border-color); min-height: 26px;
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-right #trans-amount-card {
+    background: transparent; margin: 0; padding: 0; display: block;
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-right .amount-input-row-v3 { gap: 3px; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-right .tm-amount-card.tm-amount-big .amount-currency { font-size: 1rem; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-right .tm-amount-card.tm-amount-big .amount-input-v2 {
+    flex: 0 0 auto; width: 5.6em; font-size: 1.2rem; text-align: right; font-variant-numeric: tabular-nums;
+}
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-right .amount-kb-toggle { padding: 2px 4px; font-size: 1rem; }
+html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-right .amount-expr-hint { padding: 0; font-size: 0.7rem; line-height: 1.1; }
+
+/* 键盘：左右留 10px（排列、「再记 / 保存」、按键高度都在 css/40，两种布局共用） */
+html[data-trans-layout="compact"] #editTransactionModal .amount-keypad { padding-left: 10px; padding-right: 10px; }
+
+/* 只读查看：胶囊不可点（附件胶囊除外，能打开预览） */
+html[data-trans-layout="compact"] #editTransactionModal .trans-modal-v2.view-only .tmc-pill:not(#tmc-att-pill) { pointer-events: none; }
+
+/* 系统键盘弹出时（js/61-trans-compact.js 用 visualViewport 算出键盘高度）：弹窗整体缩到键盘上方，分类区自动让出空间 */
+html.tmc-kb[data-trans-layout="compact"] #editTransactionModal .modal-dialog,
+html.tmc-kb[data-trans-layout="compact"] #editTransactionModal .modal-content {
+    height: calc(100dvh - var(--tmc-kb, 0px)); max-height: calc(100dvh - var(--tmc-kb, 0px));
+}
+html.tmc-pan[data-trans-layout="compact"] #editTransactionModal .modal-content { transform: translateY(var(--tmc-vtop, 0px)); }

@@ -80,7 +80,7 @@
 .mobile-transaction-card .amount-transfer{ color: var(--app-transfer); font-weight: bold; font-size: 1rem; }
 .mobile-transaction-card .category-text  { font-weight: bold; color: var(--bs-body-color); }
 
-/* ---- 旧版交易页悬浮按钮：已由底部导航中间“+”取代，彻底隐藏 ---- */
+/* ---- 交易页悬浮按钮：已由底部导航中间“+”取代，保持隐藏 ---- */
 #mobile-fab-group {
     display: none !important;
 }

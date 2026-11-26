@@ -1,5 +1,5 @@
 /* @file css/70-app-skin.css
-   5.0.4 视觉结构层：首页概览、日期分组交易行、账户/统计/设置页头部、底部导航中间加号。
+   视觉结构层：首页概览、日期分组交易行、账户/统计/设置页头部、底部导航中间加号。
    全部颜色取自 css/themes/*.css 的语义变量，三套主题共用同一套 DOM。 */
 
 /* ── 基础 ─────────────────────────────────────────────────── */
@@ -465,7 +465,7 @@ a { color: var(--app-link, var(--app-primary)); }
     flex-shrink: 0;
 }
 
-/* 旧版两行结构仍用于图表钻取抽屉 */
+/* 两行结构：用于图表钻取抽屉 */
 .mobile-transaction-card .card-line-1 {
     display: flex;
     justify-content: space-between;
@@ -1070,10 +1070,20 @@ a { color: var(--app-link, var(--app-primary)); }
 .entry-reminder-amt.is-warn   { color: var(--bs-warning-text-emphasis); }
 .entry-reminder-amt.is-danger { color: var(--app-expense); }
 
-/* 5.1.0：转账的另一半已不存在（孤立记录）的小标签，点开可处理 */
+/* 转账的另一半已不存在（孤立记录）的小标签，点开可处理 */
 .txn-orphan-badge {
     display: inline-block; margin-left: 6px; padding: 0 6px;
     font-size: 0.66rem; font-weight: 600; line-height: 1.5;
     color: var(--app-expense); border: 1px solid currentColor; border-radius: 999px;
     vertical-align: middle; white-space: nowrap;
 }
+
+
+/* 记账窗口大小自定义滑块（经典、紧凑各一套） */
+.trans-size-box { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--bs-tertiary-bg); }
+.trans-size-title { font-size: .78rem; color: var(--bs-secondary-color); margin-bottom: 6px; }
+.trans-size-row { display: flex; align-items: center; gap: 10px; margin: 0; padding: 6px 0; }
+.trans-size-name { flex: none; width: 6.5em; font-size: .85rem; }
+.trans-size-row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--bs-primary); }
+.trans-size-val { flex: none; width: 3.6em; text-align: right; font-size: .82rem; font-variant-numeric: tabular-nums; color: var(--bs-secondary-color); }
+.trans-size-reset { margin-top: 4px; border: 0; background: transparent; color: var(--bs-primary); font-size: .82rem; padding: 4px 0; }

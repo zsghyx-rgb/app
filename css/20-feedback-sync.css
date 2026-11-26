@@ -16,7 +16,7 @@
     pointer-events: none;
     transition: opacity 0.25s;
     box-shadow: var(--app-shadow-soft);
-    /* 长文字：自动换行、完整显示（以前是 nowrap，超出屏幕的部分会被截掉） */
+    /* 长文字：自动换行、完整显示 */
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -34,7 +34,7 @@
 #app-toast.tap-dismiss { cursor: pointer; }
 #app-toast.show { opacity: 1; pointer-events: auto; }
 
-/* ───────── 5.1.8：底部导航上方的一行同步细线 ─────────
+/* ───────── 底部导航上方的一行同步细线 ─────────
    平时完全隐藏、不占位置；改完数据立刻出现（琥珀色），3 秒后自动同步，
    同步中蓝色来回流动，成功后绿色停留约 1.5 秒再淡出。
    长时间同步不成功时，才由下面的 #sync-bar 弹出文字提示。 */
@@ -106,7 +106,7 @@ html[data-app-theme="cute"] #sync-line { bottom: calc(78px + env(safe-area-inset
     border-radius: 20px;
     font-size: 0.82rem;
     line-height: 1.25;
-    /* 5.0.9：接近透明 + 细边框 + 轻微毛玻璃，不再是一整条纯黑/纯白的色块。
+    /* 接近透明 + 细边框 + 轻微毛玻璃。
        先给不支持 color-mix 的浏览器一个半透明兜底，再用 color-mix 覆盖。 */
     border: 1px solid var(--sb-border, var(--bs-border-color));
     border: 1px solid color-mix(in srgb, var(--sb-fg, var(--bs-body-color)) 30%, transparent);
@@ -160,7 +160,7 @@ html[data-app-theme="cute"] #sync-line { bottom: calc(78px + env(safe-area-inset
     #sync-bar:not(.on-login).expanded { max-width: min(calc(100vw - 20px), 420px); }
     body.sync-bar-on { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 56px); }
 }
-/* 5.0.9：用户长按拖动过位置（位置存在本机 localStorage，只在非登录界面生效）。
+/* 用户长按拖动过位置（位置存在本机 localStorage，只在非登录界面生效）。
    left / top 由 js/88-toast-syncbar.js 设置到 --sb-left / --sb-top。 */
 #sync-bar.moved:not(.on-login) {
     left: var(--sb-left, 10px);
