@@ -181,6 +181,18 @@ function tmcCloseTagRow() {
  * 所以不拿它们做减法：直接把 visualViewport.height（真正可见的高度）写进 --tmc-vh，由 css/45 设成弹窗高度，
  * 弹窗顶部跟着可视区顶部（--tmc-vtop）。分类区（弹性）自动变矮，备注/金额行留在键盘上方。
  * 键盘高度 --tmc-kb 只用来判断“键盘是否弹出”，并作为 --tmc-vh 不可用时的后备。没有 visualViewport 就保持原行为。 */
+/* iOS 26 起，键盘上方会浮出一条“上一项 / 下一项 / 完成”的悬浮条（约 47pt 高，离键盘顶约 12pt）。
+ * 它盖在页面上，visualViewport 不把它算进键盘高度，所以弹窗底边只对齐键盘顶时，底部的备注 / 标签行正好被它压住。
+ * 网页检测不到这条悬浮条，只能按系统版本估一个固定高度（按截图量：悬浮条顶到键盘顶约 58pt，再留 4pt 余量）。
+ * iOS 26 的 Safari 把 UA 里的系统版本冻结在 18_6，要看 Version/26；其他 iOS 浏览器看 OS 26_x。 */
+const TMC_KB_ACCESSORY_PX = 62;
+function _tmcAccessoryPx(ua) {
+    ua = ua || (typeof navigator !== 'undefined' ? navigator.userAgent || '' : '');
+    if (!/iPhone|iPad|iPod/.test(ua)) return 0;
+    const os = /OS (\d+)_/.exec(ua), ver = /Version\/(\d+)/.exec(ua);
+    return Math.max(os ? +os[1] : 0, ver ? +ver[1] : 0) >= 26 ? TMC_KB_ACCESSORY_PX : 0;
+}
+
 function tmcOnViewport() {
     if (!tmcOn()) return;
     const vv = window.visualViewport;
@@ -188,7 +200,7 @@ function tmcOnViewport() {
     const modal = $('editTransactionModal');
     if (!vv || !modal || !modal.classList.contains('show')) { _tmcKeyboard(root, 0, 0, 0); return; }
     const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-    _tmcKeyboard(root, kb > 120 ? kb : 0, vv.offsetTop, vv.height);
+    _tmcKeyboard(root, kb > 120 ? kb : 0, vv.offsetTop, vv.height - _tmcAccessoryPx());   // 再让出 iOS 26 悬浮条的高度
 }
 function _tmcKeyboard(root, kb, top, vh) {
     if (kb > 0) {
