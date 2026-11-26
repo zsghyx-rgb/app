@@ -36,7 +36,7 @@ function showGasUrlInput() {
 function saveGasUrl() {
     const val = $('gas-url-input').value.trim();
     if (!val || !val.startsWith('https://script.google.com')) {
-        uiAlert('请输入有效的 GAS Web App URL（以 https://script.google.com 开头）');
+        uiAlert('请输入有效的 GAS 地址（以 https://script.google.com 开头，/exec 结尾）');
         return;
     }
     localStorage.setItem('APP_gas_url', val);
@@ -118,10 +118,10 @@ function toggleOfflineMode() {
     $('password-section').style.display = 'none';
 
     if (offlineMode) {
-        showToast('已切换离线模式：将使用本机缓存', 'info', 3000);
+        showToast('已切换为离线模式', 'info', 3000);
         loadFromDrive();
     } else if (cloudConfigured()) {
-        showToast('已切换在线模式', 'info', 2000);
+        showToast('已切换为在线模式', 'info', 2000);
         loadFromDrive();
     }
 }
@@ -137,7 +137,7 @@ function closeLoginSettings() {
 
 async function switchUser() {
     if (hasUnsavedChanges) {
-        const ok = await uiConfirm('有未保存的更改，仍要切换用户吗？\n\n（改动会先保存在本机草稿里，下次登录该用户时自动恢复）', { title: '切换用户', okText: '切换' });
+        const ok = await uiConfirm('有未保存的更改，仍要切换用户吗？\n\n改动会存为本机草稿，下次登录该用户时自动恢复。', { title: '切换用户', okText: '切换' });
         if (!ok) return;
         flushDraftNow();
     }

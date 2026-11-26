@@ -266,6 +266,7 @@ function exitSplitMode(opts) {
         if (descEl) descEl.value = first.desc || '';
     }
     _resetSplitSummary();
+    if (typeof tmcSync === 'function') tmcSync();   // 紧凑布局：标签胶囊跟着刷新
 }
 
 /** 拆分头部“退出拆分”：有内容时先确认，再把合计填回单笔金额 */

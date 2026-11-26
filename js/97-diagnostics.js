@@ -1,8 +1,8 @@
 // @file js/97-diagnostics.js
-// 账本自检与数据修复（5.1.5 起）：
+// 账本自检与数据修复：
 //  - 自检：多设备数字对不上时，列出用户/数据桶/同步状态，并顺手合并本机重复记录
 //  - 从云端重建本机数据
-//  - 5.1.6：用本机数据覆盖云端；恢复云端“已删除但本机没有”的记录
+//  - 用本机数据覆盖云端；恢复云端“已删除但本机没有”的记录
 
 /** 收集一份可读的自检报告（纯数据，便于贴到聊天/控制台） */
 function jibiSelfCheck() {
@@ -25,7 +25,7 @@ function jibiSelfCheck() {
     const dupIds = new Set();
     dups.forEach(x => dupIds.add(x.记录.split(':')[1]));
 
-    // 2) 孤立数据桶：有数据但不在用户列表里（以前会把这类数据整块藏起来）
+    // 2) 孤立数据桶：有数据但不在用户列表里
     const orphanBuckets = buckets.filter(b => {
         if (users.indexOf(b) >= 0) return false;
         const ud = d.allUserData[b] || {};
@@ -114,7 +114,7 @@ function jibiShowSelfCheck() {
 
 /** 从云端全量重建本机数据（自检发现数据对不上、或换了设备后一片空白时用） */
 async function rebuildFromCloud() {
-    if (!userPassword) { uiAlert('需要先登录（输入加密密码）才能重新拉取。'); return; }
+    if (!userPassword) { uiAlert('请先登录（需要加密密码）再重新拉取。'); return; }
     if (offlineMode) { uiAlert('离线模式下不能重新拉取，请先切换到在线模式。'); return; }
     const ok = await uiConfirm(
         '将丢弃本机的同步进度，从 Google 表格重新拉取完整数据。\n\n本机还没同步上去的改动会丢失；已经同步过的数据不受影响。继续？',
@@ -129,13 +129,13 @@ async function rebuildFromCloud() {
         localStorage.removeItem('APP_sb_state');
         localStorage.removeItem('APP_raw_cache');
         window._incPendingInitial = true;
-        showToast('正在从 Google 表格重建…', 'syncing', 0);
+        showToast('正在从云端重建…', 'syncing', 0);
         await incInitialLoad(userPassword);
         if (window._incPendingInitial) {
             // incInitialLoad 自己吞掉了错误；这里看标记判断是否成功
             if (oldCache !== null) localStorage.setItem('APP_raw_cache', oldCache);
             if (oldState !== null) localStorage.setItem('APP_sb_state', oldState);
-            showToast('重建失败：云端数据没有拉下来，本机数据已保留', 'error', 0);
+            showToast('重建失败：没拉到云端数据，本机数据已保留', 'error', 0);
         }
     } catch (e) {
         if (oldCache !== null) localStorage.setItem('APP_raw_cache', oldCache);
@@ -152,12 +152,12 @@ function jibiCountRecords(map) {
 }
 
 /**
- * 用本机数据整体覆盖云端（5.1.6）。
+ * 用本机数据整体覆盖云端。
  * 用于：云端被误删/被清空、某台设备数据乱了、想把完好的那台设备的数据重新变成唯一标准。
  * 与「从备份恢复」走同一个服务端动作 restoreAll：覆盖前 GAS 会自动留一份 records_before_restore_ 安全副本。
  */
 async function jibiOverwriteCloud() {
-    if (!userPassword) { uiAlert('需要先登录（输入加密密码）才能覆盖云端。'); return; }
+    if (!userPassword) { uiAlert('请先登录（需要加密密码）再覆盖云端。'); return; }
     if (offlineMode) { uiAlert('离线模式下不能写入云端，请先切换到在线模式。'); return; }
     if (driveIsSyncing) { uiAlert('正在同步中，请稍后再试。'); return; }
     if (!inMemoryLoadedData || !inMemoryLoadedData.allUserData) { uiAlert('本机还没有加载数据。'); return; }
@@ -177,7 +177,7 @@ async function jibiOverwriteCloud() {
         });
     } catch (e) {
         uiAlert('读取云端失败：' + e.message +
-            '\n\n请检查：\n·「连接设置」里的 Apps Script 地址是否还有效；\n· Google Drive 的 FamilyLedger 文件夹里是否有一个真实的 Google 表格 records_sheet（同名 .xlsx 不算）。\n\n修好后回到这里重试。');
+            '\n\n请检查连接设置里的 GAS 地址是否有效，以及 Drive 的 FamilyLedger 文件夹里是否有名为 records_sheet 的 Google 表格（同名 .xlsx 不算）。');
         return;
     }
 
@@ -187,13 +187,13 @@ async function jibiOverwriteCloud() {
         ? `\n⚠ 本机记录（${localRecords}）比云端（${cloudLive}）少，覆盖后云端多出来的 ${cloudLive - localRecords} 条会被标记删除。\n请先确认这台设备的数据才是完整的。\n`
         : '';
     const ok = await uiConfirm(
-        `会用本机的 ${localRecords} 条记录（用户：${users.join('、')}）整体覆盖 Google 表格。\n` +
+        `将用本机的 ${localRecords} 条记录（用户：${users.join('、')}）覆盖云端表格。\n` +
         risk +
         `\n本机：${localRecords} 条\n` +
-        `云端：${cloudLive} 条（其中 ${cloudOnly} 条本机没有，覆盖后会被标记为已删除）\n` +
+        `云端：${cloudLive} 条（其中 ${cloudOnly} 条本机没有，覆盖后会标记为已删除）\n` +
         (cloudDeleted ? `云端另有 ${cloudDeleted} 条已删除记录\n` : '') +
-        '\n覆盖前，云端会自动保存一份 records_before_restore_ 安全副本。\n' +
-        '覆盖后，其他设备同步一次就会拿到这份数据。确定继续？',
+        '\n覆盖前云端会自动留一份 records_before_restore_ 安全副本，' +
+        '覆盖后其他设备同步一次即可拿到这份数据。继续？',
         { title: '用本机数据覆盖云端', okText: '确认覆盖', cancelText: '取消', danger: true }
     );
     if (!ok) return;
@@ -226,7 +226,7 @@ async function jibiOverwriteCloud() {
         const after = await incPullRows(0);
         incApplyRows(inMemoryLoadedData, incDecryptRows(after, userPassword), state);
         userPins = inMemoryLoadedData.userPins || userPins || {};
-        pendingDeletesClear();   // 5.1.9：云端已按本机重写，旧的删除登记作废
+        pendingDeletesClear();   // 云端已按本机重写，旧的删除登记作废
         incPersistLocal(state, true);
         clearUnsavedFlag();
         loadAllData();
@@ -243,12 +243,12 @@ async function jibiOverwriteCloud() {
 }
 
 /**
- * 恢复云端“已删除但本机没有”的记录（5.1.6）。
+ * 恢复云端“已删除但本机没有”的记录。
  * 用于：另一台设备把本机没见过的记录误判为删除、推上云端之后，找回被误删的账目。
  * 只恢复属于当前用户的记录；已删除用户的记录直接跳过。
  */
 async function jibiRecoverCloudDeleted() {
-    if (!userPassword) { uiAlert('需要先登录（输入加密密码）才能读取云端。'); return; }
+    if (!userPassword) { uiAlert('请先登录（需要加密密码）再读取云端。'); return; }
     if (offlineMode) { uiAlert('离线模式下不能读取云端，请先切换到在线模式。'); return; }
     if (!inMemoryLoadedData || !inMemoryLoadedData.allUserData) { uiAlert('本机还没有加载数据。'); return; }
 
@@ -275,7 +275,7 @@ async function jibiRecoverCloudDeleted() {
     });
 
     if (!cand.length) {
-        uiAlert('没有可恢复的记录。\n\n云端已删除、本机又没有的记录：0 条' +
+        uiAlert('没有可恢复的记录。' +
             (skipped.length ? `\n其中 ${skipped.length} 条属于已删除的用户，已跳过。` : '') +
             (failed ? `\n另有 ${failed} 条无法解密。` : ''), { title: '恢复已删除记录', okText: '知道了' });
         return;
@@ -294,7 +294,7 @@ async function jibiRecoverCloudDeleted() {
 
     const ok = await uiConfirm(
         `云端有 ${cand.length} 条“已删除、但本机没有”的记录：\n\n${preview}\n\n` +
-        '如果这些是你误删的，点“恢复”：它们会加回本机并重新写回云端。' +
+        '如果是误删，点“恢复”：会加回本机并写回云端。' +
         (skipped.length ? `\n（另有 ${skipped.length} 条属于已删除的用户，已跳过）` : ''),
         { title: '恢复已删除记录', okText: '恢复这些记录', cancelText: '取消', danger: false }
     );
@@ -310,8 +310,8 @@ async function jibiRecoverCloudDeleted() {
         if (arr.some(x => String(x.id) === String(row.id))) return;
         rec.updatedAt = now;
         arr.push(rec);
-        memTouched();                                   // 5.1.9：内存变了，界面数组需要对账
-        pendingDeletesForget([String(row.id)]);         // 5.1.9：加回来的记录不再是“已删除”
+        memTouched();                                   // 内存变了，界面数组需要对账
+        pendingDeletesForget([String(row.id)]);         // 加回来的记录不再是“已删除”
         items.push({ item: { id: String(row.id), kind: row.kind, owner: row.owner, payload: rec }, sig: incSig(rec) });
     });
 
@@ -332,7 +332,7 @@ async function jibiRecoverCloudDeleted() {
         const failedN = up.rejected.length;
         showToast(`已恢复 ${up.pushed} 条记录` + (failedN ? `，${failedN} 条被云端拒绝（时间戳较旧）` : ''), failedN ? 'warning' : 'success', 6000);
     } catch (e) {
-        loadAllData(); filterUserData();   // 5.1.9：先让界面数组跟上内存（含刚加回的记录），再保存，避免旧数组把它们覆盖掉
+        loadAllData(); filterUserData();   // 先让界面数组跟上内存（含刚加回的记录），再保存，避免旧数组把它们覆盖掉
         saveUserData();
         hasUnsavedChanges = true;
         if (typeof syncBarRender === 'function') syncBarRender();

@@ -3,10 +3,9 @@
 
 /* ─── 背景 ───
  * 一笔转账 = 两条独立记录（转出 expense + 转入 income），新数据用同一个 transferPairId 关联；
- * 5.1.0 之前的老数据没有 transferPairId，只能靠“同一天 + 两个账户互相指向”来猜另一半。
- * 之前删除/编辑/账户详情各写了一套猜法（有的严格比较、有的宽松比较），老数据在同一天有多笔转账时，
- * 删除一笔会连带删掉别人的转出记录，留下孤立的转入记录（点开提示“找不到配对的转账记录”）。
- * 现在全部走 resolveTransferPair()。 */
+ * 没有 transferPairId 的老数据，只能靠“同一天 + 两个账户互相指向”来猜另一半。
+ * 删除 / 编辑 / 账户详情统一走 resolveTransferPair()，不要各写一套猜法：老数据同一天有多笔转账时，
+ * 不一致的猜法会连带删掉别人的转出记录，留下孤立的转入记录（点开提示“找不到配对的转账记录”）。 */
 
 function _sameId(a, b) { return a != null && b != null && String(a) === String(b); }
 
@@ -60,10 +59,10 @@ function _orphanDesc(t) {
 async function handleOrphanTransfer(t) {
     const desc = _orphanDesc(t);
     if (t.ownerName !== currentUserName) {
-        uiAlert(`这笔转账的另一半记录已不存在（可能已被删除），它现在是一条孤立记录。\n\n${desc}\n\n这条记录属于 ${t.ownerName}，请让对方登录后在“设置 → 高级功能 → 检查孤立转账”里清理。`);
+        uiAlert(`这笔转账的另一半记录已不存在，现在是孤立记录。\n\n${desc}\n\n它属于 ${t.ownerName}，请让对方登录后在“设置 → 高级功能 → 检查孤立转账”里清理。`);
         return;
     }
-    const ok = await uiConfirm(`这笔转账的另一半记录已不存在（可能已被删除），它现在是一条孤立记录，还会影响账户余额。\n\n${desc}\n\n要删除这条孤立记录吗？`,
+    const ok = await uiConfirm(`这笔转账的另一半记录已不存在，现在是孤立记录，还会影响账户余额。\n\n${desc}\n\n要删除这条记录吗？`,
         { title: '转账配对缺失', okText: '删除这条记录', cancelText: '先保留', danger: true });
     if (ok) deleteOrphanTransfers([t.id]);
 }
@@ -72,7 +71,7 @@ async function handleOrphanTransfer(t) {
 async function scanOrphanTransfers() {
     const ids = getOrphanTransferIds();
     const list = transactions.filter(t => ids.has(t.id)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    if (!list.length) { uiAlert('没有发现孤立转账：所有转账的转出、转入记录都是成对的。'); return; }
+    if (!list.length) { uiAlert('没有孤立转账，所有转账都是成对的。'); return; }
     const mine = list.filter(t => t.ownerName === currentUserName);
     const others = list.length - mine.length;
     let msg = `发现 ${list.length} 条孤立转账（另一半已不存在）：\n\n` + list.slice(0, 8).map(_orphanDesc).join('\n') + (list.length > 8 ? `\n……共 ${list.length} 条` : '');

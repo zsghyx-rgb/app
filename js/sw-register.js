@@ -1,8 +1,7 @@
 // @file js/sw-register.js
 // Service Worker 注册、“有新版本，点击刷新”提示条、网络恢复后自动同步。依赖主脚本里的 $ / flushDraftNow / cloudConfigured 等，必须放在所有 js/ 业务文件之后。
 
-/* 以前 SW 装好就 skipWaiting + 自动接管，用户可能正在填表，页面被静默换掉。
- * 现在：新版本先进入 waiting 状态，顶部弹一条“有新版本，点击刷新”，
+/* 新版本先进入 waiting 状态，顶部弹一条“有新版本，点击刷新”；不自动接管，避免用户正在填表时页面被静默换掉。
  * 用户点了才切换（切换前先把未保存的改动落盘）。 */
 let _swReg = null;
 let _swReloading = false;

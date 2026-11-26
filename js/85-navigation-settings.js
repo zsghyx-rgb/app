@@ -60,20 +60,20 @@ function showSettingsSubpage(name) {
     $$('.settings-subpage').forEach(function(el) { el.classList.remove('active'); });
     var sub = $('settings-sub-' + name);
     if (sub) sub.classList.add('active');
-    if (name === 'stats-charts') renderStatsChartSettings();   // 5.1.2：统计图表开关
-    if (name === 'appearance') renderThemeSettings();     // 5.1.1：外观设置放进二级菜单，打开时刷新当前选中状态
+    if (name === 'stats-charts') renderStatsChartSettings();   // 统计图表开关
+    if (name === 'appearance') renderThemeSettings();     // 外观设置放进二级菜单，打开时刷新当前选中状态
     if (name === 'exchange-rate') renderExchangeRateSettings();
     if (name === 'categories') renderCategorySettings();
     if (name === 'users') { renderUserManagement(); initPasswordHint(); renderHiddenAccountsList(); }
     if (name === 'password') initPasswordHint();
-    if (name === 'data-sync') renderDataSyncStatus();   // 5.1.8：同步状态卡片
+    if (name === 'data-sync') renderDataSyncStatus();   // 同步状态卡片
     if (name === 'planned') renderPlannedTransactions();
     if (name === 'orphan-attachments') { $('orphan-attachments-result').innerHTML = ''; }
 }
 
 // ── 清理孤立附件 ────────────────────────────────────────────
 async function scanOrphanAttachments(btn) {
-    if (!GAS_URL) { showToast('请先配置 GAS URL', 'warning'); return; }
+    if (!GAS_URL) { showToast('请先在连接设置中填写 GAS 地址', 'warning'); return; }
     const result = $('orphan-attachments-result');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>扫描中…';
@@ -92,9 +92,9 @@ async function scanOrphanAttachments(btn) {
 
         // 拉取 Drive 上的附件列表
         const listResp = await fetch(gasRequestUrl({ action: 'listAttachments' }));
-        if (!listResp.ok) throw new Error('无法获取附件列表，请确认 GAS 已更新并重新部署');
+        if (!listResp.ok) throw new Error('无法获取附件列表，请更新 Code.gs 并重新部署');
         const allFiles = await listResp.json();
-        if (!Array.isArray(allFiles)) throw new Error('GAS 返回格式错误，请确认 GAS 已更新');
+        if (!Array.isArray(allFiles)) throw new Error('云端返回格式错误，请更新 Code.gs');
 
         const orphans = allFiles.filter(f => !usedIds.has(f.id));
 

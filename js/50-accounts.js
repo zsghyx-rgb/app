@@ -248,7 +248,7 @@ function calculateBalance(accId) {
 function deleteAccount(id) {
     const hasTransactions = transactions.some(t => t.accountId == id || (t.relatedAccountId && t.relatedAccountId == id));
     if (hasTransactions) {
-        uiAlert(`该账户已有交易流水，无法删除！\n请先删除或转移相关交易记录。`);
+        uiAlert(`该账户已有交易，无法删除。请先删除或转移相关交易。`);
         return;
     }
     const index = accounts.findIndex(a => a.id == id);

@@ -53,7 +53,7 @@ function triggerAutoSave() {
         saveUserData();        // 内存立即生效（渲染、同步都读内存）
         scheduleDraftSave();   // 落盘合并成一次
     }
-    if (typeof scheduleAutoSync === 'function') scheduleAutoSync();   // 5.1.8：改完后自动同步（延迟见 AUTO_SYNC_DELAY_MS）
+    if (typeof scheduleAutoSync === 'function') scheduleAutoSync();   // 改完后自动同步（延迟见 AUTO_SYNC_DELAY_MS）
     syncBarRender();
 }
 
@@ -130,7 +130,7 @@ function mergeData(local, remote) {
     const deletedIdSet = new Set(mergedDeletedLog.map(e => String(e.id)));
 
     const merged = {
-        users: [],                       // 5.1.5：下面按「并集」重新算，不再直接取某一边的列表
+        users: [],                       // 下面按「并集」重新算，不直接取某一边的列表
         removedUsers: {},
         categories: local.categories,
         exchangeRates: local.exchangeRates,
@@ -182,7 +182,7 @@ function mergeData(local, remote) {
         };
     });
 
-    // ── 跨桶去重（5.1.5）：同步层是按 id 全局唯一的，同一 id 在两处会让余额被算两次 ──
+    // ── 跨桶去重：同步层是按 id 全局唯一的，同一 id 在两处会让余额被算两次 ──
     const kinds = ['accounts', 'transactions', 'plannedTransactions'];
     const bucketNames = Object.keys(merged.allUserData);
     const winners = { accounts: new Map(), transactions: new Map(), plannedTransactions: new Map() };
@@ -271,7 +271,7 @@ async function loadFromDrive() {
     // 离线模式：只用本机缓存（不需要云端连接配置）
     if (offlineMode) {
         if (!localRawCache) {
-            showToast('本机还没有缓存，无法离线使用。请先切回在线模式登录一次。', 'warning', 5000);
+            showToast('本机没有缓存，无法离线使用，请先在线登录一次', 'warning', 5000);
             $('password-section').style.display = 'none';
             return;
         }
@@ -287,7 +287,7 @@ async function loadFromDrive() {
     }
 
     if (!cloudConfigured()) {
-        uiAlert('请先在登录界面的连接设置里填写 GAS URL 和 Token。');
+        uiAlert('请先在连接设置中填写 GAS 地址和 Token。');
         return;
     }
 
@@ -311,7 +311,7 @@ async function loadFromDrive() {
     window._driveRawContent = null;
     window._incPendingInitial = true;
     localStorage.removeItem('APP_sb_state'); // 没有可用缓存 → 状态作废，做全量拉取
-    showToast(localRawCache ? `已 ${Math.floor(daysSinceSync)} 天未同步，请输入密码并从云端重新加载` : '请输入密码以从 Google 表格加载数据', 'info', 4000);
+    showToast(localRawCache ? `已 ${Math.floor(daysSinceSync)} 天未同步，请输入密码并从云端重新加载` : '请输入密码，从云端加载数据', 'info', 4000);
     $('user-section').style.display = 'none';
     $('user-buttons').innerHTML = '';
     $('password-error').classList.add('d-none');

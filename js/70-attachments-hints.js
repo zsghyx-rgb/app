@@ -98,6 +98,7 @@ function resetAttachmentUI() {
         container.style.setProperty('display', 'none', 'important');
     }
     if (idField) idField.value = '';
+    if (typeof tmcSync === 'function') tmcSync();   // 紧凑布局：图片胶囊
 }
 
 async function compressImage(file, maxKB = 500) {
@@ -148,7 +149,7 @@ window.addEventListener('load', () => {
     editModalEl.addEventListener('hide.bs.modal', function (event) {
         if (isUploadingAttachment) {
             event.preventDefault(); // 阻止关闭
-            uiAlert('图片正在同步至网盘，请稍候...');
+            uiAlert('图片正在上传，请稍候');
         }
     });
     editModalEl.addEventListener('hidden.bs.modal', function () {
@@ -244,6 +245,7 @@ function renderAttachmentThumbs(ids) {
 
     if (!ids || ids.length === 0) {
         container.style.setProperty('display', 'none', 'important');
+        if (typeof tmcSync === 'function') tmcSync();   // 紧凑布局：图片胶囊
         return;
     }
 
@@ -275,6 +277,7 @@ function renderAttachmentThumbs(ids) {
         }
         container.appendChild(wrapper);
     });
+    if (typeof tmcSync === 'function') tmcSync();   // 紧凑布局：图片胶囊显示“N 张”
 }
 
 // 5. 删除特定位置的图片（直接删 + 可撤销，不再弹原生确认框）
@@ -305,8 +308,7 @@ function applyDescHint(catId, category) {
     catEl.value = category;
     catEl.dispatchEvent(new Event('change', { bubbles: true }));
     // 分类下拉是隐藏的 <select>，真正显示给用户的是 .cat-grid 按钮组，
-    // 之前只更新了隐藏 select 的 value 而没有同步可见的按钮高亮，
-    // 导致用户点击“应用”后界面看起来分类并没有变化（实际数据已变但未渲染）。
+    // 只改隐藏 select 的 value 不够，还要同步可见的按钮高亮，否则点“应用”后界面看起来分类没变。
     catGridSync(catId, 'cat-grid-' + catId);
 }
 /**
@@ -371,7 +373,7 @@ async function checkHistoryCategories() {
         }
     });
 
-    if (suspects.length === 0) { uiAlert('校对完成！所有分类均正常。'); return; }
+    if (suspects.length === 0) { uiAlert('校对完成，所有分类都正常。'); return; }
 
     const orphanCount = suspects.filter(s => s.isOrphan).length;
     const suggCount   = suspects.filter(s => !s.isOrphan).length;

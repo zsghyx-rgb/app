@@ -63,11 +63,33 @@ function accSelectOpen(selectId) {
     if (!trigger || !dropdown) return;
     trigger.classList.add('open');
     dropdown.classList.add('open');
-    // fixed 定位：对齐触发器底部，宽度与触发器相同
+    _accSelectPlace(selectId);
+}
+
+/** fixed 定位：默认对齐触发器底部、宽度与触发器相同。
+ *  紧凑布局：账户胶囊在屏幕下半部，列表向上展开，宽度至少 240px（胶囊本身很窄）。 */
+function _accSelectPlace(selectId) {
+    const trigger = $('trigger-' + selectId);
+    const dropdown = $('dropdown-' + selectId);
+    if (!trigger || !dropdown) return;
     const rect = trigger.getBoundingClientRect();
+    if (selectId === 'edit-trans-account' && typeof tmcOn === 'function' && tmcOn()) {
+        const w = Math.min(Math.max(rect.width, 240), window.innerWidth - 16);
+        const left = Math.max(8, Math.min(rect.left, window.innerWidth - 8 - w));
+        dropdown.classList.add('acc-up');
+        dropdown.style.left = left + 'px';
+        dropdown.style.width = w + 'px';
+        dropdown.style.top = 'auto';
+        dropdown.style.bottom = (window.innerHeight - rect.top) + 'px';
+        dropdown.style.maxHeight = Math.max(120, Math.min(300, rect.top - 12)) + 'px';
+        return;
+    }
+    dropdown.classList.remove('acc-up');
+    dropdown.style.bottom = '';
+    dropdown.style.maxHeight = '';
     dropdown.style.left = rect.left + 'px';
     dropdown.style.width = rect.width + 'px';
-    dropdown.style.top = (rect.bottom) + 'px';
+    dropdown.style.top = rect.bottom + 'px';
 }
 
 function accSelectClose(selectId) {
@@ -79,12 +101,7 @@ function accSelectRepositionAll() {
     ACC_SELECT_IDS.forEach(id => {
         const dropdown = $('dropdown-' + id);
         if (!dropdown || !dropdown.classList.contains('open')) return;
-        const trigger = $('trigger-' + id);
-        if (!trigger) return;
-        const rect = trigger.getBoundingClientRect();
-        dropdown.style.left = rect.left + 'px';
-        dropdown.style.width = rect.width + 'px';
-        dropdown.style.top = rect.bottom + 'px';
+        _accSelectPlace(id);
     });
 }
 

@@ -3,15 +3,15 @@
 
 async function exportJsonData() {
     saveUserData();
-    if (!(await uiConfirm('JSON 为明文格式，所有数据均可见（包括密码保护的内容）。确认导出？', { title: '导出明文 JSON', okText: '仍然导出', danger: true }))) return;
+    if (!(await uiConfirm('JSON 是明文，所有数据都可见（包括受密码保护的内容）。确认导出？', { title: '导出明文 JSON', okText: '仍然导出', danger: true }))) return;
     const blob = new Blob([JSON.stringify(inMemoryLoadedData, null, 2)], {type: 'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `ledger_backup_${formatLocal(new Date())}.json`;
     a.click();
-    // 导出不会上传数据：不要用 clearUnsavedFlag 把“待同步”标记清掉（5.1.8 起它还会取消自动同步），
+    // 导出不会上传数据：不要用 clearUnsavedFlag 把“待同步”标记清掉（它还会取消自动同步），
     // 否则刚改完就导出，改动会被误认为已同步而永远不再上传。
-    if (verboseToast) showToast('JSON已导出', 'success');
+    if (verboseToast) showToast('JSON 已导出', 'success');
 }
 
 function exportTransactionCsv() {
@@ -73,7 +73,7 @@ function importTransactionCsv() {
     reader.onload = (e) => {
         const text = e.target.result;
         const rows = text.split(/\r\n|\n|\r/).filter(r => r.trim());
-        if (rows.length < 2) { uiAlert('CSV文件似乎是空的'); return; }
+        if (rows.length < 2) { uiAlert('CSV 文件是空的'); return; }
         let successCount = 0, failLog = [];
         for (let i = 1; i < rows.length; i++) {
             const cols = rows[i].split(',').map(clean);
@@ -99,7 +99,7 @@ function importTransactionCsv() {
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
         displayedTransactionCount = 100;
         renderAllTransactions(); renderAccounts();
-        if (failLog.length > 0) uiAlert(`导入完成。成功: ${successCount}。失败原因:\n${failLog.join('\n')}`);
+        if (failLog.length > 0) uiAlert(`导入完成：成功 ${successCount} 条。失败原因：\n${failLog.join('\n')}`);
         else if (successCount === 0) uiAlert('导入失败：没有成功导入任何数据');
         else uiAlert(`成功导入 ${successCount} 条记录`);
     };
@@ -114,7 +114,7 @@ function importTransferCsv() {
     reader.onload = (e) => {
         const text = e.target.result;
         const rows = text.split(/\r\n|\n|\r/).filter(r => r.trim());
-        if (rows.length < 2) { uiAlert('CSV文件似乎是空的'); return; }
+        if (rows.length < 2) { uiAlert('CSV 文件是空的'); return; }
         let successCount = 0, failLog = [];
         for (let i = 1; i < rows.length; i++) {
             const cols = rows[i].split(',').map(clean);
@@ -147,8 +147,8 @@ function importTransferCsv() {
         }
         saveUserData(); triggerAutoSave(); loadAllData(); filterUserData();
         renderAllTransactions(); renderAccounts();
-        if (failLog.length > 0) uiAlert(`导入完成。成功: ${successCount}。失败原因:\n${failLog.join('\n')}`);
-        else if (successCount === 0) uiAlert('导入失败');
+        if (failLog.length > 0) uiAlert(`导入完成：成功 ${successCount} 条。失败原因：\n${failLog.join('\n')}`);
+        else if (successCount === 0) uiAlert('导入失败：没有成功导入任何转账');
         else uiAlert(`成功导入 ${successCount} 条转账`);
     };
     reader.readAsText(file);

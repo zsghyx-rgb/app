@@ -17,13 +17,14 @@ async function sheetCall(params, body) {
     let r;
     try { r = await fetch(gasRequestUrl(params || {}), opts); }
     catch (e) {
-        throw new Error('无法连接 GAS（Failed to fetch）。常见原因：① 没有在 Apps Script 里运行 authorizeOnce 授权表格权限；② 修改代码后没有“新建版本”重新部署；③ GAS URL 不是以 /exec 结尾的网页应用地址。可在浏览器直接打开 GAS 地址（后面加 ?token=你的令牌&action=pull&since=0）查看具体报错。');
+        console.warn('[sheetCall] 请求失败：', e);   // 排查步骤见 ARCHITECTURE.md「排查：无法连接云端」
+        throw new Error('无法连接云端，请检查网络和连接设置');
     }
     const t = (await r.text()).trim();
-    if (t === 'UNAUTHORIZED') throw new Error('GAS 访问令牌不正确');
+    if (t === 'UNAUTHORIZED') throw new Error('访问令牌不正确，请检查连接设置');
     let j;
-    try { j = JSON.parse(t); } catch (_) { throw new Error('GAS 返回异常（是否已部署新版 Code.gs？）：' + t.slice(0, 60)); }
-    if (j && j.error) throw new Error('GAS：' + j.error);
+    try { j = JSON.parse(t); } catch (_) { console.warn('[sheetCall] 非 JSON 响应：', t.slice(0, 200)); throw new Error('云端返回异常，请确认已部署最新版 Code.gs'); }
+    if (j && j.error) throw new Error('云端：' + j.error);
     return j;
 }
 
@@ -268,14 +269,11 @@ function incRemoveTransferCompanions(data, gone, outIds) {
     return n;
 }
 
-/** 用户列表的合并规则（5.1.5 起）：
- *  以前是“整条配置谁的时间戳新谁说了算”，而新增/改名/删除用户又不动时间戳，
- *  结果一台改了预算的旧设备一同步，就能把别的设备刚加的用户连同他的全部数据“抹掉”。
- *  现在：
+/** 用户列表的合并规则（不能让一份旧配置把别的设备刚加的用户连同他的数据“抹掉”）：
  *   - users 取并集（云端 ∪ 本机 ∪ 有数据的桶），并集只增不减，绝不因为配置覆盖丢用户；
  *   - 删除用户靠 removedUsers 标记生效（同名重新添加会清掉标记）；
  *   - 有数据的桶一律保留，哪怕用户列表里没有它 —— 钱不能因为一份旧配置就看不见。 */
-/** removedUsers 的取值约定（5.1.5）：
+/** removedUsers 的取值约定：
  *   正数 = 在该时间点被删除；负数 = 在该时间点被重新添加（删除作废）。
  *  合并时取“更晚发生”的那一个（绝对时间更大），并保留符号，
  *  这样“删了又加”和“加了又删”都能正确收敛到最新的一次操作。 */
@@ -378,7 +376,7 @@ function incDecryptRows(rows, pw) {
         try { return { row, rec: incDec(row.enc, pw) }; }
         catch (_) { failed++; return null; }
     });
-    if (failed) throw new Error(`有 ${failed} 条云端记录解密失败（密码不一致或数据损坏），本次同步已中止，本地数据未改动`);
+    if (failed) throw new Error(`${failed} 条云端记录解密失败，已中止同步（本地数据未改动）`);
     return out;
 }
 
@@ -390,7 +388,7 @@ function incDecryptRows(rows, pw) {
  */
 function incApplyRows(data, decrypted, state) {
     const res = { newItems: 0, changed: 0, configChanged: false, removed: 0 };
-    if (data === inMemoryLoadedData && typeof memTouched === 'function') memTouched();   // 5.1.9：内存即将变化，界面数组需要对账
+    if (data === inMemoryLoadedData && typeof memTouched === 'function') memTouched();   // 内存即将变化，界面数组需要对账
     const companionIds = [];
     const local = incCollectLocal(data);
 
@@ -414,7 +412,7 @@ function incApplyRows(data, decrypted, state) {
             const localSig = incSig(lc);
             if (localSig === remoteSig) { state.synced[id] = remoteSig; return; }
             // 用户列表先取并集：即使这份配置因为时间戳更旧而不被采用，
-            // “谁存在”也不该被它抹掉（这正是以前整块数据消失的原因）。
+            // “谁存在”也不该被它抹掉。
             const usersBefore = JSON.stringify(data.users || []);
             incMergeUsersFromConfig(data, rec);
             const usersGrew = JSON.stringify(data.users || []) !== usersBefore;
@@ -472,7 +470,7 @@ function incApplyRows(data, decrypted, state) {
     });
     // 整轮合并之后：改名留下的旧名字空桶在这里清掉（记录已经全部挪到新名字下）
     if (incPruneRemovedUsers(data)) res.changed++;
-    // 5.1.9：转账连带删除的另一半/手续费要补发墓碑，墓碑只认“显式删除”，所以在这里登记
+    // 转账连带删除的另一半/手续费要补发墓碑，墓碑只认“显式删除”，所以在这里登记
     if (companionIds.length && typeof pendingDeletesGet === 'function') {
         const pd = pendingDeletesGet(), now = Date.now();
         companionIds.forEach(id => { if (state.synced[id] !== 'X') pd[id] = now; });
@@ -490,10 +488,9 @@ function incDiffLocal(data, state, force) {
         if (!force && state.synced[id] === sig) return;
         upserts.push({ item, sig });
     });
-    // 5.1.9：墓碑只来自“用户显式删除”（pendingDeletes / deletedLog）。
-    // 以前是“synced 里有、本机没有 = 删除”，任何让本机丢记录的 bug 都会被放大成云端删除（5.1.6 事故）。
-    // 现在本机缺失但没有删除登记的记录一律当作“本机丢了”，同步时从云端取回，绝不发墓碑。
-    // order: 行（账户排序）不是用户记录，沿用原来的推断。
+    // 墓碑只来自“用户显式删除”（pendingDeletes / deletedLog）：本机缺失但没有删除登记的记录一律当作“本机丢了”，
+    // 同步时从云端取回，绝不发墓碑（原因见 ARCHITECTURE.md「内存 ↔ 界面数组对账与删除登记」）。
+    // order: 行（账户排序）不是用户记录，本机没有就按删除处理。
     const explicit = explicitDeleteIds();
     Object.keys(state.synced).forEach(id => {
         if (state.synced[id] === 'X' || local.has(id)) return;
@@ -522,7 +519,7 @@ async function incPushUpserts(upserts, state, pw) {
             enc: incEnc(item.payload, pw), ts: (typeof ts === 'number' && ts > 0) ? ts : incTsOf(item), deleted: false
         }));
         const r = await sheetCall({}, { action: 'push', rows: body });
-        if (r.tooLarge && r.tooLarge.length) throw new Error(`有 ${r.tooLarge.length} 条记录内容过大（超过单元格上限），无法同步`);
+        if (r.tooLarge && r.tooLarge.length) throw new Error(`${r.tooLarge.length} 条记录过大，无法同步`);
         const ok = new Set((r.accepted || []).map(String));
         batch.forEach(({ item, sig }) => {
             if (ok.has(item.id)) { state.synced[item.id] = sig; pushed++; }
@@ -537,7 +534,7 @@ async function incPushTombstones(ids, state) {
         const part = ids.slice(i, i + 200);
         await sheetCall({}, { action: 'tombstone', ids: part, ts: Date.now() });
         part.forEach(id => { state.synced[id] = 'X'; });
-        pendingDeletesForget(part);   // 5.1.9：墓碑已送达，登记可以撤掉
+        pendingDeletesForget(part);   // 墓碑已送达，登记可以撤掉
     }
 }
 
@@ -564,9 +561,9 @@ async function incSyncCore(options = {}) {
         let ok = false;
         if (options.manual) {
             ok = await uiConfirm(
-                `云端这次有 ${delRows} 条“已删除”记录（正常记录只有 ${liveRows} 条）。\n\n` +
-                '如果这不是你刚做的批量删除，请点“取消”：本机不会删除任何数据，也不会把删除推回云端。\n' +
-                '确认是本人操作，才点“继续同步”。',
+                `云端有 ${delRows} 条“已删除”记录（正常记录 ${liveRows} 条）。\n\n` +
+                '如果不是你刚做的批量删除，请取消：本机不会删除数据，也不会把删除推回云端。\n' +
+                '确认是你的操作，再点“继续同步”。',
                 { title: '云端发来大量删除', okText: '继续同步', cancelText: '取消（安全）', danger: true }
             );
         }
@@ -582,7 +579,7 @@ async function incSyncCore(options = {}) {
     summary.newItems += applied.newItems;
     summary.changed += applied.changed;
     summary.configChanged = applied.configChanged;
-    // 5.1.9：内存刚被改写，界面数组必须在同一个 tick 里跟上。后面还有网络等待，
+    // 内存刚被改写，界面数组必须在同一个 tick 里跟上。后面还有网络等待，
     // 期间用户的任何编辑都会走 saveUserData()，它不能再拿旧数组去覆盖刚拉到的记录。
     if (applied.changed > 0) incReloadGlobals();
 
@@ -608,13 +605,13 @@ async function incSyncCore(options = {}) {
         let ok = false;
         if (options.manual) {
             ok = await uiConfirm(
-                `本次同步将删除云端 ${diff.tombstones.length} 条记录（占 ${Math.round(diff.tombstones.length / Math.max(1, knownCount) * 100)}%）。\n\n如果这不是你的操作，请点“取消”，本地和云端都不会被改动。`,
+                `本次同步将删除云端 ${diff.tombstones.length} 条记录（占 ${Math.round(diff.tombstones.length / Math.max(1, knownCount) * 100)}%）。\n\n如果不是你的操作，请取消，本地和云端都不会改动。`,
                 { title: '检测到异常删除', okText: '继续推送', cancelText: '取消（安全）', danger: true }
             );
         }
         if (!ok) {
             summary.aborted = `检测到异常删除（${diff.tombstones.length} 条），已中止推送`;
-            // 5.1.9：前面已经把云端数据合进内存，必须先写缓存、后写状态，否则 lastSeq 前进了而缓存里没有这些记录
+            // 前面已经把云端数据合进内存，必须先写缓存、后写状态，否则 lastSeq 前进了而缓存里没有这些记录
             incPersistLocal(state, summary.changed > 0);
             return summary;
         }
@@ -660,8 +657,7 @@ function incPersistLocal(state, rewriteCache) {
     incSaveState(state);
 }
 
-/** 把合并结果刷新到界面（与原 syncToDrive 的刷新逻辑一致） */
-/** 5.1.9：只刷新“数据”（配置全局 + 界面数组），不碰 DOM。同步把云端数据写进内存后必须立刻调用，
+/** 只刷新“数据”（配置全局 + 界面数组），不碰 DOM。同步把云端数据写进内存后必须立刻调用，
  *  即使记账表单正开着也一样——表单保存时按 id 重新取记录，不依赖旧数组。
  *  返回 false 表示还没登录（没有界面数组可刷新）。 */
 function incReloadGlobals() {
@@ -691,13 +687,13 @@ function incRefreshAfterMerge(summary) {
     if (summary.configChanged) renderCategorySettings();
 }
 
-/** 5.1.9：有记录在本机丢失、已从云端取回时提示一次（正常情况下不会出现） */
+/** 有记录在本机丢失、已从云端取回时提示一次（正常情况下不会出现） */
 function incNoteRestored(s) {
-    if (s && s.restored > 0) showToast(`有 ${s.restored} 条记录在本机丢失，已从云端恢复`, 'info', 5000);
+    if (s && s.restored > 0) showToast(`本机丢失的 ${s.restored} 条记录已从云端恢复`, 'info', 5000);
 }
 
-/** 手动 / 自动同步入口（对应原 syncToDrive）
- *  5.1.8：自动同步不再弹提示——成功只让底部细线变绿，失败先由细线提示，
+/** 手动 / 自动同步入口
+ *  自动同步不弹提示：成功只让底部细线变绿，失败先由细线提示，
  *  连续失败超过 BAR_ERROR_DELAY_MS 才弹文字状态条（见 js/88-toast-syncbar.js）。 */
 async function incSync(manual = false, forcePush = false) {
     if (!currentUser) return;
@@ -720,7 +716,7 @@ async function incSync(manual = false, forcePush = false) {
         _barBusy = null;
         if (typeof syncLineOk === 'function') syncLineOk();
         if (s.rejected > 0) {
-            showToast(`有 ${s.rejected} 条改动被云端拒绝（多半是本机时间落后于其他设备）。请校准手机/电脑时间后再同步一次。`, 'warning', 0);
+            showToast(`${s.rejected} 条改动被云端拒绝，请校准设备时间后重新同步`, 'warning', 0);
         }
     } catch (err) {
         showToast('同步失败：' + err.message, 'error', 0);
@@ -737,7 +733,7 @@ async function incSync(manual = false, forcePush = false) {
     }
 }
 
-/** 5.2.0：有弹窗（含记账窗口）开着吗？实现在 js/88-toast-syncbar.js 的 isAnyModalOpen（脚本都加载完才会调用） */
+/** 有弹窗（含记账窗口）开着吗？实现在 js/88-toast-syncbar.js 的 isAnyModalOpen（脚本都加载完才会调用） */
 function incModalOpen() { return typeof isAnyModalOpen === 'function' && isAnyModalOpen(); }
 
 /** 登录后的后台静默同步（对应原 backgroundSyncAfterLogin） */
@@ -760,19 +756,19 @@ async function incBackgroundSync() {
         clearUnsavedFlag();
         incEnsureBackup();
         if (incModalOpen()) {
-            // 5.2.0：以前这里查的是页面里并不存在的 #add-transaction-section，永远判成“没开”，推迟渲染从未生效
-            if (s.changed > 0) { window._pendingUIRefresh = true; showToast(s.newItems > 0 ? `后台已合并 ${s.newItems} 条云端新数据，关闭窗口后自动刷新` : '后台已合并云端改动', 'info', 3000); }
+            // 弹窗开着：只推迟渲染（数据已刷新），关窗后由 flushPendingUIRefresh 补渲染
+            if (s.changed > 0) { window._pendingUIRefresh = true; showToast(s.newItems > 0 ? `已合并 ${s.newItems} 条云端新数据，关闭窗口后刷新` : '已合并云端改动', 'info', 3000); }
         } else {
             incRefreshAfterMerge(s);
-            if (s.newItems > 0) showToast(`云端有 ${s.newItems} 条新数据已合并`, 'success', 3000);
+            if (s.newItems > 0) showToast(`已合并 ${s.newItems} 条云端新数据`, 'success', 3000);
             else if (verboseToast) showToast('云端数据已是最新', 'info', 2000);
         }
         if (s.rejected > 0) {
-            showToast(`有 ${s.rejected} 条改动被云端拒绝（多半是本机时间落后于其他设备），请校准时间后再同步。`, 'warning', 0);
+            showToast(`${s.rejected} 条改动被云端拒绝，请校准设备时间后重新同步`, 'warning', 0);
         }
     } catch (e) {
         console.warn('[sb] 后台同步失败', e);
-        // 以前这里只写控制台，用户完全看不到同步失败；现在走底部状态条（带“重试”按钮）
+        // 失败走底部状态条（带“重试”按钮）
         const msg = (e && e.message) ? e.message : String(e);
         showToast('同步失败：' + msg, 'error', 0);
     } finally {
@@ -809,22 +805,22 @@ function incAssemble(rows, pw) {
 async function incInitialLoad(password) {
     const errEl = $('password-error');
     try {
-        showToast('正在从 Google 表格加载…', 'syncing', 0);
+        showToast('正在从云端加载…', 'syncing', 0);
         userPassword = password;
         const rows = await incPullRows(0);
-        if (!rows.length) throw new Error('云端还没有数据。请先在连接设置里点「新建空账本」初始化');
+        if (!rows.length) throw new Error('云端还没有数据，请先新建空账本');
         const { data, state, hasConfig } = incAssemble(rows, password);
-        if (!hasConfig) throw new Error('云端数据缺少配置记录，无法加载');
+        if (!hasConfig) throw new Error('云端缺少配置记录，无法加载');
         inMemoryLoadedData = data;
         categories = data.categories;
         exchangeRates = data.exchangeRates;
         _configUpdatedAt = data.configUpdatedAt || Date.now();
         window._incPendingInitial = false;
         if (errEl) errEl.classList.add('d-none');
-        pendingDeletesClear();   // 5.1.9：本机状态整体重建，旧的删除登记作废
+        pendingDeletesClear();   // 本机状态整体重建，旧的删除登记作废
         incPersistLocal(state, true);
         localStorage.setItem('APP_last_sync_time', String(Date.now()));
-        showToast('数据已从 Google 表格加载', 'success', 2500);
+        showToast('数据已从云端加载', 'success', 2500);
         onDataLoaded();
     } catch (e) {
         userPassword = '';
@@ -872,24 +868,24 @@ function gasRequestUrl(options = {}) {
  * 这里向服务端请求物理清理（需要 Code.gs 支持 action=purgeDeleted）。
  */
 async function purgeCloudDeletedRows(btn) {
-    if (!GAS_URL) { showToast('请先在连接设置里配置 GAS URL', 'warning'); return; }
-    const ok = await uiConfirm('将从云端表格中物理删除所有带“已删除”标记的行。\n\n已经同步过删除操作的设备不受影响；尚未同步的设备下次打开会照常合并。继续？', { title: '清理云端已删除行', okText: '开始清理' });
+    if (!GAS_URL) { showToast('请先在连接设置中填写 GAS 地址', 'warning'); return; }
+    const ok = await uiConfirm('将永久清除云端表格里所有带“已删除”标记的行。\n\n已同步过的设备不受影响，未同步的设备下次打开会照常合并。继续？', { title: '清理云端已删除行', okText: '开始清理' });
     if (!ok) return;
 
     const oldHtml = btn ? btn.innerHTML : '';
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>清理中…'; }
-    showToast('正在清理云端已删除行…', 'syncing', 0);
+    showToast('正在清理云端已删除记录…', 'syncing', 0);
     try {
         const r = await sheetCall({}, { action: 'purgeDeleted' });
         if (r && (r.ok || r.removed !== undefined)) {
-            showToast(`已清理 ${r.removed || 0} 行已删除记录`, 'success', 3000);
+            showToast(`已清理 ${r.removed || 0} 条已删除记录`, 'success', 3000);
         } else {
-            showToast('服务端没有返回清理结果，可能还没升级 Code.gs', 'warning', 4000);
+            showToast('云端没有返回清理结果，请确认 Code.gs 已更新', 'warning', 4000);
         }
     } catch (e) {
         const msg = (e && e.message) ? e.message : String(e);
         if (/返回异常|error/i.test(msg)) {
-            showToast('服务端还不支持这个操作：需要先在 Apps Script 里加上 purgeDeleted（改完要重新部署新版本）', 'error', 0);
+            showToast('云端不支持此操作，请更新 Code.gs 并重新部署', 'error', 0);
         } else {
             showToast('清理失败：' + msg, 'error', 0);
         }

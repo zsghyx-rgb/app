@@ -237,9 +237,9 @@ function maybePromptPinSetup(name) {
         setTimeout(async () => {
             try {
                 const pin = _validPinOrNull(await uiPrompt(
-                    '可以给这个用户设一个 1-4 位数字 PIN。\n\n' +
-                    '只有从别人的界面切换到「' + name + '」时才会询问；' +
-                    '登录自己、进入 App 自动登录都不需要。',
+                    '给这个用户设一个 1-4 位数字 PIN（可选）。\n\n' +
+                    '只有从别人的界面切换到「' + name + '」时才会询问，' +
+                    '登录自己不需要。',
                     {
                         title: '设置登录 PIN（可选）',
                         okText: '保存',

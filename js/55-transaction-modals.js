@@ -1,7 +1,7 @@
 // @file js/55-transaction-modals.js
 // 新增/编辑交易与转账弹窗：标签切换、打开新增/编辑、转账账户互换、删除交易。
 
-// 5.1.1：切换前先把金额里的算式算成数字（再带到另一个标签），切换后刷新数字键盘/日期快捷
+// 切换前先把金额里的算式算成数字（再带到另一个标签），切换后刷新数字键盘/日期快捷
 function switchTransTab(tab, skipReset) {
     commitTransAmount();
     _switchTransTabCore(tab, skipReset);
@@ -250,7 +250,7 @@ function swapTransferAccounts() {
     const toSel = $('edit-transfer-to');
     if (!fromSel || !toSel) return;
     const toAcc = accounts.find(a => a.id == toSel.value);
-    if (toAcc && toAcc.ownerName !== currentUserName) { uiAlert('只能从自己的账户转出，转入账户是其他用户的账户，无法互换'); return; }
+    if (toAcc && toAcc.ownerName !== currentUserName) { uiAlert('转入账户属于其他用户，无法互换方向'); return; }
     const tmp = fromSel.value;
     fromSel.value = toSel.value;
     toSel.value = tmp;

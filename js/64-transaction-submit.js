@@ -122,7 +122,7 @@ $('edit-transfer-form').addEventListener('submit', (e) => {
     // 同币种时转入金额一定等于转出金额（转入框是隐藏的）；跨币种才读转入框
     const newAmtIn = accFrom.currency === accTo.currency ? newAmtOut : parseFloat($('edit-transfer-amount-in').value);
     if (isNaN(newAmtOut) || isNaN(newAmtIn) || newAmtOut <= 0 || newAmtIn <= 0) { uiAlert('请输入有效的转账金额'); return; }
-    if (isNaN(newFee)) { uiAlert('请输入有效的手续费金额（或留空表示没有手续费）'); return; }
+    if (isNaN(newFee)) { uiAlert('手续费金额无效（没有手续费请留空）'); return; }
 
     if (mode === 'add') {
         const uniqueId = Date.now() + Math.random();
@@ -156,7 +156,7 @@ $('edit-transfer-form').addEventListener('submit', (e) => {
         if (!tOut || !tOut.isTransfer) { uiAlert('找不到转账记录'); return; }
 
         const tIn = resolveTransferPair(tOut).tIn;
-        if (!tIn) { uiAlert('找不到配对的转账记录（另一半可能已被删除）。请关闭后在转账记录上重新点开处理。'); return; }
+        if (!tIn) { uiAlert('找不到配对的转账记录（可能已被删除），请关闭后重新打开这笔转账'); return; }
 
         tOut.date = newDate; tOut.accountId = newFromId; tOut.relatedAccountId = newToId;
         tOut.amount = -Math.abs(newAmtOut); tOut.desc = newDesc;

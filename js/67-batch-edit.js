@@ -55,7 +55,7 @@ function toggleBatchSelect(id) {
         if (batchSelectedType && t.type !== batchSelectedType) {
             const cb0 = document.querySelector(`.mobile-transaction-card[data-id="${id}"] .batch-edit-checkbox`);
             if (cb0) cb0.checked = false;   // 浏览器已经把它勾上了，要还原
-            showToast('已选择' + (batchSelectedType === 'expense' ? '支出' : '收入') + '，只能继续选择同类型的交易；如需选另一类，请先取消已选的', 'warning');
+            showToast('已选' + (batchSelectedType === 'expense' ? '支出' : '收入') + '，只能继续选同类型；要选另一类请先取消已选项', 'warning');
             return;
         }
         batchSelectedIds.add(id);

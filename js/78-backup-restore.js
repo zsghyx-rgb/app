@@ -333,9 +333,8 @@ function diffBackupVsCurrent(backupData, currentData) {
 }
 
 /** 把备份装进内存，并让界面数组和配置全局按备份重建。
- *  5.2.0：以前是 inMemoryLoadedData = backup; saveUserData(); loadAllData()——saveUserData 会用当前界面数组
- *  （和当前的分类/汇率/预算等全局）把刚装入的备份覆盖掉，恢复等于没做（5.1.8 起就有，只有“刚同步过、版本号不一致”时才被对账救回，
- *  而且救不回配置）。正确顺序：先把备份当作内存真数据，再让全局数组按它重建，中间不经过 saveUserData。 */
+ *  顺序不能错：先把备份当作内存真数据，再让全局数组按它重建，中间不能经过 saveUserData()——
+ *  它会用当前界面数组和当前的分类/汇率/预算等全局把刚装入的备份覆盖掉（见 ARCHITECTURE.md）。 */
 function applyBackupLocally(backup) {
     // 统一把时间戳提到现在：让恢复的内容在各设备上都算“最新”，覆盖旧版本
     const now = Date.now();
@@ -386,7 +385,7 @@ async function restoreFromBackup(fileName, dateStr) {
         const after = await incPullRows(0);
         incApplyRows(inMemoryLoadedData, incDecryptRows(after, userPassword), state);
         userPins = inMemoryLoadedData.userPins || userPins || {};
-        pendingDeletesClear();   // 5.1.9：云端已按备份重写，旧的删除登记作废
+        pendingDeletesClear();   // 云端已按备份重写，旧的删除登记作废
         incPersistLocal(state, true);
         clearUnsavedFlag();
         loadAllData();

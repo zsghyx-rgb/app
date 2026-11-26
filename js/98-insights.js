@@ -362,7 +362,7 @@ function _renderAnomalies() {
             if (lastTotal > 0 && amt / lastTotal > 0.1) {
                 anomalies.push({
                     cat, amt, type: 'new',
-                    desc: `近3月首次出现，占上月支出 ${(amt/lastTotal*100).toFixed(0)}%`
+                    desc: `近 3 个月首次出现，占上月支出 ${(amt/lastTotal*100).toFixed(0)}%`
                 });
             }
         } else if (std < mean * 0.01) {

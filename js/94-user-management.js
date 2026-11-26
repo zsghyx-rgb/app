@@ -61,7 +61,7 @@ function addUserFromSettings(e) {
     const input = $('new-user-input');
     const name = input.value.trim();
     if (!name) return;
-    if (dataUsers.includes(name)) { uiAlert(`用户 "${name}" 已存在`); return; }
+    if (dataUsers.includes(name)) { uiAlert(`用户「${name}」已存在`); return; }
     dataUsers.push(name);
     if (!inMemoryLoadedData.allUserData[name]) {
         inMemoryLoadedData.allUserData[name] = { accounts: [], transactions: [], plannedTransactions: [] };
@@ -69,20 +69,20 @@ function addUserFromSettings(e) {
     // 同名用户重新添加：写一个“晚于删除”的负数标记，配置合并时才不会被旧删除标记挡住
     if (!inMemoryLoadedData.removedUsers) inMemoryLoadedData.removedUsers = {};
     inMemoryLoadedData.removedUsers[name] = -Date.now();
-    // 5.1.5：用户列表属于配置块，增删改都必须更新配置时间戳，
+    // 用户列表属于配置块，增删改都必须更新配置时间戳，
     // 否则别的设备拿旧配置一同步就会把这个用户覆盖掉（连他的账户和交易一起消失）。
     markConfigUpdated();
     saveUserData(); triggerAutoSave();
     input.value = '';
     renderUserManagement();
-    if (verboseToast) showToast(`已添加用户 "${name}"`, 'success');
+    if (verboseToast) showToast(`已添加用户「${name}」`, 'success');
 }
 
 async function renameUser(oldName) {
     const newName = await uiPrompt(`将用户「${oldName}」改名为：`, { title: '重命名用户', okText: '保存', input: { value: oldName } });
     if (!newName || newName.trim() === oldName) return;
     const trimmed = newName.trim();
-    if (dataUsers.includes(trimmed)) { uiAlert(`用户名 "${trimmed}" 已存在`); return; }
+    if (dataUsers.includes(trimmed)) { uiAlert(`用户「${trimmed}」已存在`); return; }
     const idx = dataUsers.indexOf(oldName);
     if (idx === -1) return;
     dataUsers[idx] = trimmed;
@@ -128,7 +128,7 @@ async function renameUser(oldName) {
     markConfigUpdated();
     saveUserData(); triggerAutoSave();
     renderUserManagement();
-    if (verboseToast) showToast(`已重命名为 "${trimmed}"`, 'success');
+    if (verboseToast) showToast(`已重命名为「${trimmed}」`, 'success');
 
     // 云端可能还有这台设备没拉到的旧名字记录（别的设备刚加的）：一并改成新名字。
     // 不迁的话，下次同步把它们拉回来，旧名字又会出现，用户数从 3 个变成 4 个。
@@ -156,8 +156,8 @@ function userHasData(name) {
 }
 
 async function removeUser(name) {
-    if (userHasData(name)) { uiAlert('该用户有账户、交易或计划交易数据，不可删除。'); return; }
-    const ok = await uiConfirm(`确定删除用户 "${name}"？`, { okText: '删除用户', danger: true });
+    if (userHasData(name)) { uiAlert('该用户还有账户、交易或计划数据，不能删除。'); return; }
+    const ok = await uiConfirm(`确定删除用户「${name}」？`, { okText: '删除用户', danger: true });
     if (!ok) return;
     const snapUsers = dataUsers.slice();
     const snapSlot = inMemoryLoadedData.allUserData[name];

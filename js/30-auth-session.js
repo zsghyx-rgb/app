@@ -29,7 +29,7 @@ async function decryptAndLoadData() {
                 // 离线模式不连接云端，也不清空本机缓存
                 if (offlineMode) return;
                 const reload = await uiConfirm(
-                    '本机缓存无法用这个密码解密。\n\n如果密码已在其他设备上修改，可以清除本机缓存，直接从 Google 表格用新密码重新加载。\n\n云端数据不会被删除。',
+                    '无法用这个密码解密本机缓存。\n\n如果密码在其他设备改过，可清除本机缓存，用新密码从云端重新加载。云端数据不会被删除。',
                     { title: '缓存无法解密', okText: '清除缓存并重载', cancelText: '取消' }
                 );
                 if (reload) {
@@ -59,7 +59,7 @@ async function decryptAndLoadData() {
     }
 
     $('password-section').style.display = 'block';
-    uiAlert('请先在连接设置里确认已配置 GAS，然后点击「从 Google 表格加载」。');
+    uiAlert('请先在连接设置中填写 GAS 地址，再点「从 Google 表格加载」。');
 }
 
 /**
@@ -79,9 +79,8 @@ function onDataLoaded() {
         inMemoryLoadedData.allUserData = {};
     }
 
-    // 用户列表（5.1.5）：配置文件里的用户 ∪ 数据桶里的名字。
-    // 以前只认 users 字段，一旦这份列表被别的设备的旧配置覆盖，桶里的数据就整体“消失”了；
-    // 现在桶里有数据就一定能显示出来（removedUsers 里的名字只是不再显示，除非它还有数据）。
+    // 用户列表：配置文件里的用户 ∪ 数据桶里的名字。桶里有数据就一定能显示出来，
+    // 不会因为一份旧配置少了某个用户而整体“消失”（removedUsers 里的名字只是不再显示，除非它还有数据）。
     const removed = inMemoryLoadedData.removedUsers || {};
     const names = [], seenName = new Set();
     const pushName = (u, force) => {
@@ -133,11 +132,11 @@ async function createNewDataFile() {
         try {
             const r = await sheetCall({ action: 'pull', since: 0, limit: 1 });
             if (r && Array.isArray(r.rows) && r.rows.length > 0) {
-                uiAlert('云端已经有账本数据，不能在这里新建空账本。\n\n如果确实要重新开始，请先在 Google 表格中备份并清空 records 表格。');
+                uiAlert('云端已有账本数据，不能新建空账本。\n\n如需重新开始，请先在 Google 表格里备份并清空 records 表。');
                 return;
             }
         } catch (e) {
-            uiAlert('无法检查云端数据：' + e.message + '\n\n请确认网络和 GAS 配置后再试。');
+            uiAlert('无法检查云端数据：' + e.message);
             return;
         }
     }
@@ -283,7 +282,7 @@ function checkAndRestoreDraft(userName) {
                 showToast(`已恢复 ${timeStr} 的本地未同步记录`, 'warning', 6000);
             } else {
                 // 其他用户：数据已合并，仅提示
-                showToast(`已恢复 [${draftUser}] ${timeStr} 的本地未同步记录`, 'warning', 6000);
+                showToast(`已恢复「${draftUser}」${timeStr} 的本地未同步记录`, 'warning', 6000);
             }
         } catch(e) {
             // 草稿损坏，直接清除，不影响主流程
@@ -306,7 +305,7 @@ function checkAndRestoreDraft(userName) {
  */
 async function logout() {
     if (hasUnsavedChanges) {
-        const ok = await uiConfirm('有未保存的更改，确定退出吗？\n\n（改动会先保存在本机草稿里，下次登录时自动恢复）', { title: '退出登录', okText: '退出', danger: true });
+        const ok = await uiConfirm('有未保存的更改，确定退出吗？\n\n改动会存为本机草稿，下次登录时自动恢复。', { title: '退出登录', okText: '退出', danger: true });
         if (!ok) return;
     }
     flushDraftNow();
@@ -439,14 +438,14 @@ function loadAllData() {
             uData.plannedTransactions.forEach(p => { if (take('plannedTransactions', p)) plannedTransactions.push({ ...p, ownerName: u }); });
         }
     });
-    // 5.1.9：界面数组此刻与内存一致，记下版本和“已知记录”，供 saveUserData 对账用
+    // 界面数组此刻与内存一致，记下版本和“已知记录”，供 saveUserData 对账用
     _globalsVersion = _memVersion;
     _recordGlobalsKnown();
 }
 
-/* ═══ 5.1.9：内存数据（inMemoryLoadedData）↔ 界面数组（accounts / transactions / plannedTransactions）对账 ═══
+/* ═══ 内存数据（inMemoryLoadedData）↔ 界面数组（accounts / transactions / plannedTransactions）对账 ═══
  * 背景：同步层把云端新数据写进内存，界面数组要等刷新才更新；这期间 saveUserData() 若用旧数组整体覆盖内存，
- *      拉到的记录就丢了，而同步进度已前进，随后又被当成“本机删除”发墓碑到云端（5.1.6 事故的根因）。
+ *      拉到的记录就丢了，而同步进度已前进，随后又被当成“本机删除”发墓碑到云端。
  * 规则：
  *   1. 同步层每次改内存都调用 memTouched()（_memVersion +1）；loadAllData / saveUserData 完成时令 _globalsVersion = _memVersion。
  *   2. saveUserData 发现两个版本不一致，先 reconcileGlobalsFromMemory()（按 id 三方合并），再写回。
@@ -568,7 +567,7 @@ function reconcileGlobalsFromMemory() {
 
 function saveUserData() {
     if (!currentUser) return;
-    // 5.1.9：同步刚往内存里写过东西、界面数组还没跟上 → 先对账，绝不能用旧数组覆盖掉同步拉到的数据
+    // 同步刚往内存里写过东西、界面数组还没跟上 → 先对账，绝不能用旧数组覆盖掉同步拉到的数据
     if (_globalsVersion !== _memVersion) reconcileGlobalsFromMemory();
     const idsBefore = _memRecordIds();
     // 回写范围 = 用户列表 ∪ 数据桶名，保证“桶里有数据但不在用户列表”的记录不会被写丢
@@ -589,7 +588,7 @@ function saveUserData() {
     inMemoryLoadedData.budgets = budgets;
     inMemoryLoadedData.categoryIcons = categoryIcons;
     inMemoryLoadedData.configUpdatedAt = _configUpdatedAt;
-    // 5.1.9：写回前内存里有、写回后没有的 = 用户显式删除，登记后才会向云端发墓碑；重新出现的（撤销）从登记里移除
+    // 写回前内存里有、写回后没有的 = 用户显式删除，登记后才会向云端发墓碑；重新出现的（撤销）从登记里移除
     _registerDeletions(idsBefore, _memRecordIds());
     _globalsVersion = _memVersion;
     _recordGlobalsKnown();

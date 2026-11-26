@@ -226,8 +226,7 @@ function switchAssetAggregation(type, el) {
 }
 
 function renderStats() {
-    // 统计页不可见时完全跳过：交易页每次重绘都会调用 renderStats，
-    // 以前即使人不在统计页也会把 6 张图全部重算一遍，这是交易页卡顿的主要来源之一。
+    // 统计页不可见时完全跳过：交易页每次重绘都会调用 renderStats，不跳过会把 6 张图全部重算一遍，导致交易页卡顿。
     if (!$('view-stats')?.classList.contains('active-view')) return;
 
     renderStatsCurrencyButtons();

@@ -1,18 +1,18 @@
 // @file js/76-stats-overview.js
-// 统计页（5.1.2）：概览卡（支出大字 + 对比上期 + 日均 + 预算进度）、分类占比（环形图+列表）、近 6 个月趋势（不受日期筛选影响）、每日支出、
+// 统计页：概览卡（支出大字 + 对比上期 + 日均 + 预算进度）、分类占比（环形图+列表）、近 6 个月趋势（不受日期筛选影响）、每日支出、
 // “更多图表”折叠区，以及设置 → 统计图表 里逐个图表的显示开关（只存本机）。
 
 /* ═══════════ 一、图表开关（本机） ═══════════ */
 const STATS_CHART_PREFS_KEY = 'APP_stats_charts';
 const STATS_CHART_DEFS = [
     { id: 'category',   group: 'main', def: true,  name: '分类占比',        desc: '环形图 + 占比列表，点一下看明细', inst: 'categoryShare' },
-    { id: 'trend',      group: 'main', def: true,  name: '月度收支趋势',    desc: '近 6 个月（年视图为全年 12 个月），不受日期筛选影响；点柱子切换到该月', inst: 'trend6' },
-    { id: 'daily',      group: 'main', def: true,  name: '每日支出',        desc: '这段时间每天花了多少，点某一天看明细', inst: 'daily' },
-    { id: 'ranking',    group: 'more', def: false, name: '支出排行（柱状）', desc: '按分类从高到低的柱状图（旧版样式）', inst: 'expense' },
+    { id: 'trend',      group: 'main', def: true,  name: '月度收支趋势',    desc: '近 6 个月（年视图为全年），不受日期筛选影响；点柱子切到该月', inst: 'trend6' },
+    { id: 'daily',      group: 'main', def: true,  name: '每日支出',        desc: '每天花了多少，点某一天看明细', inst: 'daily' },
+    { id: 'ranking',    group: 'more', def: false, name: '支出排行（柱状）', desc: '按分类从高到低的柱状图', inst: 'expense' },
     { id: 'tags',       group: 'more', def: true,  name: '标签统计',        desc: '按标签汇总支出', inst: 'tags' },
     { id: 'catTrend',   group: 'more', def: true,  name: '单类别趋势',      desc: '选一个分类，看它随时间的变化', inst: 'cattrend' },
     { id: 'totalTrend', group: 'more', def: true,  name: '总支出趋势',      desc: '所选期间内的总支出变化', inst: 'totalExpense' },
-    { id: 'assets',     group: 'more', def: true,  name: '历史资产趋势',    desc: '净资产随时间的变化（计算量最大，点开才绘制）', inst: 'assetHistory' }
+    { id: 'assets',     group: 'more', def: true,  name: '历史资产趋势',    desc: '净资产随时间的变化（点开才绘制）', inst: 'assetHistory' }
 ];
 let _statsPrefs = null;
 let _statsMoreOpen = null;          // 本次打开页面时“更多图表”是否展开（默认取设置）
@@ -371,7 +371,7 @@ function renderTrend6Chart() {
         data: { labels, datasets: [
             { label: '收入', data: keys.map(k => agg[k].inc), backgroundColor: keys.map(k => shade(th.income, k)), borderRadius: 4 },
             { label: '支出', data: keys.map(k => agg[k].exp), backgroundColor: keys.map(k => shade(th.expense, k)), borderRadius: 4 },
-            // 5.1.8：结余（收入 − 支出）趋势线，和柱状图共用一条纵轴，负值会落在 0 以下
+            // 结余（收入 − 支出）趋势线，和柱状图共用一条纵轴，负值会落在 0 以下
             { type: 'line', label: '结余', data: keys.map(k => agg[k].inc - agg[k].exp),
               borderColor: th.primary, backgroundColor: chartAlpha(th.primary, 0.14),
               borderWidth: 2.5, pointRadius: 2.5, pointHoverRadius: 5, pointBackgroundColor: th.primary,

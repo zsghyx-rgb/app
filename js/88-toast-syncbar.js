@@ -51,17 +51,17 @@ function showToast(msg, type = 'success', duration = 3000) {
     syncBarRender();
 }
 
-/* ───────── 5.1.8：底部导航上方的一行细线同步指示 + 改完 3 秒自动同步 ─────────
+/* ───────── 底部导航上方的一行细线同步指示 + 改完 3 秒自动同步 ─────────
  * 状态完全由全局变量推导，平时不显示、不占位置：
  *   有修改未同步 → 琥珀色细线（改完立刻出现，3 秒后自动同步）
  *   同步中       → 蓝色细线来回流动
  *   同步成功     → 绿色细线，约 1.5 秒后淡出
  *   长时间同步不成功 → 才弹出底部文字状态条（#sync-bar）
  */
-const AUTO_SYNC_DELAY_MS = 3000;        // 改完多久后自动同步（5.2.0：4 秒 → 3 秒）
+const AUTO_SYNC_DELAY_MS = 3000;        // 改完多久后自动同步
 const BAR_ERROR_DELAY_MS = 8000;        // 同步连续失败多久后弹文字提示条
 const SYNC_LINE_OK_MS = 1500;           // 绿色细线停留时间
-const AUTO_SYNC_MODAL_HOLD_MAX_MS = 60000;   // 5.2.0：弹窗开着时，自动同步最多暂缓多久（忘了关窗也不会一直不上传）
+const AUTO_SYNC_MODAL_HOLD_MAX_MS = 60000;   // 弹窗开着时，自动同步最多暂缓多久（忘了关窗也不会一直不上传）
 let _autoSyncHeldAt = 0;                // >0：有一次自动同步因弹窗打开而暂缓，值为首次暂缓的时间
 let _lineOkUntil = 0;
 let _lineState = '';
@@ -102,13 +102,13 @@ function cancelAutoSync() {
     _autoSyncHeldAt = 0;
 }
 
-/** 5.2.0：是否有弹窗（记账 / 账户 / 计划交易 / 预算…）正开着。记账窗口是 Bootstrap 弹窗 #editTransactionModal */
+/** 是否有弹窗（记账 / 账户 / 计划交易 / 预算…）正开着。记账窗口是 Bootstrap 弹窗 #editTransactionModal */
 function isAnyModalOpen() {
     return typeof document !== 'undefined' && !!document.querySelector('.modal.show');
 }
 
-/** 5.2.0：自动同步现在该不该先等一等？弹窗开着就等（避免输入时同步卡顿、也让连续记账合并成一次同步），
- *  但页面在后台时不等，暂缓也有上限。数据安全不依赖这个判断（5.1.9 起同步随时都安全）。 */
+/** 自动同步现在该不该先等一等？弹窗开着就等（避免输入时同步卡顿、也让连续记账合并成一次同步），
+ *  但页面在后台时不等，暂缓也有上限。数据安全不依赖这个判断（同步随时都安全）。 */
 function autoSyncShouldHold(now) {
     if (typeof document !== 'undefined' && document.hidden) return false;
     if (!isAnyModalOpen()) return false;
@@ -132,7 +132,7 @@ async function autoSyncNow() {
     if (driveIsSyncing) { _autoSyncAgain = true; return; }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;   // 离线：等 online 事件
     if (!hasUnsavedChanges) return;
-    // 5.2.0：弹窗开着 → 先不同步，只记下“被暂缓”；关窗后由 resumeAutoSyncAfterModal 重新排 3 秒，
+    // 弹窗开着 → 先不同步，只记下“被暂缓”；关窗后由 resumeAutoSyncAfterModal 重新排 3 秒，
     // 暂缓超过上限由 resumeAutoSyncIfNeeded 照常同步
     if (autoSyncShouldHold(Date.now())) { if (!_autoSyncHeldAt) _autoSyncHeldAt = Date.now(); return; }
     _autoSyncHeldAt = 0;
@@ -148,7 +148,7 @@ window.addEventListener('offline', syncLineRender);
 /** 同步进行中又有改动时，scheduleAutoSync 只记下 _autoSyncAgain 标记（不能并发）。
  *  同步结束后由下面的 800ms 兜底定时器调用这里补排下一次，保证改动最终会被上传。 */
 function resumeAutoSyncIfNeeded() {
-    // 5.2.0：被弹窗暂缓的自动同步——弹窗关了就补排（再给 3 秒），暂缓到上限就照常同步
+    // 被弹窗暂缓的自动同步——弹窗关了就补排（再给 3 秒），暂缓到上限就照常同步
     if (_autoSyncHeldAt && hasUnsavedChanges && !driveIsSyncing && !_autoSyncTimer) {
         if (!isAnyModalOpen()) { _autoSyncHeldAt = 0; scheduleAutoSync(); }
         else if (Date.now() - _autoSyncHeldAt >= AUTO_SYNC_MODAL_HOLD_MAX_MS) autoSyncNow();
@@ -158,7 +158,7 @@ function resumeAutoSyncIfNeeded() {
     if (hasUnsavedChanges) scheduleAutoSync();
 }
 
-/** 5.2.0：后台同步遇到弹窗时只推迟“渲染”（数据早已刷新），弹窗都关了再补渲染 */
+/** 后台同步遇到弹窗时只推迟“渲染”（数据早已刷新），弹窗都关了再补渲染 */
 function flushPendingUIRefresh() {
     if (!window._pendingUIRefresh || isAnyModalOpen()) return;
     window._pendingUIRefresh = false;
@@ -198,7 +198,7 @@ function syncBarDerive() {
     let s = { state: 'idle', text: '', btn: '', close: false, loginVisible };
     if (_barBusy) s = { ...s, state: 'syncing', text: _barBusy.msg };
     else if (_barError) {
-        // 5.1.8：同步失败先只显示底部细线，连续失败超过 BAR_ERROR_DELAY_MS 才弹出文字条
+        // 同步失败先只显示底部细线，连续失败超过 BAR_ERROR_DELAY_MS 才弹出文字条
         const ripe = !_barError.delayed || (Date.now() - (_barError.at || 0) >= BAR_ERROR_DELAY_MS);
         if (ripe) s = { ...s, state: 'error', text: _barError.msg, btn: _barError.retry ? '重试' : '', close: true };
     } else if (currentUser && !offlineMode && hasUnsavedChanges) {
@@ -233,7 +233,7 @@ function syncBarRender() {
     document.body.classList.toggle('sync-bar-on', s.state !== 'idle' && !s.loginVisible && !bar.classList.contains('moved'));
 }
 
-/* ─── 5.0.9：长按拖动提示条，位置记在本机 ───
+/* ─── 长按拖动提示条，位置记在本机 ───
  * 位置按“可移动范围的比例”保存 {x, y}（0~1），换屏幕尺寸/横竖屏后仍在相对位置，并自动限制在屏幕内。 */
 const SYNC_BAR_POS_KEY = 'APP_sync_bar_pos';
 const SYNC_BAR_MARGIN = 8;          // 离屏幕边缘的最小距离

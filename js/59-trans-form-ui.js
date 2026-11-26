@@ -1,10 +1,10 @@
 // @file js/59-trans-form-ui.js
-// 新增/编辑支出收入的表单增强（5.1.1）：数字键盘（支持 + − 算式）、日期快捷（今天/昨天/前天）、保存并再记一笔、备注联想（选中后带出分类）。
+// 新增/编辑支出收入的表单增强：数字键盘（支持 + − 算式，「再记 / 保存」在键盘里）、日期快捷（今天/昨天/前天）、保存并再记一笔、备注联想（选中后带出分类）。
 
 /* ═══════════ 一、数字键盘 ═══════════
  * 金额输入框 #edit-trans-amount 在“数字键盘模式”下是只读的（不弹系统键盘），数字由页面里的键盘填入；
  * 框里放的是算式文本（如 12+8.5），保存前由 commitTransAmount() 算成一个数字再交给原来的保存逻辑。
- * “系统键盘模式”下和以前完全一样（右上角键盘图标切换，选择记在本机）。 */
+ * “系统键盘模式”下用系统自带键盘（右上角键盘图标切换，选择记在本机）。 */
 const AMOUNT_PAD_KEY = 'APP_amount_pad';          // 'pad'（默认）| 'system'
 let _padMode = 'pad';
 try { if (localStorage.getItem(AMOUNT_PAD_KEY) === 'system') _padMode = 'system'; } catch (_) {}
@@ -88,6 +88,35 @@ function amountPadPress(k) {
     _updateExprHint();
 }
 
+/** 键盘左下角：新增 → 再记；编辑 → 删除 */
+function kpSyncLeft() {
+    const left = $('kp-left');
+    if (!left) return;
+    const del = ($('edit-trans-mode') ? $('edit-trans-mode').value : 'add') === 'edit';
+    left.textContent = del ? '删除' : '再记';
+    left.classList.toggle('is-del', del);
+}
+
+/** 键盘上的「再记 / 保存」。返回 true 表示已处理（键盘事件据此不再当成数字键处理） */
+function kpKeyAction(k) {
+    if (k !== 'left' && k !== 'save') return false;
+    const submitBtn = $('edit-trans-submit-btn');
+    if (submitBtn && submitBtn.disabled) {                       // 附件上传中：和底部保存按钮一样不允许提交
+        if (typeof showToast === 'function') showToast('图片上传中，请稍候', 'info', 1800);
+        return true;
+    }
+    if (k === 'save') {
+        commitTransAmount();
+        _transKeepOpen = false;
+        const form = $('edit-transaction-form');
+        if (form.requestSubmit) form.requestSubmit(); else if (submitBtn) submitBtn.click();
+        return true;
+    }
+    const mode = $('edit-trans-mode') ? $('edit-trans-mode').value : 'add';
+    if (mode === 'edit') deleteCurrentTransaction(); else submitTransAndContinue();
+    return true;
+}
+
 // 键盘是否显示 + 输入框是只读还是可输入
 function amountPadSync() {
     const kp = $('amount-keypad'), el = _amtEl(), form = $('edit-transaction-form');
@@ -101,6 +130,13 @@ function amountPadSync() {
     const tg = $('amount-kb-toggle');
     if (tg) { tg.classList.toggle('active', !padOn); tg.title = padOn ? '改用系统键盘' : '改用数字键盘'; }
     $('trans-amount-card')?.classList.toggle('pad-active', padOn && formVisible && !_inSplitMode);
+    // 数字键盘显示时，键盘里的「再记 / 保存」代替底部保存栏（css/40）；
+    // 点了备注 / 标签（键盘临时收起）时底部栏也隐藏——输入完键盘自动回来，在键盘里保存；系统键盘模式 / 拆分 / 只读查看时才显示底部栏
+    form.classList.toggle('kp-on', kp.style.display !== 'none');
+    form.classList.toggle('kp-typing', formVisible && mode !== 'view' && !_inSplitMode && padOn && _padTempHidden);
+    // 紧凑布局再同步胶囊文字 / 拆分按钮
+    kpSyncLeft();
+    if (typeof tmcSync === 'function') tmcSync();
 }
 
 function amountPadShow() {            // 点金额区：显示数字键盘（系统键盘模式下则聚焦输入）
@@ -271,12 +307,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // 键盘按键（事件委托）。用 pointerdown 而不是 click：连续快速点按时更跟手，也避免 iOS 的 300ms 延迟/双击放大
     const kp = $('amount-keypad');
     if (kp) {
+        let backTimer = null;
+        const stopBackTimer = () => { clearTimeout(backTimer); backTimer = null; };
         kp.addEventListener('pointerdown', e => {
             const b = e.target.closest('button[data-k]');
             if (!b) return;
             e.preventDefault();
+            if (kpKeyAction(b.dataset.k)) return;                      // 「再记 / 保存」
             amountPadPress(b.dataset.k);
+            // 键盘没有 C 键：长按退格 0.5 秒清空金额
+            if (b.dataset.k === 'back') { stopBackTimer(); backTimer = setTimeout(() => { amountPadPress('clear'); backTimer = null; }, 500); }
         });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => kp.addEventListener(ev, stopBackTimer));
         kp.addEventListener('click', e => e.preventDefault());
     }
     // 备注联想：用 pointerdown 选择，避免先触发输入框失焦把列表关掉
@@ -298,4 +340,14 @@ document.addEventListener('DOMContentLoaded', () => {
             amountPadSync();
         }
     });
+    // 备注 / 标签输入完（失焦）后，数字键盘自动回来（不用再点一下金额区）
+    if (form) form.addEventListener('focusout', () => setTimeout(() => {
+        if (!_padTempHidden) return;
+        const a = document.activeElement;
+        const typing = a && form.contains(a) && a.id !== 'edit-trans-amount' &&
+            ((a.tagName === 'INPUT' && (!a.type || a.type === 'text' || a.type === 'search')) || a.tagName === 'TEXTAREA');
+        if (typing) return;
+        _padTempHidden = false;
+        amountPadSync();
+    }, 80));
 });

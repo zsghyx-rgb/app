@@ -9,7 +9,7 @@ function renderPlannedTransactions() {
         container.innerHTML = '<div class="alert alert-secondary">暂无计划交易，点击上方"新增计划"按钮创建。</div>';
         return;
     }
-    // 按“下次生成日期”从近到远排列（5.1.8 恢复）：已结束/无法再生成的排在最后，再按开始日期。
+    // 按“下次生成日期”从近到远排列：已结束/无法再生成的排在最后，再按开始日期。
     const sortedPlans = [...userPlannedTransactions].sort((a, b) => {
         const na = getNextGenerationDate(a);
         const nb = getNextGenerationDate(b);
@@ -185,7 +185,7 @@ async function manualGeneratePlanned(id) {
     ], { title: '按计划生成交易', okText: '生成', focusKey: 'date' });
     if (!vals) return;
     const targetDate = (vals.date || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) { uiAlert('日期格式错误！请使用 YYYY-MM-DD 格式'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) { uiAlert('日期格式不对，请用 YYYY-MM-DD'); return; }
     const amtRaw = parseFloat(vals.amount);
     if (!isFinite(amtRaw) || amtRaw <= 0) { uiAlert('金额必须大于 0'); return; }
     generateTransactionFromPlan(plan, targetDate, amtRaw);
@@ -194,10 +194,10 @@ async function manualGeneratePlanned(id) {
 async function generateTransactionFromPlan(plan, targetDate, amountOverride) {
     const acc = accounts.find(a => a.id == plan.accountId);
     if (!acc) return;
-    if (plan.lastGenerated === targetDate) { uiAlert(`计划 "${plan.name}" 在 ${targetDate} 已经生成过交易了！`); return; }
+    if (plan.lastGenerated === targetDate) { uiAlert(`计划「${plan.name}」在 ${targetDate} 已生成过交易`); return; }
     const existingTransaction = transactions.find(t => t.fromPlannedId === plan.id && t.date === targetDate);
     if (existingTransaction) {
-        const ok = await uiConfirm(`警告：${targetDate} 已存在来自此计划的交易！是否仍要生成新交易？（不推荐）`, { okText: '仍然生成', cancelText: '取消' });
+        const ok = await uiConfirm(`${targetDate} 已有此计划生成的交易，仍要再生成一笔吗？`, { okText: '仍然生成', cancelText: '取消' });
         if (!ok) return;
     }
     // 优先用调用方传入的金额（来自表单），否则回退到计划金额

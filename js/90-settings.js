@@ -195,15 +195,15 @@ function changeDataPassword() {
 
             let extra = '';
             if (lastStat && lastStat.rekey && lastStat.rekey.unsupported) {
-                extra += '；服务端还是旧版 Code.gs，云端已删除的记录仍是旧密码（重新部署 Code.gs 后请再改一次密码）';
+                extra += '；Code.gs 不是最新版，云端已删除记录仍用旧密码（更新后请再改一次密码）';
             }
             if (lastStat && lastStat.rekey && lastStat.rekey.tooLarge) {
-                extra += `；有 ${lastStat.rekey.tooLarge} 条记录内容过大，密文无法重写`;
+                extra += `；${lastStat.rekey.tooLarge} 条记录过大，未能重新加密`;
             }
             if (broken.size) {
-                extra += `；另有 ${broken.size} 条记录原本就无法用当前密码解开，本次未改动`;
+                extra += `；${broken.size} 条记录本来就无法解密，已跳过`;
             }
-            showToast(`密码已更新，云端 ${(lastStat && lastStat.pushed) || 0} 条记录已用新密码重新加密；其他设备下次登录需输入新密码${extra}`, 'success', 7000);
+            showToast(`密码已更新，云端 ${(lastStat && lastStat.pushed) || 0} 条记录已重新加密，其他设备下次登录请用新密码${extra}`, 'success', 7000);
         } catch (e) {
             // 失败回滚：把这次写过的行再用旧密码写回去，避免云端留下半新半旧的数据。
             // 回滚也失败时不切换本机密码，提示用户留在本页重试（重试会从头再写一遍）。
@@ -213,8 +213,8 @@ function changeDataPassword() {
             }
             showMsg('<i class="bi bi-x-circle"></i> 修改未完成：' + _escHtml(e.message) + '<br>' +
                 (rolledBack
-                    ? '已把这次写入的部分改回原密码，云端没有留下半新半旧的数据，请稍后重试。'
-                    : '请保持本页面不要退出，稍后再点一次「确认修改」重试（表单内容不用改）。'), 'danger');
+                    ? '已改回原密码，云端没有留下新旧混合的数据，请稍后重试。'
+                    : '请不要离开本页，稍后再点一次「确认修改」重试。'), 'danger');
             showToast('密码修改未完成', 'error', 0);
         } finally {
             driveIsSyncing = false;
@@ -232,7 +232,7 @@ function initPasswordHint() {
     hint.textContent = userPassword ? '云端数据使用密码加密' : '当前没有加密密码';
 }
 
-/* ───────── 设置 › 数据与同步：状态卡片（5.1.8） ───────── */
+/* ───────── 设置 › 数据与同步：状态卡片 ───────── */
 function _dsFmtTime(ts) {
     const n = Number(ts);
     if (!n) return '—';
@@ -276,7 +276,7 @@ function renderDataSyncStatus() {
     else if (offlineMode) { cls = 'off'; text = '离线'; subText = '离线模式只读写本机缓存，不会联网'; }
     else if (_barError) { cls = 'err'; text = '同步失败'; subText = _barError.msg || '同步失败'; }
     else if (driveIsSyncing) { cls = 'warn'; text = '同步中'; subText = '正在和 Google 表格同步…'; }
-    else if (hasUnsavedChanges || pending > 0) { cls = 'warn'; text = '待同步'; subText = '改动会在 3 秒后自动上传，也可以点下面的按钮立即同步'; }
+    else if (hasUnsavedChanges || pending > 0) { cls = 'warn'; text = '待同步'; subText = '改动 3 秒后自动上传，也可点下面的按钮立即同步'; }
     pill.className = 'ds-pill ds-pill-' + cls;
     pill.textContent = text;
     sub.textContent = subText;
@@ -426,9 +426,9 @@ function addCategory(e, type) {
 async function removeCategory(type, cat) {
     const affected = transactions.filter(t => t.type === type && t.category === cat);
     const affectedPlans = plannedTransactions ? plannedTransactions.filter(p => p.type === type && p.category === cat) : [];
-    let confirmMsg = `确定删除分类 "${cat}"？`;
-    if (affected.length > 0) confirmMsg += `\n\n⚠️ 将影响 ${affected.length} 条历史记录（改为"未分类"）`;
-    if (affectedPlans.length > 0) confirmMsg += `\n⚠️ 将影响 ${affectedPlans.length} 条计划交易（改为"未分类"）`;
+    let confirmMsg = `确定删除分类「${cat}」？`;
+    if (affected.length > 0) confirmMsg += `\n\n⚠️ 将影响 ${affected.length} 条历史记录（改为“未分类”）`;
+    if (affectedPlans.length > 0) confirmMsg += `\n⚠️ 将影响 ${affectedPlans.length} 条计划交易（改为“未分类”）`;
     const ok = await uiConfirm(confirmMsg, { okText: '删除分类', danger: true });
     if (!ok) return;
 
@@ -578,7 +578,7 @@ async function editCategoryName(type, oldName) {
     if (!newName) return;
     const trimmedName = newName.trim();
     if (trimmedName === '' || trimmedName === oldName) return;
-    if (categories[type].includes(trimmedName)) { uiAlert('该分类名称已存在！'); return; }
+    if (categories[type].includes(trimmedName)) { uiAlert('分类名称已存在'); return; }
     const catIdx = categories[type].indexOf(oldName);
     if (catIdx > -1) categories[type][catIdx] = trimmedName;
     transactions.forEach(t => {
@@ -591,7 +591,7 @@ async function editCategoryName(type, oldName) {
     if (plannedTransactions) plannedTransactions.forEach(p => { if (p.type === type && p.category === oldName) p.category = trimmedName; });
     markConfigUpdated(); saveUserData(); triggerAutoSave(); renderCategorySettings();
     displayedTransactionCount = 100; renderAllTransactions(); renderStats();
-    if (verboseToast) showToast(`分类已重命名: "${oldName}" → "${trimmedName}"`, 'success');
+    if (verboseToast) showToast(`分类已重命名为「${trimmedName}」`, 'success');
 }
 
 let resizingColumn = null, startX = 0, startWidth = 0;

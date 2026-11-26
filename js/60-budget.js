@@ -119,7 +119,7 @@ function openAddBudgetModal() {
     if (!usedCats.has('__total__')) sel.add(new Option('总支出预算（不限分类）', '__total__'));
     (categories.expense || []).forEach(c => { if (!usedCats.has(c)) sel.add(new Option(c, c)); });
     if (sel.options.length === 0) {
-        showToast('所有分类都已设置过预算啦', 'info', 2500);
+        showToast('所有分类都已设置预算', 'info', 2500);
         return;
     }
     $('budget-amount-input').value = '';
