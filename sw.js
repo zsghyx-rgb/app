@@ -1,5 +1,5 @@
 /* 记一笔 · Service Worker
- * 与 index.html v5.2.0 配套（页面里通过 navigator.serviceWorker.register('sw.js') 注册）
+ * 与 index.html 配套（页面里通过 navigator.serviceWorker.register('sw.js') 注册）
  *
  * 策略：
  *  1. 应用外壳（index.html / css/*.css / js/*.js / manifest.json / 图标）：网络优先（3 秒超时），失败回退缓存
@@ -10,11 +10,11 @@
  *     （账目数据是 Google 表格中的加密密文行，同步状态由 App 自己管理，不能被 SW 缓存）
  *
  * 版本更新：
- *  install 里不再自动 skipWaiting。新版本会停在 waiting 状态，
+ *  install 里不自动 skipWaiting：新版本停在 waiting 状态，
  *  页面收到提示后显示“有新版本，点击刷新”，用户点击时才 postMessage('SKIP_WAITING') 切换。
  *  这样用户正在填表时不会被打断。
  */
-const APP_VERSION = '5.2.0';
+const APP_VERSION = '5.2.3';
 const SHELL_CACHE = `jibi-shell-v${APP_VERSION}`;
 const CDN_CACHE = 'jibi-cdn-v2';   // CDN 资源带版本号，长期有效，不随 APP_VERSION 清理
 
@@ -28,6 +28,7 @@ const SHELL_URLS = [
   './css/20-feedback-sync.css',
   './css/30-transactions.css',
   './css/40-transaction-form.css',
+    './css/45-trans-compact.css',
   './css/50-insights-stats.css',
   './css/60-widgets.css',
   './css/themes/clean.css',
@@ -52,8 +53,10 @@ const SHELL_URLS = [
   './js/57-transfer-ui.js',
   './js/58-split-items.js',
   './js/59-trans-form-ui.js',
+    './js/61-trans-compact.js',
   './js/60-budget.js',
   './js/62-category-icons.js',
+  './js/63-trans-sizes.js',
   './js/64-transaction-submit.js',
   './js/66-transaction-filters.js',
   './js/67-batch-edit.js',
@@ -77,8 +80,8 @@ const SHELL_URLS = [
   './js/sw-register.js',
 ];
 
-/* 固定版本：任何一项都不要再写“不指定版本”的地址（以前 chart.js 就是这样，
- * 上游一发新版就可能直接改坏图表）。这里必须与 index.html 里的 <script>/<link> 完全一致。 */
+/* 固定版本：任何一项都不要写“不指定版本”的地址（上游一发新版就可能直接改坏图表）。
+ * 这里必须与 index.html 里的 <script>/<link> 完全一致。 */
 const CDN_URLS = [
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',

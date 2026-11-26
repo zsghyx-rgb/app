@@ -40,7 +40,7 @@
         }
     })();
     </script>
-    <title id="app-title">记一笔 v5.2.0</title>
+    <title id="app-title">记一笔 v5.2.3</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -60,20 +60,21 @@
     <link rel="stylesheet" href="css/20-feedback-sync.css">
     <link rel="stylesheet" href="css/30-transactions.css">
     <link rel="stylesheet" href="css/40-transaction-form.css">
+    <link rel="stylesheet" href="css/45-trans-compact.css">
     <link rel="stylesheet" href="css/50-insights-stats.css">
     <link rel="stylesheet" href="css/60-widgets.css">
     <!-- 三套主题（始终全部加载，由 html[data-app-theme] 决定哪一套生效） -->
     <link rel="stylesheet" href="css/themes/clean.css">
     <link rel="stylesheet" href="css/themes/cute.css">
     <link rel="stylesheet" href="css/themes/finance.css">
-    <!-- 5.0.4 视觉结构层：首页分组列表、概览卡、底部导航中间加号 -->
+    <!-- 视觉结构层：首页分组列表、概览卡、底部导航中间加号 -->
     <link rel="stylesheet" href="css/70-app-skin.css">
 </head>
 <body>
 
 <!-- 统一通知 toast -->
 <div id="app-toast"></div>
-<!-- 5.1.8：底部导航上方的一行同步细线（平时不显示，不占位置） -->
+<!-- 底部导航上方的一行同步细线（平时不显示，不占位置） -->
 <div id="sync-line" data-state="idle" aria-hidden="true"></div>
 <div id="sync-bar" role="status" aria-live="polite">
     <span class="sb-icon"></span>
@@ -99,7 +100,7 @@
 
 <!-- 新版本提示 -->
 <div id="update-banner" role="status" aria-live="polite">
-    <span class="ub2-text"><i class="bi bi-arrow-repeat"></i> 有新版本，点击刷新后生效</span>
+    <span class="ub2-text"><i class="bi bi-arrow-repeat"></i> 有新版本，点击刷新</span>
     <button type="button" onclick="applyAppUpdate()">刷新</button>
     <button type="button" class="ub2-close" aria-label="稍后" onclick="dismissUpdateBanner()">×</button>
 </div>
@@ -144,7 +145,7 @@
                 <div id="gas-token-input-bar" style="display:none;">
                     <label class="form-label small mb-1">GAS Token</label>
                     <div class="input-group input-group-sm">
-                        <input type="password" class="form-control" id="gas-token-input" placeholder="在 GAS 脚本中设置的 token" autocomplete="off" spellcheck="false">
+                        <input type="password" class="form-control" id="gas-token-input" placeholder="与 GAS 脚本中的 token 一致" autocomplete="off" spellcheck="false">
                         <button class="btn btn-outline-success" type="button" onclick="saveGasToken()"><i class="bi bi-check-lg"></i></button>
                     </div>
                 </div>
@@ -174,7 +175,7 @@
         <div class="mb-3">
             <label class="form-label small text-muted fw-bold mb-2" id="select-file-label">数据来源</label>
             <div id="offline-file-bar">
-                <div class="small text-muted mb-1"><i class="bi bi-hdd"></i> 离线模式：使用本机缓存，不会连接云端。</div>
+                <div class="small text-muted mb-1"><i class="bi bi-hdd"></i> 离线模式：仅使用本机缓存。</div>
                 <button class="btn btn-outline-secondary btn-sm" onclick="loadFromDrive()">
                     <i class="bi bi-hdd"></i> 载入本地缓存
                 </button>
@@ -209,7 +210,7 @@
         </div>
     </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;pointer-events:none;">
-        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.2.0</span>
+        <span class="text-muted" style="font-size:0.7rem;" id="sidebar-version">version 5.2.3</span>
     </div>
 </div>
 <div id="app-wrapper" class="d-none">
@@ -325,7 +326,7 @@
                 <div class="input-group input-group-sm">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control" id="ad-search-input"
-                           placeholder="搜索类别、备注、标签、金额、转入/转出账户…"
+                           placeholder="搜索类别、备注、标签、金额、账户…"
                            oninput="refreshDetailContent(currentDetailAccountId)"
                            autocomplete="off">
                     <button class="btn btn-outline-secondary" onclick="clearAdSearch()"><i class="bi bi-x"></i></button>
@@ -491,7 +492,7 @@
 
             <!-- 概览子页 -->
             <div id="stats-pane-overview" class="stats-sub-pane active">
-                <!-- 5.1.2 概览卡：本月（所选期间）支出大字 + 对比上期 + 日均 + 预算进度；点击切换金额显示（沿用三态） -->
+                <!-- 概览卡：本月（所选期间）支出大字 + 对比上期 + 日均 + 预算进度；点击切换金额显示（沿用三态） -->
                 <div class="stats-overview stats-hero clickable-amount" id="stats-overview" onclick="toggleAmountVisibility()" title="点击隐藏/显示金额">
                     <div class="so-top"><span id="so-label">本月支出</span><span id="so-sub"></span></div>
                     <div class="so-amount stat-number is-expense" id="stat-expense-display">0.00</div>
@@ -701,7 +702,7 @@
                 </div>
             </div>
 
-            <!-- Sub-page: 外观与主题（5.1.1 起放进二级菜单；以下设置只保存在本机，不写入加密数据、不参与同步） -->
+            <!-- Sub-page: 外观与主题（放进二级菜单；以下设置只保存在本机，不写入加密数据、不参与同步） -->
             <div id="settings-sub-appearance" class="settings-subpage">
                 <div class="subpage-header">
                     <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
@@ -744,17 +745,44 @@
 
                 <div class="appearance-block">
                     <div class="appearance-block-head">
+                        <span class="appearance-block-title">记账窗口样式</span>
+                        <span class="appearance-block-hint">新增/编辑 支出·收入</span>
+                    </div>
+                    <div class="appearance-seg" id="trans-layout-seg" role="group" aria-label="记账窗口样式">
+                        <button type="button" data-layout="classic" onclick="setTransLayout('classic')">经典（默认）</button>
+                        <button type="button" data-layout="compact" onclick="setTransLayout('compact')">紧凑（分类优先）</button>
+                    </div>
+                    <div class="trans-size-box" id="trans-size-box">
+                        <div class="trans-size-title" id="trans-size-title">经典样式的大小</div>
+                        <label class="trans-size-row"><span class="trans-size-name">分类每行个数</span>
+                            <input type="range" id="trans-size-cols" min="3" max="6" step="1" value="4" oninput="setTransSize('cols', this.value)">
+                            <span class="trans-size-val" id="trans-size-cols-val">4 个</span></label>
+                        <label class="trans-size-row"><span class="trans-size-name">分类图标大小</span>
+                            <input type="range" id="trans-size-icon" min="32" max="72" step="2" value="40" oninput="setTransSize('icon', this.value)">
+                            <span class="trans-size-val" id="trans-size-icon-val">40 px</span></label>
+                        <label class="trans-size-row"><span class="trans-size-name">键盘按键高度</span>
+                            <input type="range" id="trans-size-key" min="36" max="72" step="2" value="48" oninput="setTransSize('key', this.value)">
+                            <span class="trans-size-val" id="trans-size-key-val">48 px</span></label>
+                        <button type="button" class="trans-size-reset" onclick="resetTransSizes()">恢复默认</button>
+                    </div>
+                    <div class="sync-pos-row">
+                        <span class="sync-pos-tip">大小滑块只调当前选中的样式，经典和紧凑各记一套。紧凑：分类一屏显示更多，账户、日期、标签、图片收成胶囊。转账页不变。</span>
+                    </div>
+                </div>
+
+                <div class="appearance-block">
+                    <div class="appearance-block-head">
                         <span class="appearance-block-title">同步提示位置</span>
                         <span class="appearance-block-hint" id="sync-bar-pos-state">当前：默认位置</span>
                     </div>
                     <div class="sync-pos-row">
-                        <span class="sync-pos-tip">长按“有修改尚未同步”提示，再拖动即可移动；位置只保存在本机。</span>
+                        <span class="sync-pos-tip">长按同步提示后拖动，即可移动位置。</span>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="sync-bar-reset-btn" onclick="resetSyncBarPos()" disabled>恢复默认</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Sub-page: 统计图表（5.1.2；只保存在本机，不写入加密数据、不参与同步） -->
+            <!-- Sub-page: 统计图表（只保存在本机，不写入加密数据、不参与同步） -->
             <div id="settings-sub-stats-charts" class="settings-subpage">
                 <div class="subpage-header">
                     <i class="bi bi-arrow-left" onclick="showSettingsMenu()"></i>
@@ -776,7 +804,7 @@
                     <div class="chart-switch-row chart-switch-open">
                         <div class="chart-switch-text">
                             <div class="chart-switch-name">“更多图表”默认展开</div>
-                            <div class="chart-switch-desc">关闭时进入统计页只显示主要图表，需要时再点开</div>
+                            <div class="chart-switch-desc">关闭后统计页只显示主要图表</div>
                         </div>
                         <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chart-switch-moreopen" onchange="setStatsMoreOpenDefault(this.checked)"></div>
                     </div>
@@ -850,7 +878,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-0">根据您的历史记账行为，检测备注相近但分类不一致的交易，逐条提示修正。</p>
+                        <p class="text-muted small mb-0">找出备注相近但分类不一致的交易，逐条提示修正。</p>
                     </div>
                 </div>
             </div>
@@ -880,12 +908,12 @@
                         <i class="bi bi-eye-slash"></i> 隐藏账户管理
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-2">已隐藏的账户不会出现在账户页面和交易页面，可在此处恢复显示。</p>
+                        <p class="text-muted small mb-2">隐藏的账户不在账户页和交易页显示，可在这里恢复。</p>
                         <div id="hidden-accounts-list"></div>
                     </div>
                 </div>
                 <p class="text-muted small mt-3 mb-0">
-                    <i class="bi bi-info-circle"></i> 切换用户 / 退出登录请返回设置页底部操作。
+                    <i class="bi bi-info-circle"></i> 切换用户、退出登录请在设置页底部操作。
                 </p>
             </div>
 
@@ -949,8 +977,8 @@
                         </button>
                         <p class="text-muted small mb-0 mt-2">
                             <i class="bi bi-info-circle"></i>
-                            数据保存在 Google 表格中，每条记录由本机加密后上传，本机保留加密缓存以便离线查看。
-                            改完数据 3 秒后自动同步；底部导航上方的一条细线会提示进度：琥珀色＝待同步、蓝色＝同步中、绿色＝已完成。
+                            数据加密后保存在 Google 表格，本机留有加密缓存供离线查看。
+                            改完 3 秒后自动同步，底部细线显示进度：琥珀＝待同步，蓝＝同步中，绿＝已完成。
                         </p>
                     </div>
                 </div>
@@ -965,7 +993,7 @@
                             <i class="bi bi-clipboard-check"></i>
                             <span class="ds-action-main">
                                 <span class="ds-action-title">数据自检</span>
-                                <span class="ds-action-desc">多设备数字对不上时先点这里，只读检查、不改数据</span>
+                                <span class="ds-action-desc">多设备数字对不上时先检查（只读，不改数据）</span>
                             </span>
                             <i class="bi bi-chevron-right"></i>
                         </button>
@@ -973,7 +1001,7 @@
                             <i class="bi bi-arrow-repeat"></i>
                             <span class="ds-action-main">
                                 <span class="ds-action-title">从云端重建本机数据</span>
-                                <span class="ds-action-desc">丢弃本机同步进度，重新从云端拉一份完整数据</span>
+                                <span class="ds-action-desc">丢弃本机同步进度，从云端重新拉取全部数据</span>
                             </span>
                             <i class="bi bi-chevron-right"></i>
                         </button>
@@ -981,7 +1009,7 @@
                             <i class="bi bi-arrow-counterclockwise"></i>
                             <span class="ds-action-main">
                                 <span class="ds-action-title">恢复云端已删除的记录</span>
-                                <span class="ds-action-desc">误删的记录还在云端留有删除标记，可在这里找回来</span>
+                                <span class="ds-action-desc">找回云端还留着删除标记的误删记录</span>
                             </span>
                             <i class="bi bi-chevron-right"></i>
                         </button>
@@ -998,7 +1026,7 @@
                             <i class="bi bi-cloud-arrow-up-fill"></i>
                             <span class="ds-action-main">
                                 <span class="ds-action-title">用本机数据覆盖云端</span>
-                                <span class="ds-action-desc">云端被误删或某台设备数据乱了时使用；覆盖前会自动留一份安全副本</span>
+                                <span class="ds-action-desc">云端被误删或某台设备数据错乱时使用，覆盖前自动留安全副本</span>
                             </span>
                             <i class="bi bi-chevron-right"></i>
                         </button>
@@ -1006,7 +1034,7 @@
                             <i class="bi bi-eraser"></i>
                             <span class="ds-action-main">
                                 <span class="ds-action-title">清理云端表格中的已删除行</span>
-                                <span class="ds-action-desc">把删除后残留的标记行真正清掉，减小表格体积</span>
+                                <span class="ds-action-desc">彻底清掉已删除的标记行，减小表格体积</span>
                             </span>
                             <i class="bi bi-chevron-right"></i>
                         </button>
@@ -1020,7 +1048,7 @@
                     </div>
                     <div class="card-body">
                         <p class="text-muted small mb-2">
-                            云端每日自动保留最近 30 份表格副本，每周保留最近 12 份。备份内容与线上数据一致，可直接在 Google 表格中打开；也可在这里与当前数据对比或恢复。
+                            云端每日保留最近 30 份、每周保留最近 12 份表格副本，内容与线上一致，可直接在 Google 表格中打开，也可在这里对比或恢复。
                         </p>
                         <button class="btn btn-outline-secondary btn-sm w-100 mb-2" onclick="loadBackupList()">
                             <i class="bi bi-arrow-clockwise"></i> 读取备份列表
@@ -1061,7 +1089,7 @@
                         <input type="file" id="transaction-csv-input" class="d-none" accept=".csv" onchange="importTransactionCsv()">
                         <input type="file" id="transfer-csv-input" class="d-none" accept=".csv" onchange="importTransferCsv()">
                         <p class="text-muted small mb-0 mt-2">
-                            JSON 为明文完整备份（含密码保护的内容）；CSV 只含交易或转账记录，用于导入到其他工具。
+                            JSON 是明文完整备份（含密码保护的内容）；CSV 只含交易或转账记录，可导入其他工具。
                         </p>
                     </div>
                 </div>
@@ -1075,7 +1103,7 @@
                 </div>
                 <div class="card shadow-sm mb-3">
                     <div class="card-body">
-                        <p class="text-muted small mb-3">扫描 Google Drive 中没有对应交易记录的附件文件，可批量删除以释放空间。</p>
+                        <p class="text-muted small mb-3">扫描 Drive 中没有对应交易的附件，可批量删除释放空间。</p>
                         <button class="btn btn-outline-primary w-100 mb-3" onclick="scanOrphanAttachments(this)">
                             <i class="bi bi-search me-1"></i>开始扫描
                         </button>
@@ -1097,7 +1125,7 @@
                     <div class="card-body">
                         <p class="text-muted small mb-3">
                             <i class="bi bi-info-circle"></i>
-                            修改后会立即用新密码重新加密云端表格中的所有数据；其他设备下次同步时需要输入新密码。
+                            修改后立即用新密码重新加密云端全部数据；其他设备下次同步需输入新密码。
                         </p>
                         <div>
                             <div class="text-muted small mb-3" id="pwd-status-hint"></div>
@@ -1118,7 +1146,7 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-4">
                         <h5>记一笔</h5>
-                        <p class="text-muted small">版本 <span id="settings-version">v5.2.0</span></p>
+                        <p class="text-muted small">版本 <span id="settings-version">v5.2.3</span></p>
                         <p class="text-muted small mb-0">个人财务记账 PWA 应用</p>
                     </div>
                 </div>
@@ -1217,14 +1245,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small mb-3">勾选需要修改的字段并填写新值，未勾选的字段将保持每笔交易原本的值不变。</p>
+                <p class="text-muted small mb-3">勾选要修改的字段并填写新值，未勾选的保持原样。</p>
 
                 <div class="form-check mb-1">
                     <input class="form-check-input" type="checkbox" id="batch-enable-account" onchange="toggleBatchField('account')">
                     <label class="form-check-label" for="batch-enable-account">修改账户</label>
                 </div>
                 <select class="form-select form-select-sm mb-1" id="batch-field-account" disabled></select>
-                <p class="text-muted mb-3" style="font-size:0.7rem;">注意：修改账户不会转换金额币种，请确认所选交易与目标账户币种一致</p>
+                <p class="text-muted mb-3" style="font-size:0.7rem;">注意：修改账户不会换算币种，请确认交易与目标账户币种一致</p>
 
                 <div class="form-check mb-1">
                     <input class="form-check-input" type="checkbox" id="batch-enable-category" onchange="toggleBatchField('category')">
@@ -1383,6 +1411,9 @@
             <div class="modal-header py-2">
                 <h5 class="modal-title fs-6" id="editTransactionModalTitle">新增交易</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <!-- tmc:begin 紧凑布局的“拆分”按钮（经典布局下隐藏） -->
+                <button type="button" class="tmc-split-btn" id="tmc-split-btn" onclick="handleSplitBtn()" aria-label="拆分账单" style="display:none;"><i class="bi bi-scissors"></i></button>
+                <!-- tmc:end -->
             </div>
             <!-- Tab 栏 -->
             <div class="px-3 pt-2 pb-1" id="trans-tab-bar">
@@ -1451,7 +1482,7 @@
                             </div>
                         </div>
 
-                        <!-- 拆分模式分录区（5.1.4）：固定头部（项数/添加/退出）+ 可滚动分录 + 固定合计 -->
+                        <!-- 拆分模式分录区：固定头部（项数/添加/退出）+ 可滚动分录 + 固定合计 -->
                         <div id="split-items-section">
                             <div id="split-mode-bar">
                                 <span class="split-mode-title" id="split-mode-title">拆分账单</span>
@@ -1519,7 +1550,27 @@
                         </div>
                     </div>
 
-                    <!-- 数字键盘（5.1.1）：支出/收入的金额用它输入，支持 + − 算式；点备注/标签时自动收起 -->
+                    <!-- tmc:begin 紧凑布局容器：经典布局下整块隐藏；紧凑布局下 js/61-trans-compact.js 把账户/日期/快捷日期/标签/备注/金额/附件等【现有节点】搬进来 -->
+                    <div class="tmc-bar" id="tmc-bar">
+                        <!-- 账户、日期（现有节点）插在这里 -->
+                        <button type="button" class="tmc-pill" id="tmc-tag-pill"><i class="bi bi-tag"></i><span id="tmc-tag-text">标签</span></button>
+                        <div class="tmc-pill" id="tmc-att-pill" role="button" tabindex="0" style="display:none;"><i class="bi bi-image"></i><span id="tmc-att-text">图片</span></div>
+                        <div class="tmc-pop" id="tmc-pop-date"></div>
+                        <div class="tmc-pop" id="tmc-pop-att"></div>
+                    </div>
+                    <div class="tmc-tagrow" id="tmc-tagrow">
+                        <button type="button" class="tmc-tag-ok" id="tmc-tag-ok" aria-label="完成"><i class="bi bi-check-lg"></i></button>
+                    </div>
+                    <div class="tmc-memo-wrap" id="tmc-memo-wrap">
+                        <div id="tmc-hint"></div>
+                        <div class="tmc-memo" id="tmc-memo">
+                            <div class="tmc-memo-left" id="tmc-memo-left"></div>
+                            <div class="tmc-memo-right" id="tmc-memo-right"></div>
+                        </div>
+                    </div>
+                    <!-- tmc:end -->
+
+                    <!-- 数字键盘：支出/收入的金额用它输入，支持 + − 算式；点备注/标签时自动收起 -->
                     <div class="amount-keypad" id="amount-keypad" role="group" aria-label="数字键盘">
                         <button type="button" data-k="7">7</button>
                         <button type="button" data-k="8">8</button>
@@ -1537,6 +1588,9 @@
                         <button type="button" data-k="0">0</button>
                         <button type="button" data-k=".">.</button>
                         <button type="button" data-k="=" class="kp-eq" id="kp-eq">=</button>
+                        <!-- 键盘左下角（新增=再记 / 编辑=删除）和右下角（保存）；两种布局共用 -->
+                        <button type="button" data-k="left" class="kp-c kp-left" id="kp-left">再记</button>
+                        <button type="button" data-k="save" class="kp-c kp-save" id="kp-save">保存</button>
                     </div>
 
                     <!-- 底部保存栏（金额已移至顶部卡片） -->
@@ -1626,7 +1680,7 @@
                                     <input type="text" inputmode="decimal" placeholder="0.00" class="transfer-fee-input decimal-input" id="edit-transfer-fee" oninput="handleTransferFeeInput()">
                                     <button type="button" class="transfer-fee-clear" onclick="clearTransferFee()">清除</button>
                                 </div>
-                                <div class="transfer-fee-note">会记为转出账户的一笔支出，分类“手续费”，计入支出统计。</div>
+                                <div class="transfer-fee-note">记为转出账户的一笔支出，分类“手续费”，计入支出统计。</div>
                             </div>
                         </div>
 
@@ -1709,8 +1763,10 @@
 <script src="js/57-transfer-ui.js"></script>
 <script src="js/58-split-items.js"></script>
 <script src="js/59-trans-form-ui.js"></script>
+<script src="js/61-trans-compact.js"></script>
 <script src="js/60-budget.js"></script>
 <script src="js/62-category-icons.js"></script>
+<script src="js/63-trans-sizes.js"></script>
 <script src="js/64-transaction-submit.js"></script>
 <script src="js/66-transaction-filters.js"></script>
 <script src="js/67-batch-edit.js"></script>
