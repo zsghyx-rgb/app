@@ -180,7 +180,7 @@ function tmcCloseTagRow() {
  * iOS 的 100dvh 不随键盘变化，而且 Safari 弹出键盘时底部工具栏会收起，100dvh 和 window.innerHeight 可能差一个工具栏的高度，
  * 所以不拿它们做减法：直接把 visualViewport.height（真正可见的高度）写进 --tmc-vh，由 css/45 设成弹窗高度，
  * 弹窗顶部跟着可视区顶部（--tmc-vtop）。分类区（弹性）自动变矮，备注/金额行留在键盘上方。
- * 键盘高度 --tmc-kb 只用来判断“键盘是否弹出”，并作为 --tmc-vh 不可用时的后备。没有 visualViewport 就保持原行为。 */
+ * 键盘高度 --tmc-kb 只用来判断“键盘是否弹出”，并作为 --tmc-vh 不可用时的后备（算法见 _tmcKbHeight）。没有 visualViewport 就保持原行为。 */
 /* iOS 26 起，键盘上方会浮出一条“上一项 / 下一项 / 完成”的悬浮条（约 47pt 高，离键盘顶约 12pt）。
  * 它盖在页面上，visualViewport 不把它算进键盘高度，所以弹窗底边只对齐键盘顶时，底部的备注 / 标签行正好被它压住。
  * 网页检测不到这条悬浮条，只能按系统版本估一个固定高度（按截图量：悬浮条顶到键盘顶约 58pt，再留 4pt 余量）。
@@ -193,14 +193,23 @@ function _tmcAccessoryPx(ua) {
     return Math.max(os ? +os[1] : 0, ver ? +ver[1] : 0) >= 26 ? TMC_KB_ACCESSORY_PX : 0;
 }
 
+/** 键盘高度 = 页面高度 - 可视区高度。不能再减 vv.offsetTop：iOS 点到底部输入框时会把页面整体顶上去，
+ *  顶起的距离 offsetTop 正好等于键盘高度，减掉就变成 0，被误判成“没有键盘”，弹窗缩小的所有设置都被清掉。
+ *  捏合放大时可视区也会变小，这时不算键盘（scale > 1）；小于 120px 的变化（工具栏伸缩等）也不算。 */
+function _tmcKbHeight(innerHeight, vvHeight, vvScale) {
+    if (vvScale > 1.01) return 0;
+    const kb = Math.round(innerHeight - vvHeight);
+    return kb > 120 ? kb : 0;
+}
+
 function tmcOnViewport() {
     if (!tmcOn()) return;
     const vv = window.visualViewport;
     const root = document.documentElement;
     const modal = $('editTransactionModal');
     if (!vv || !modal || !modal.classList.contains('show')) { _tmcKeyboard(root, 0, 0, 0); return; }
-    const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-    _tmcKeyboard(root, kb > 120 ? kb : 0, vv.offsetTop, vv.height - _tmcAccessoryPx());   // 再让出 iOS 26 悬浮条的高度
+    const kb = _tmcKbHeight(window.innerHeight, vv.height, vv.scale || 1);
+    _tmcKeyboard(root, kb, vv.offsetTop, vv.height - _tmcAccessoryPx());   // 再让出 iOS 26 悬浮条的高度
 }
 function _tmcKeyboard(root, kb, top, vh) {
     if (kb > 0) {
@@ -276,6 +285,8 @@ function tmcInitEvents() {
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', tmcOnViewport);
         window.visualViewport.addEventListener('scroll', tmcOnViewport);
+    // iOS 的 resize 事件有时来得晚：焦点进出输入框时，等键盘动画结束再重算一次
+    ['focusin', 'focusout'].forEach(ev => document.addEventListener(ev, () => { setTimeout(tmcOnViewport, 150); setTimeout(tmcOnViewport, 450); }));
     }
 }
 
