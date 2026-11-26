@@ -152,12 +152,13 @@ html[data-trans-layout="compact"] #editTransactionModal .amount-keypad { padding
 /* 只读查看：胶囊不可点（附件胶囊除外，能打开预览） */
 html[data-trans-layout="compact"] #editTransactionModal .trans-modal-v2.view-only .tmc-pill:not(#tmc-att-pill) { pointer-events: none; }
 
-/* 系统键盘弹出时（js/61-trans-compact.js 用 visualViewport 算出键盘高度 --tmc-kb 和可视区顶部偏移 --tmc-vtop）：
-   弹窗整体缩到键盘上方（高度 = 可视区高度），分类区自动让出空间，备注 / 标签所在的底部一行就不会被键盘盖住。
+/* 系统键盘弹出时（js/61-trans-compact.js 用 visualViewport 写入 --tmc-vh 可视区高度、--tmc-vtop 可视区顶部偏移、--tmc-kb 键盘高度）：
+   弹窗整体缩到可视区内，分类区自动让出空间，备注 / 标签所在的底部一行就不会被键盘盖住。
+   不用 100dvh 做减法：Safari 弹出键盘时工具栏收起，100dvh 和 innerHeight 会差一个工具栏的高度，减出来的结果偏高、底部被盖。
    必须带 !important：手机端基础样式（css/40、css/30）把弹窗高度锁成了 100dvh !important，不带的话这条规则在手机上不起作用。 */
 html.tmc-kb[data-trans-layout="compact"] #editTransactionModal .modal-dialog,
 html.tmc-kb[data-trans-layout="compact"] #editTransactionModal .modal-content {
-    height: calc(100dvh - var(--tmc-kb, 0px) - var(--tmc-vtop, 0px)) !important;
-    max-height: calc(100dvh - var(--tmc-kb, 0px) - var(--tmc-vtop, 0px)) !important;
+    height: var(--tmc-vh, calc(100dvh - var(--tmc-kb, 0px) - var(--tmc-vtop, 0px))) !important;
+    max-height: var(--tmc-vh, calc(100dvh - var(--tmc-kb, 0px) - var(--tmc-vtop, 0px))) !important;
 }
 html.tmc-pan[data-trans-layout="compact"] #editTransactionModal .modal-content { transform: translateY(var(--tmc-vtop, 0px)); }
