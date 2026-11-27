@@ -210,6 +210,13 @@ function tmcOnViewport() {
     if (!vv || !modal || !modal.classList.contains('show')) { _tmcKeyboard(root, 0, 0, 0); return; }
     const kb = _tmcKbHeight(window.innerHeight, vv.height, vv.scale || 1);
     _tmcKeyboard(root, kb, vv.offsetTop, vv.height - _tmcAccessoryPx());   // 再让出 iOS 26 悬浮条的高度
+    // iOS 点输入框时会自己把页面往上顶，顶多少取决于点的那一刻输入框的位置（那时数字键盘还没收起，键盘越高顶得越少），
+    // 结果弹窗位置会随数字键盘高度变化。弹窗已经按可视区高度缩好，输入框已在键盘上方，不需要 iOS 再顶：复位滚动位置，
+    // 让位置只由 --tmc-vh 决定（复位后 vv 的 scroll 事件会再算一次，偏移为 0 就不会再复位，不会循环）。
+    if (kb > 0 && (vv.offsetTop > 1 || window.scrollY > 1)) {
+        try { window.scrollTo(0, 0); } catch (_) {}
+        if (modal.scrollTop) modal.scrollTop = 0;
+    }
 }
 function _tmcKeyboard(root, kb, top, vh) {
     if (kb > 0) {
