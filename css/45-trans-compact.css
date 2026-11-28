@@ -4,7 +4,7 @@
    以后如果决定只保留一种：删掉本文件 + js/61-trans-compact.js + index.html 里 “tmc:begin … tmc:end” 之间的标记 + 设置页“记账窗口样式”一块 + 59/58/70/99 里调用 tmcSync 等的几行钩子即可（键盘在 css/40 + js/59、大小设置在 js/63，两种布局共用，不用动；详见 ARCHITECTURE.md）。 */
 
 /* ── 经典布局下：新增的容器/按钮一律隐藏 ── */
-.tmc-bar, .tmc-tagrow, .tmc-memo-wrap, .tmc-split-btn { display: none; }
+.tmc-bar, .tmc-tagrow, .tmc-memo-wrap { display: none; }
 
 /* ── 紧凑布局 ── */
 :root[data-trans-layout="compact"] #editTransactionModal {
@@ -28,11 +28,6 @@ html[data-trans-layout="compact"] #editTransactionModal .modal-header .btn-close
 html[data-trans-layout="compact"][data-bs-theme="dark"] #editTransactionModal .modal-header .btn-close {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23f8f9fa'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e");
 }
-html[data-trans-layout="compact"] #editTransactionModal .tmc-split-btn {
-    order: 2; flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%;
-    background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-size: 1rem;
-    display: flex; align-items: center; justify-content: center;
-}
 html[data-trans-layout="compact"] #editTransactionModal .trans-type-btn { padding: 6px 4px; }
 
 /* 主体：不再整体滚动，只有分类网格在自己的区域里滚 */
@@ -52,7 +47,6 @@ html[data-trans-layout="compact"] #editTransactionModal #cat-grid-section {
     background: transparent; border-radius: 0; margin: 0; padding: 6px 8px 0;
     border-top: 1px solid var(--bs-border-color);
 }
-html[data-trans-layout="compact"] #editTransactionModal .tmc-split-btn { display: none !important; }   /* 与经典一致：拆分按钮放在“所有分类”标题行右侧，标题栏里的剪刀按钮保持隐藏 */
 html[data-trans-layout="compact"] #editTransactionModal #cat-grid-section .cat-grid {
     flex: 1; min-height: 0; max-height: none; grid-template-columns: repeat(var(--trans-cat-cols, 4), 1fr);
     align-content: start; grid-auto-rows: max-content;   /* 不让网格把行拉伸去填满高度 */
@@ -113,7 +107,6 @@ html[data-trans-layout="compact"] #editTransactionModal .tmc-tag-ok {
     flex: none; width: 42px; height: 42px; border: 0; border-radius: 12px;
     background: var(--bs-primary); color: var(--app-on-primary); font-size: 1.2rem;
 }
-html[data-trans-layout="compact"] #editTransactionModal .tmc-tagrow .tag-suggest-list { top: auto; bottom: calc(100% + 4px); }
 html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form.split-mode .tmc-tagrow,
 html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form.split-mode #tmc-tag-pill { display: none; }
 
@@ -129,7 +122,6 @@ html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left .desc-sug
 html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left #desc-collapse-wrap { background: transparent; margin: 0; height: 46px; padding: 0 10px; }
 html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left #desc-collapse-wrap .tm-row-chevron { display: none; }
 html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-left .tm-meta-input { font-size: 0.9rem; }
-html[data-trans-layout="compact"] #editTransactionModal .tmc-memo .desc-suggest-list { top: auto; bottom: calc(100% + 6px); }
 html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form.split-mode #tmc-memo-wrap { display: none; }
 html[data-trans-layout="compact"] #editTransactionModal .tmc-memo-right {
     flex: none; display: flex; align-items: center; margin-left: 4px; padding-left: 10px;
@@ -152,13 +144,15 @@ html[data-trans-layout="compact"] #editTransactionModal .amount-keypad { padding
 /* 只读查看：胶囊不可点（附件胶囊除外，能打开预览） */
 html[data-trans-layout="compact"] #editTransactionModal .trans-modal-v2.view-only .tmc-pill:not(#tmc-att-pill) { pointer-events: none; }
 
-/* 系统键盘弹出时（js/61-trans-compact.js 用 visualViewport 写入 --tmc-vh 可视区高度、--tmc-vtop 可视区顶部偏移、--tmc-kb 键盘高度）：
-   弹窗整体缩到可视区内，分类区自动让出空间，备注 / 标签所在的底部一行就不会被键盘盖住。
-   不用 100dvh 做减法：Safari 弹出键盘时工具栏收起，100dvh 和 innerHeight 会差一个工具栏的高度，减出来的结果偏高、底部被盖。
-   必须带 !important：手机端基础样式（css/40、css/30）把弹窗高度锁成了 100dvh !important，不带的话这条规则在手机上不起作用。 */
-html.tmc-kb[data-trans-layout="compact"] #editTransactionModal .modal-dialog,
-html.tmc-kb[data-trans-layout="compact"] #editTransactionModal .modal-content {
-    height: var(--tmc-vh, calc(100dvh - var(--tmc-kb, 0px) - var(--tmc-vtop, 0px))) !important;
-    max-height: var(--tmc-vh, calc(100dvh - var(--tmc-kb, 0px) - var(--tmc-vtop, 0px))) !important;
-}
-html.tmc-pan[data-trans-layout="compact"] #editTransactionModal .modal-content { transform: translateY(var(--tmc-vtop, 0px)); }
+/* ── 系统键盘：和经典布局一样用原生滚动，不用 JS 估算任何高度 ──
+   弹窗主体 .modal-body 本来就是可滚动容器（css/40）。紧凑布局只要让内容“可以比主体高”，浏览器 / iOS 聚焦输入框时
+   就会像经典布局那样自动把它滚到键盘上方（键盘、悬浮条等细节都由系统处理）：
+   1) 分类区（.trans-scroll-area）设了最小高度，不会被压成 0；没有键盘时表单撑满主体，胶囊行 / 备注行仍贴底；
+   2) 点备注 / 标签（数字键盘临时收起）时，主体底部多出一屏高的滚动空间，js/61 再把输入框滚到主体顶部（scrollIntoView）：
+   只靠浏览器默认的“滚到键盘上沿”不够，iOS 26 键盘上方的悬浮条不算进可视区，输入框会落在悬浮条后面；
+   滚到主体顶部则一定在键盘和悬浮条上方，不需要知道它们多高。 */
+html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form { flex: 1 0 auto; }
+html[data-trans-layout="compact"] #editTransactionModal #edit-transaction-form .trans-scroll-area { min-height: 220px; }
+html[data-trans-layout="compact"] #editTransactionModal .modal-body::after { content: ""; flex: none; height: 0; }
+html[data-trans-layout="compact"] #editTransactionModal:has(#edit-trans-desc:focus) .modal-body::after,
+html[data-trans-layout="compact"] #editTransactionModal:has(#edit-trans-tags:focus) .modal-body::after { height: 100dvh; }
