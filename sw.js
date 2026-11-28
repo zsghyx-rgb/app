@@ -14,7 +14,7 @@
  *  页面收到提示后显示“有新版本，点击刷新”，用户点击时才 postMessage('SKIP_WAITING') 切换。
  *  这样用户正在填表时不会被打断。
  */
-const APP_VERSION = '5.2.4';
+const APP_VERSION = '5.2.0';
 const SHELL_CACHE = `jibi-shell-v${APP_VERSION}`;
 const CDN_CACHE = 'jibi-cdn-v2';   // CDN 资源带版本号，长期有效，不随 APP_VERSION 清理
 
