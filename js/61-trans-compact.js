@@ -100,7 +100,7 @@ function renderTransLayoutSettings() {
     });
 }
 
-/* ═══════════ 三、状态同步（胶囊文字、拆分按钮） ═══════════
+/* ═══════════ 三、状态同步（胶囊文字） ═══════════
  * 由 amountPadSync / renderAttachmentThumbs / resetAttachmentUI / exitSplitMode 调用；经典布局下立刻返回。 */
 function _tmcAttachmentCount() {
     const v = ($('edit-trans-attachment-id') && $('edit-trans-attachment-id').value) || '';
@@ -115,11 +115,6 @@ function tmcSync() {
     const viewOnly = !!(content && content.classList.contains('view-only'));
     const mode = ($('edit-trans-mode') && $('edit-trans-mode').value) || 'add';
     const formVisible = form.style.display !== 'none';
-
-    // 标题栏右侧的“拆分”：只在支出表单、非拆分状态、非只读时出现（沿用原来 #split-toggle-btn 的显示规则）
-    const sb = $('tmc-split-btn'), orig = $('split-toggle-btn');
-    const canSplit = formVisible && !viewOnly && mode !== 'view' && !_inSplitMode && orig && orig.style.display !== 'none';
-    if (sb) sb.style.display = canSplit ? '' : 'none';
 
     // 标签胶囊：有内容就显示内容
     const tags = (($('edit-trans-tags') && $('edit-trans-tags').value) || '').trim();
@@ -176,64 +171,7 @@ function tmcCloseTagRow() {
     tmcSync();
 }
 
-/* ═══════════ 五、系统键盘弹出时：弹窗缩到键盘上方 ═══════════
- * iOS 的 100dvh 不随键盘变化，而且 Safari 弹出键盘时底部工具栏会收起，100dvh 和 window.innerHeight 可能差一个工具栏的高度，
- * 所以不拿它们做减法：直接把 visualViewport.height（真正可见的高度）写进 --tmc-vh，由 css/45 设成弹窗高度，
- * 弹窗顶部跟着可视区顶部（--tmc-vtop）。分类区（弹性）自动变矮，备注/金额行留在键盘上方。
- * 键盘高度 --tmc-kb 只用来判断“键盘是否弹出”，并作为 --tmc-vh 不可用时的后备（算法见 _tmcKbHeight）。没有 visualViewport 就保持原行为。 */
-/* iOS 26 起，键盘上方会浮出一条“上一项 / 下一项 / 完成”的悬浮条（约 47pt 高，离键盘顶约 12pt）。
- * 它盖在页面上，visualViewport 不把它算进键盘高度，所以弹窗底边只对齐键盘顶时，底部的备注 / 标签行正好被它压住。
- * 网页检测不到这条悬浮条，只能按系统版本估一个固定高度（按截图量：悬浮条顶到键盘顶约 58pt，再留 4pt 余量）。
- * iOS 26 的 Safari 把 UA 里的系统版本冻结在 18_6，要看 Version/26；其他 iOS 浏览器看 OS 26_x。 */
-const TMC_KB_ACCESSORY_PX = 62;
-function _tmcAccessoryPx(ua) {
-    ua = ua || (typeof navigator !== 'undefined' ? navigator.userAgent || '' : '');
-    if (!/iPhone|iPad|iPod/.test(ua)) return 0;
-    const os = /OS (\d+)_/.exec(ua), ver = /Version\/(\d+)/.exec(ua);
-    return Math.max(os ? +os[1] : 0, ver ? +ver[1] : 0) >= 26 ? TMC_KB_ACCESSORY_PX : 0;
-}
-
-/** 键盘高度 = 页面高度 - 可视区高度。不能再减 vv.offsetTop：iOS 点到底部输入框时会把页面整体顶上去，
- *  顶起的距离 offsetTop 正好等于键盘高度，减掉就变成 0，被误判成“没有键盘”，弹窗缩小的所有设置都被清掉。
- *  捏合放大时可视区也会变小，这时不算键盘（scale > 1）；小于 120px 的变化（工具栏伸缩等）也不算。 */
-function _tmcKbHeight(innerHeight, vvHeight, vvScale) {
-    if (vvScale > 1.01) return 0;
-    const kb = Math.round(innerHeight - vvHeight);
-    return kb > 120 ? kb : 0;
-}
-
-function tmcOnViewport() {
-    if (!tmcOn()) return;
-    const vv = window.visualViewport;
-    const root = document.documentElement;
-    const modal = $('editTransactionModal');
-    if (!vv || !modal || !modal.classList.contains('show')) { _tmcKeyboard(root, 0, 0, 0); return; }
-    const kb = _tmcKbHeight(window.innerHeight, vv.height, vv.scale || 1);
-    _tmcKeyboard(root, kb, vv.offsetTop, vv.height - _tmcAccessoryPx());   // 再让出 iOS 26 悬浮条的高度
-    // iOS 点输入框时会自己把页面往上顶，顶多少取决于点的那一刻输入框的位置（那时数字键盘还没收起，键盘越高顶得越少），
-    // 结果弹窗位置会随数字键盘高度变化。弹窗已经按可视区高度缩好，输入框已在键盘上方，不需要 iOS 再顶：复位滚动位置，
-    // 让位置只由 --tmc-vh 决定（复位后 vv 的 scroll 事件会再算一次，偏移为 0 就不会再复位，不会循环）。
-    if (kb > 0 && (vv.offsetTop > 1 || window.scrollY > 1)) {
-        try { window.scrollTo(0, 0); } catch (_) {}
-        if (modal.scrollTop) modal.scrollTop = 0;
-    }
-}
-function _tmcKeyboard(root, kb, top, vh) {
-    if (kb > 0) {
-        root.style.setProperty('--tmc-kb', kb + 'px');
-        root.style.setProperty('--tmc-vtop', Math.round(top) + 'px');
-        root.style.setProperty('--tmc-vh', Math.round(vh) + 'px');
-        root.classList.add('tmc-kb');
-        root.classList.toggle('tmc-pan', top > 1);
-    } else {
-        root.classList.remove('tmc-kb', 'tmc-pan');
-        root.style.removeProperty('--tmc-kb');
-        root.style.removeProperty('--tmc-vtop');
-        root.style.removeProperty('--tmc-vh');
-    }
-}
-
-/* ═══════════ 六、初始化 ═══════════ */
+/* ═══════════ 五、初始化 ═══════════ */
 function tmcInitEvents() {
     const bar = $('tmc-bar'), form = $('edit-transaction-form'), modal = $('editTransactionModal');
     if (!bar || !form || !modal) return;
@@ -282,19 +220,29 @@ function tmcInitEvents() {
     // 点别处：收起面板
     document.addEventListener('click', e => { if (tmcOn() && !e.target.closest('#tmc-bar')) tmcClosePops(); });
 
-    // 关窗：收起面板、标签行、键盘高度
+    // 点备注 / 标签：把输入框滚到弹窗主体顶部（主体底部此时有一屏高的滚动空间，见 css/45）。
+    // 不估算任何高度：输入框在顶部，一定在系统键盘和 iOS 26 悬浮条上方。键盘动画结束后再滚一次，压过 iOS 自己的滚动；页面被 iOS 顶起时复位（见下）。
+    const revealInput = e => {
+        const t = e.target;
+        if (!tmcOn() || !t || (t.id !== 'edit-trans-desc' && t.id !== 'edit-trans-tags')) return;
+        const go = () => {
+            if (document.activeElement !== t) return;
+            const r = t.closest('.tmc-memo, .tmc-tagrow') || t;
+            r.scrollIntoView({ block: 'start' });
+            // iOS 点输入框时会先把整个页面（可视区）往上顶，再叠上面这次滚动，输入框就跑出屏幕上沿；页面被顶起就复位，只留弹窗主体内部的滚动
+            const vv = window.visualViewport;
+            if (window.scrollY > 1 || (vv && vv.offsetTop > 1)) { try { window.scrollTo(0, 0); } catch (_) {} }
+        };
+        setTimeout(go, 60); setTimeout(go, 400);
+    };
+    form.addEventListener('focusin', revealInput);
+
+    // 关窗：收起面板、标签行
     modal.addEventListener('hidden.bs.modal', () => {
         ['tmc-pop-date', 'tmc-pop-att'].forEach(id => { const el = $(id); if (el) el.classList.remove('open'); });
         const row = $('tmc-tagrow'); if (row) row.classList.remove('open');
-        _tmcKeyboard(document.documentElement, 0, 0, 0);
         tmcSync();
     });
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', tmcOnViewport);
-        window.visualViewport.addEventListener('scroll', tmcOnViewport);
-    // iOS 的 resize 事件有时来得晚：焦点进出输入框时，等键盘动画结束再重算一次
-    ['focusin', 'focusout'].forEach(ev => document.addEventListener(ev, () => { setTimeout(tmcOnViewport, 150); setTimeout(tmcOnViewport, 450); }));
-    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
